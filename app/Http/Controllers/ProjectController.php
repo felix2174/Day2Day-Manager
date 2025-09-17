@@ -4,9 +4,35 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
+    /**
+     * Display the specified project.
+     */
+    public function show($id)
+    {
+        $project = DB::table('projects')->find($id);
+
+        if (!$project) {
+            abort(404);
+        }
+
+        // Lade alle Zuweisungen mit Mitarbeiter-Details
+        $assignments = DB::table('assignments')
+            ->join('employees', 'assignments.employee_id', '=', 'employees.id')
+            ->where('assignments.project_id', $id)
+            ->select(
+                'assignments.*',
+                DB::raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name"),
+                'employees.department as employee_department'
+            )
+            ->get();
+
+        return view('projects.show', compact('project', 'assignments'));
+    }
+
     public function index()
     {
         $projects = Project::withCount('assignments')->get();

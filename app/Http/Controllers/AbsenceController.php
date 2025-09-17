@@ -10,7 +10,15 @@ class AbsenceController extends Controller
 {
     public function index()
     {
-        $absences = Absence::with('employee')->orderBy('start_date', 'desc')->get();
+        $absences = \DB::table('absences')
+            ->join('employees', 'absences.employee_id', '=', 'employees.id')
+            ->select(
+                'absences.*',
+                \DB::raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name")
+            )
+            ->orderBy('absences.start_date', 'desc')
+            ->get();
+
         return view('absences.index', compact('absences'));
     }
 

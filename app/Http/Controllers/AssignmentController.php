@@ -13,7 +13,16 @@ class AssignmentController extends Controller
 {
     public function index()
     {
-        $assignments = Assignment::with(['employee', 'project'])->get();
+        $assignments = \DB::table('assignments')
+            ->join('employees', 'assignments.employee_id', '=', 'employees.id')
+            ->join('projects', 'assignments.project_id', '=', 'projects.id')
+            ->select(
+                'assignments.*',
+                \DB::raw("CONCAT(employees.first_name, ' ', employees.last_name) as employee_name"),
+                'projects.name as project_name'
+            )
+            ->get();
+
         return view('assignments.index', compact('assignments'));
     }
 

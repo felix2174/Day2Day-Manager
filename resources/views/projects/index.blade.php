@@ -18,8 +18,13 @@
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2>Projekt-Verwaltung</h2>
-            <a href="/projects/create" style="background: #667eea; color: white; padding: 10px 20px;
-                                              border-radius: 4px; text-decoration: none;">
+            <a href="/projects/create"
+               style="background: #667eea; color: white; padding: 10px 20px;
+          border-radius: 4px; text-decoration: none; border: 1px solid #5a67d8;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: all 0.2s;
+          display: inline-block;"
+               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
+               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.15)';">
                 + Neues Projekt
             </a>
         </div>
@@ -61,15 +66,39 @@
                         @endif
                     </td>
                     <td style="padding: 10px; text-align: center;">
-                        <a href="/projects/{{ $project->id }}/edit" style="color: #667eea; margin-right: 10px;">Bearbeiten</a>
-                        <form method="POST" action="/projects/{{ $project->id }}" style="display: inline;"
-                              onsubmit="return confirm('Projekt wirklich löschen?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" style="color: #dc3545; border: none; background: none; cursor: pointer;">
-                                Löschen
-                            </button>
-                        </form>
+                        <div style="display: flex; gap: 8px; justify-content: center;">
+                            <a href="/projects/{{ $project->id }}"
+                               style="background: #17a2b8; color: white; padding: 6px 12px; border-radius: 4px;
+                  text-decoration: none; font-size: 13px; display: inline-block;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: all 0.2s;
+                  font-family: inherit; border: 1px solid #138496;"
+                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.15)';">
+                                Anzeigen
+                            </a>
+                            <a href="/projects/{{ $project->id }}/edit"
+                               style="background: #667eea; color: white; padding: 6px 12px; border-radius: 4px;
+                  text-decoration: none; font-size: 13px; display: inline-block;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: all 0.2s;
+                  font-family: inherit; border: 1px solid #5a67d8;"
+                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.15)';">
+                                Bearbeiten
+                            </a>
+                            <form method="POST" action="/projects/{{ $project->id }}" style="display: inline; margin: 0;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit"
+                                        onclick="return confirm('Projekt wirklich löschen?');"
+                                        style="background: #dc3545; color: white; padding: 6px 12px; border-radius: 4px;
+                           border: 1px solid #c82333; cursor: pointer; font-size: 13px; font-family: inherit;
+                           box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: all 0.2s;"
+                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
+                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.15)';">
+                                    Löschen
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             @endforeach
