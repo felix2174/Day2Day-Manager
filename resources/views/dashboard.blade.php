@@ -1,248 +1,194 @@
 @extends('layouts.app')
 
 @section('content')
-    <style>
-        body {
-            background: #f5f5f5;
-        }
-        .dashboard-container {
-            padding: 2rem;
-        }
-        .metric-cards {
-            display: flex;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .metric-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            flex: 1;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-        .metric-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .metric-card.total { border-top: 3px solid #007bff; }
-        .metric-card.total .metric-value { color: #007bff; }
-        .metric-card.allocated { border-top: 3px solid #ffc107; }
-        .metric-card.allocated .metric-value { color: #ffc107; }
-        .metric-card.available { border-top: 3px solid #28a745; }
-        .metric-card.available .metric-value { color: #28a745; }
-        .section-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-        }
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #333;
-        }
-        .capacity-bar {
-            background: #e9ecef;
-            height: 30px;
-            border-radius: 15px;
-            overflow: hidden;
-            margin: 0.75rem 0;
-        }
-        .capacity-fill {
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: width 0.3s ease;
-        }
-        .capacity-fill.low { background: #28a745; }
-        .capacity-fill.medium { background: #ffc107; }
-        .capacity-fill.high { background: #dc3545; }
-        .employee-row {
-            padding: 1rem 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-        .employee-row:last-child {
-            border-bottom: none;
-        }
-        .project-card {
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-left: 3px solid #007bff;
-        }
-        .project-progress {
-            background: #e9ecef;
-            height: 20px;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 0.5rem 0;
-        }
-        .project-progress-fill {
-            background: #007bff;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .absence-card {
-            background: #fff5f5;
-            border-left: 3px solid #dc3545;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            border-radius: 4px;
-        }
-        .absence-card.vacation {
-            background: #fffbf0;
-            border-left-color: #ffc107;
-        }
-        .absence-card.training {
-            background: #f0f9ff;
-            border-left-color: #17a2b8;
-        }
-    </style>
+<div style="width: 100%; margin: 0; padding: 0;">
+    <!-- Page Header -->
+    <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <div>
+            <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">Dashboard</h1>
+            <p style="color: #6b7280; margin: 5px 0 0 0;">Übersicht über Ihr Projektmanagement-System</p>
+        </div>
+    </div>
 
-    <div class="dashboard-container">
-        <!-- Metrics Overview -->
-        <div class="metric-cards">
-            <div class="metric-card total">
-                <div class="metric-value">{{ $resourceOverview['total_capacity'] }}h</div>
-                <div class="metric-label">Gesamtkapazität/Woche</div>
-            </div>
-            <div class="metric-card allocated">
-                <div class="metric-value">{{ $resourceOverview['total_assigned'] }}h</div>
-                <div class="metric-label">Bereits verplant</div>
-            </div>
-            <div class="metric-card available">
-                <div class="metric-value">{{ $resourceOverview['total_available'] }}h</div>
-                <div class="metric-label">Noch verfügbar</div>
+    <!-- Metrics Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <!-- Employees Card -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">Mitarbeiter</p>
+                    <p style="font-size: 32px; font-weight: bold; color: #111827; margin: 0;">{{ $employeesCount }}</p>
+                    <p style="color: #059669; font-size: 12px; margin: 4px 0 0 0;">Aktiv: {{ $activeEmployeesCount }}</p>
+                </div>
+                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.75"/>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
             </div>
         </div>
 
-        <div class="row">
-            <!-- Left Column -->
-            <div class="col-lg-8">
-                <!-- Employee Capacities -->
-                <div class="section-card">
-                    <h2 class="section-title">Mitarbeiter-Auslastung</h2>
-
-                    @foreach($employeeWorkloads as $workload)
-                        <div class="employee-row">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <strong>{{ $workload['employee']->first_name }} {{ $workload['employee']->last_name }}</strong>
-                                    <span class="text-muted ms-2">({{ $workload['employee']->department }})</span>
-                                </div>
-                                <div class="text-end">
-                                    <span class="text-success fw-bold">{{ $workload['free_hours'] }}h frei</span>
-                                    <span class="text-muted ms-2">von {{ $workload['weekly_capacity'] }}h</span>
-                                </div>
-                            </div>
-                            <div class="capacity-bar">
-                                <div class="capacity-fill {{ $workload['utilization'] > 90 ? 'high' : ($workload['utilization'] > 70 ? 'medium' : 'low') }}"
-                                     style="width: {{ min(100, $workload['utilization']) }}%;">
-                                    {{ $workload['utilization'] }}%
-                                </div>
-                            </div>
-                            @if($workload['assignments']->count() > 0)
-                                <small class="text-muted">
-                                    Projekte:
-                                    @foreach($workload['assignments'] as $assignment)
-                                        {{ $assignment->project_name }} ({{ $assignment->weekly_hours }}h){{ !$loop->last ? ', ' : '' }}
-                                    @endforeach
-                                </small>
-                            @else
-                                <small class="text-success">✓ Vollständig verfügbar</small>
-                            @endif
-                        </div>
-                    @endforeach
+        <!-- Projects Card -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">Projekte</p>
+                    <p style="font-size: 32px; font-weight: bold; color: #111827; margin: 0;">{{ $projectsCount }}</p>
+                    <p style="color: #059669; font-size: 12px; margin: 4px 0 0 0;">Aktiv: {{ $activeProjectsCount }}</p>
                 </div>
-
-                <!-- Current Projects -->
-                <div class="section-card">
-                    <h2 class="section-title">Aktuelle Projekte</h2>
-
-                    @forelse($projectData as $data)
-                        <div class="project-card">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <strong>{{ $data['project']->name }}</strong>
-                                    @if($data['weekly_hours'] > 0)
-                                        <span class="badge bg-primary ms-2">{{ $data['weekly_hours'] }}h/Woche</span>
-                                    @endif
-                                </div>
-                                <small class="text-muted">
-                                    {{ \Carbon\Carbon::parse($data['project']->start_date)->format('d.m.Y') }} -
-                                    {{ \Carbon\Carbon::parse($data['project']->end_date)->format('d.m.Y') }}
-                                </small>
-                            </div>
-                            <div class="project-progress">
-                                <div class="project-progress-fill" style="width: {{ $data['progress'] }}%;">
-                                    {{ $data['progress'] }}%
-                                </div>
-                            </div>
-                            @if($data['project']->description)
-                                <small class="text-muted">{{ $data['project']->description }}</small>
-                            @endif
-                        </div>
-                    @empty
-                        <p class="text-muted">Keine aktiven Projekte vorhanden</p>
-                    @endforelse
+                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6h5l2 2h11v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </div>
             </div>
+        </div>
 
-            <!-- Right Column -->
-            <div class="col-lg-4">
-                <!-- Absences -->
-                <div class="section-card">
-                    <h2 class="section-title">Abwesenheiten</h2>
-                    <p class="text-muted mb-3">Nächste 30 Tage</p>
+        <!-- Teams Card -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">Teams</p>
+                    <p style="font-size: 32px; font-weight: bold; color: #111827; margin: 0;">{{ $teamsCount }}</p>
+                    <p style="color: #059669; font-size: 12px; margin: 4px 0 0 0;">Aktiv: {{ $teamsCount }}</p>
+                </div>
+                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 21V7a2 2 0 0 1 2-2h6v16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M13 21V3h6a2 2 0 0 1 2 2v16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10h2M7 14h2M17 7h2M17 11h2M17 15h2" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
 
-                    @forelse($absences as $absence)
-                        <div class="absence-card {{ $absence->type }}">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <strong>{{ $absence->first_name }} {{ $absence->last_name }}</strong>
-                                @if($absence->type == 'vacation')
-                                    <span class="badge bg-warning">Urlaub</span>
-                                @elseif($absence->type == 'sick')
-                                    <span class="badge bg-danger">Krankheit</span>
-                                @elseif($absence->type == 'training')
-                                    <span class="badge bg-info">Fortbildung</span>
-                                @endif
-                            </div>
-                            <small class="text-muted">
-                                {{ \Carbon\Carbon::parse($absence->start_date)->format('d.m.Y') }} -
-                                {{ \Carbon\Carbon::parse($absence->end_date)->format('d.m.Y') }}
-                                ({{ \Carbon\Carbon::parse($absence->start_date)->diffInDays(\Carbon\Carbon::parse($absence->end_date)) + 1 }} Tage)
-                            </small>
-                            @if($absence->reason)
-                                <div class="mt-1">
-                                    <small>{{ $absence->reason }}</small>
-                                </div>
-                            @endif
-                        </div>
-                    @empty
-                        <p class="text-muted">Keine Abwesenheiten in den nächsten 30 Tagen</p>
-                    @endforelse
+        <!-- Assignments Card -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">Zuweisungen</p>
+                    <p style="font-size: 32px; font-weight: bold; color: #111827; margin: 0;">{{ $assignmentsCount }}</p>
+                    <p style="color: #059669; font-size: 12px; margin: 4px 0 0 0;">Aktiv: {{ $activeAssignmentsCount }}</p>
+                </div>
+                <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 1 0-7.07-7.07L10 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L14 19" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Recent Activity -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+        <!-- Recent Projects -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">Aktuelle Projekte</h3>
+                <p style="color: #6b7280; font-size: 14px; margin: 4px 0 0 0;">Die neuesten Projekte im System</p>
+            </div>
+            <div style="padding: 20px;">
+                @if($recentProjects->count() > 0)
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        @foreach($recentProjects->take(5) as $project)
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 8px; height: 8px; background: {{ $project->status == 'active' ? '#10b981' : ($project->status == 'planning' ? '#3b82f6' : '#6b7280') }}; border-radius: 50%;"></div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500; color: #111827; font-size: 14px;">{{ $project->name }}</div>
+                                    <div style="color: #6b7280; font-size: 12px;">{{ round($project->progress) }}% abgeschlossen</div>
+                                </div>
+                                <div style="background: {{ $project->status == 'active' ? '#dcfce7' : ($project->status == 'planning' ? '#dbeafe' : '#e0e7ff') }}; color: {{ $project->status == 'active' ? '#166534' : ($project->status == 'planning' ? '#1e40af' : '#3730a3') }}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                                    {{ ucfirst($project->status) }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div style="text-align: center; padding: 20px; color: #6b7280;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📁</div>
+                        <p style="margin: 0;">Keine Projekte vorhanden</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        <!-- Recent Absences -->
+        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">Aktuelle Abwesenheiten</h3>
+                <p style="color: #6b7280; font-size: 14px; margin: 4px 0 0 0;">Mitarbeiter im Urlaub oder krank</p>
+            </div>
+            <div style="padding: 20px;">
+                @if($currentAbsences->count() > 0)
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        @foreach($currentAbsences->take(5) as $absence)
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 8px; height: 8px; background: {{ $absence->type == 'vacation' ? '#3b82f6' : ($absence->type == 'sick' ? '#ef4444' : '#f59e0b') }}; border-radius: 50%;"></div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 500; color: #111827; font-size: 14px;">{{ $absence->first_name }} {{ $absence->last_name }}</div>
+                                    <div style="color: #6b7280; font-size: 12px;">{{ \Carbon\Carbon::parse($absence->start_date)->format('d.m.Y') }} - {{ \Carbon\Carbon::parse($absence->end_date)->format('d.m.Y') }}</div>
+                                </div>
+                                <div style="background: {{ $absence->type == 'vacation' ? '#dbeafe' : ($absence->type == 'sick' ? '#fee2e2' : '#fef3c7') }}; color: {{ $absence->type == 'vacation' ? '#1e40af' : ($absence->type == 'sick' ? '#dc2626' : '#d97706') }}; padding: 2px 6px; border-radius: 8px; font-size: 11px;">
+                                    {{ $absence->type == 'vacation' ? 'Urlaub' : ($absence->type == 'sick' ? 'Krank' : 'Persönlich') }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div style="text-align: center; padding: 20px; color: #6b7280;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📅</div>
+                        <p style="margin: 0;">Keine aktuellen Abwesenheiten</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px;">
+        <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Schnellaktionen</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <a href="{{ route('employees.create') }}" style="background: #ffffff; border: none; border-radius: 12px; padding: 12px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 8px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.75"/>
+                    </svg>
+                </div>
+                <span style="color: #374151; font-weight: 500;">Neuer Mitarbeiter</span>
+            </a>
+            <a href="{{ route('projects.create') }}" style="background: #ffffff; border: none; border-radius: 12px; padding: 12px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 8px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6h5l2 2h11v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span style="color: #374151; font-weight: 500;">Neues Projekt</span>
+            </a>
+            <a href="{{ route('teams.create') }}" style="background: #ffffff; border: none; border-radius: 12px; padding: 12px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 8px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 21V7a2 2 0 0 1 2-2h6v16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M13 21V3h6a2 2 0 0 1 2 2v16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10h2M7 14h2M17 7h2M17 11h2M17 15h2" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <span style="color: #374151; font-weight: 500;">Neues Team</span>
+            </a>
+            <a href="{{ route('assignments.create') }}" style="background: #ffffff; border: none; border-radius: 12px; padding: 12px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color:#ffffff; border-radius: 8px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 1 0-7.07-7.07L10 5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L14 19" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <span style="color: #374151; font-weight: 500;">Neue Zuweisung</span>
+            </a>
+        </div>
+    </div>
+</div>
 @endsection

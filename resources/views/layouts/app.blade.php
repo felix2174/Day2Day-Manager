@@ -3,90 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title') - enodia Scheduling Tool</title>
+    <title>@yield('title') - enodia IT-Systemhaus | Projektmanagement</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #f8fafc;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
+        
         .header {
-            background: white;
+            background: #f8fafc;
             padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .nav {
-            background: #f8f9fa;
-            padding: 10px 20px;
-            border-bottom: 1px solid #dee2e6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid #e2e8f0;
         }
-        .nav-links {
-            display: flex;
-            gap: 10px;
+        
+        .header-content h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #2c3e50;
         }
-        .nav a {
-            color: #495057;
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            display: inline-block;
-            border: 1px solid transparent;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.2s;
+        
+        .header-content p {
+            margin: 5px 0 0 0;
+            color: #6c757d;
+            font-size: 1rem;
         }
-        .nav a:hover {
-            background: #e9ecef;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
-        .nav a:active {
-            transform: translateY(0);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        .nav a.active {
-            background: #667eea;
-            color: white;
-            border-color: #5a67d8;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-        }
-        .nav a.active:hover {
-            background: #5a67d8;
-        }
+        
         .user-menu {
             display: flex;
             align-items: center;
             gap: 15px;
         }
+        
         .logout-btn {
-            background: #6c757d;
-            color: white;
-            border: 1px solid #5a6268;
+            background: #ffffff;
+            color: #374151;
+            border: none;
             padding: 8px 16px;
-            border-radius: 4px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 14px;
             font-family: inherit;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-            transition: all 0.2s;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
         }
+        
         .logout-btn:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            background: #f9fafb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
+        
         .logout-btn:active {
             transform: translateY(0);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
+        
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #f8fafc;
+            color: #374151;
+            padding: 0;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+            border-right: 1px solid #e2e8f0;
+        }
+        
+        .sidebar-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .sidebar-nav li {
+            margin: 0;
+        }
+        
+        .sidebar-nav a {
+            display: block;
+            color: #6b7280;
+            text-decoration: none;
+            padding: 12px 20px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 14px;
+            border-left: 3px solid transparent;
+            border-radius: 8px;
+            margin: 8px 12px;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .sidebar-nav a:hover {
+            background: #f1f5f9;
+            color: #374151;
+            border-left-color: #3b82f6;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-nav a.active {
+            background: #ffffff;
+            color: #1e40af;
+            border-left-color: #3b82f6;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-nav a.active:hover {
+            background: #f1f5f9;
+            transform: translateY(-1px);
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 16px;
+            overflow-x: auto;
+            background: #f8fafc;
+            min-width: 0;
+        }
+        
         .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 0 20px;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+        }
+        
+        /* Global Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary {
+            background: #ffffff;
+            color: #374151;
+        }
+        
+        .btn-primary:hover {
+            background: #f9fafb;
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn-success {
+            background: #ffffff;
+            color: #059669;
+        }
+        
+        .btn-success:hover {
+            background: #f0fdf4;
+        }
+        
+        .btn-danger {
+            background: #ffffff;
+            color: #dc2626;
+        }
+        
+        .btn-danger:hover {
+            background: #fef2f2;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+        
+        .btn-lg {
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 16px;
         }
         .card {
             background: white;
@@ -95,21 +225,86 @@
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-layout {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 10px 0;
+            }
+            
+            .sidebar-nav {
+                display: flex;
+                overflow-x: auto;
+                padding: 0 10px;
+            }
+            
+            .sidebar-nav li {
+                flex-shrink: 0;
+            }
+            
+            .sidebar-nav a {
+                padding: 10px 15px;
+                white-space: nowrap;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                margin: 2px 8px;
+                border-radius: 6px;
+            }
+            
+            .sidebar-nav a:hover {
+                border-left: none;
+                border-bottom-color: #3b82f6;
+            }
+            
+            .sidebar-nav a.active {
+                border-left: none;
+                border-bottom-color: #1d4ed8;
+            }
+            
+            .main-content {
+                padding: 15px;
+            }
+            
+            .header {
+                padding: 15px;
+            }
+            
+            .header-content h1 {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header-content h1 {
+                font-size: 1.3rem;
+            }
+            
+            .header-content p {
+                font-size: 0.9rem;
+            }
+            
+            .user-menu {
+                gap: 10px;
+            }
+            
+            .logout-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
 <div class="header">
-    <h1>enodia IT-Systemhaus</h1>
-    <p>Terminplanungstool - Ressourcenverwaltung</p>
-</div>
-
-<nav class="nav">
-    <div class="nav-links">
-        <a href="/dashboard" class="{{ request()->is('dashboard') ? 'active' : '' }}">Dashboard</a>
-        <a href="/employees" class="{{ request()->is('employees*') ? 'active' : '' }}">Mitarbeiter</a>
-        <a href="/projects" class="{{ request()->is('projects*') ? 'active' : '' }}">Projekte</a>
-        <a href="/assignments" class="{{ request()->is('assignments*') ? 'active' : '' }}">Zuweisungen</a>
-        <a href="/absences" class="{{ request()->is('absences*') ? 'active' : '' }}">Abwesenheiten</a>
+    <div class="header-content">
+        <h1>enodia IT-Systemhaus</h1>
+        <p>Projektmanagement</p>
     </div>
 
     @auth
@@ -131,10 +326,54 @@
             </a>
         </div>
     @endauth
-</nav>
+</div>
 
-<div class="container">
-    @yield('content')
+<div class="main-layout">
+    <nav class="sidebar">
+        <ul class="sidebar-nav">
+            <li>
+                <a href="/dashboard" class="{{ request()->is('dashboard') ? 'active' : '' }}">
+                    Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="/employees" class="{{ request()->is('employees*') ? 'active' : '' }}">
+                    Mitarbeiter
+                </a>
+            </li>
+            <li>
+                <a href="/projects" class="{{ request()->is('projects*') ? 'active' : '' }}">
+                    Projekte
+                </a>
+            </li>
+            <li>
+                <a href="/assignments" class="{{ request()->is('assignments*') ? 'active' : '' }}">
+                    Zuweisungen
+                </a>
+            </li>
+            <li>
+                <a href="/absences" class="{{ request()->is('absences*') ? 'active' : '' }}">
+                    Abwesenheiten
+                </a>
+            </li>
+            <li>
+                <a href="/teams" class="{{ request()->is('teams*') ? 'active' : '' }}">
+                    Teams
+                </a>
+            </li>
+            <li>
+                <a href="/gantt" class="{{ request()->is('gantt*') ? 'active' : '' }}">
+                    Gantt-Diagramm
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            @yield('content')
+        </div>
+    </main>
 </div>
 </body>
 </html>

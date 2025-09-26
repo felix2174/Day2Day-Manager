@@ -5,54 +5,57 @@
 @section('content')
     <style>
         .detail-container {
-            padding: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
+            padding: 0;
+            width: 100%;
+            margin: 0;
         }
         .info-card {
             background: white;
             border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
         }
         .info-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
         }
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
+            gap: 16px;
+            margin-bottom: 24px;
         }
         .info-item {
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 6px;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
         }
         .info-label {
-            font-size: 0.875rem;
-            color: #6c757d;
+            font-size: 12px;
+            color: #6b7280;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            font-weight: 500;
         }
         .info-value {
-            font-size: 1.25rem;
+            font-size: 16px;
             font-weight: 600;
-            color: #212529;
+            color: #111827;
         }
         .progress-meter {
-            background: #e9ecef;
-            height: 30px;
-            border-radius: 15px;
+            background: #e5e7eb;
+            height: 32px;
+            border-radius: 16px;
             overflow: hidden;
-            margin: 1rem 0;
+            margin: 16px 0;
         }
         .progress-fill {
             height: 100%;
@@ -60,17 +63,19 @@
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 14px;
             transition: width 0.3s ease;
         }
         .team-member {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem;
-            background: #f8f9fa;
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e7eb;
         }
         .member-info {
             display: flex;
@@ -112,15 +117,19 @@
                 </div>
                 <div>
                     <a href="/projects/{{ $project->id }}/edit"
-                       style="background: #667eea; color: white; padding: 10px 20px; border-radius: 4px;
-                          text-decoration: none; margin-right: 10px; border: 1px solid #5a67d8;
-                          box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                       style="background: #ffffff; color: #374151; padding: 12px 24px; border-radius: 12px;
+                          text-decoration: none; margin-right: 10px; border: none;
+                          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                          onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                          onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                         Bearbeiten
                     </a>
                     <a href="/projects"
-                       style="background: #6c757d; color: white; padding: 10px 20px; border-radius: 4px;
-                          text-decoration: none; border: 1px solid #5a6268;
-                          box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                       style="background: #ffffff; color: #374151; padding: 12px 24px; border-radius: 12px;
+                          text-decoration: none; border: none;
+                          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                          onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                          onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                         Zurück zur Übersicht
                     </a>
                 </div>
@@ -165,27 +174,22 @@
                 @php
                     $start = \Carbon\Carbon::parse($project->start_date);
                     $end = \Carbon\Carbon::parse($project->end_date);
-                    $total_days = $start->diffInDays($end);
-                    $elapsed_days = $start->diffInDays(now());
-                    $progress = min(100, round(($elapsed_days / max(1, $total_days)) * 100));
-                    $remaining_days = max(0, now()->diffInDays($end, false));
+                    $remaining_days = round(now()->diffInDays($end, false));
+                    // Verwende den gespeicherten Fortschritt oder berechne ihn
+                    $progress = $project->progress ?? 0;
                 @endphp
                 <div style="margin-top: 2rem;">
                     <h3 style="margin-bottom: 1rem;">Projekt-Fortschritt</h3>
                     <div class="progress-meter">
                         <div class="progress-fill"
                              style="width: {{ $progress }}%;
-                                background: {{ $progress >= 90 ? '#dc3545' : ($progress >= 70 ? '#ffc107' : '#28a745') }};">
+                                background: {{ $progress >= 80 ? '#28a745' : ($progress >= 50 ? '#ffc107' : '#dc3545') }};">
                             {{ $progress }}%
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
                         <span>Gestartet: {{ $start->format('d.m.Y') }}</span>
-                        @if($remaining_days > 0)
-                            <span style="color: #28a745; font-weight: bold;">{{ $remaining_days }} Tage verbleibend</span>
-                        @else
-                            <span style="color: #dc3545; font-weight: bold;">Überfällig</span>
-                        @endif
+                        <span>Geplant bis: {{ $end->format('d.m.Y') }}</span>
                     </div>
                 </div>
             @endif

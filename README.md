@@ -1,48 +1,79 @@
-\# Enodia Terminplanungstool
+# 🏢 Projektmanagement - enodia IT-Systemhaus
 
+## 📋 IHK-Abschlussprojekt
+**Projektant:** Entwicklung einer individualisierten Webapplikation zur Ressourcen- und Kapazitätsverwaltung  
+**Durchführungszeitraum:** 01.09.2025 - 07.11.2025  
+**Auszubildender:** Jörg Michno  
+**Status:** ✅ **FERTIGGESTELLT** - Bereit für IHK-Präsentation
 
+## 🚀 Features
+- 👥 **Mitarbeiterverwaltung** mit Kapazitätsübersicht und Auslastungsampel
+- 📊 **Projektverwaltung** mit Teamzuweisung und Fortschrittsverfolgung
+- ⚡ **Echtzeit-Auslastungsberechnung** mit visueller Darstellung
+- 📈 **CSV-Export** für Reporting und Analyse
+- 🚦 **Ampelsystem** für Ressourcenauslastung (Grün/Gelb/Rot)
+- 📅 **Abwesenheitsverwaltung** mit Urlaub, Krankheit und Fortbildung
+- 🔐 **Benutzerauthentifizierung** mit Laravel Breeze
 
-IHK-Abschlussprojekt von Jörg Michno
+## 🛠️ Technischer Stack
+- **Framework:** Laravel 12.x (PHP 8.2+)
+- **Datenbank:** SQLite (Development) / MySQL (Production)
+- **Frontend:** Blade Templates mit modernem CSS
+- **Server:** Apache 2.4 (XAMPP)
+- **Styling:** Custom CSS mit professionellem Design
+- **Export:** CSV-Export für Excel-Kompatibilität
 
+## 🎯 Projektziele (ERREICHT)
+- ✅ Vollständige Funktionsfähigkeit aller Module
+- ✅ Sauberer, wartbarer Code nach Laravel-Standards
+- ✅ Professionelle Benutzeroberfläche
+- ✅ SQLite-Kompatibilität für lokale Entwicklung
+- ✅ Responsive Design für verschiedene Bildschirmgrößen
 
+ Schnellstart nach Neustart
+1. XAMPP starten
 
-\## Schnellstart für Kollegen
+XAMPP Control Panel öffnen
+Apache → Start
+MySQL → Start
 
+2. Terminal/PowerShell öffnen und zum Projekt navigieren
+cd C:\xampp\htdocs\mein-projekt
 
+3. Laravel Server starten
+php artisan serve
 
-\### Installation
+4. Browser öffnen
+http://127.0.0.1:8000
 
-1\. Repository klonen
+5. Login
+Email: admin@enodia.de
+Passwort: Test1234
 
-2\. `composer install` ausführen
+Git-Befehle (im Projektordner)
 
-3\. `.env.example` zu `.env` kopieren
+Status prüfen
+git status
 
-4\. Datenbank-Zugangsdaten in `.env` eintragen
+Änderungen speichern
+git add .
+git commit -m "Beschreibung der Änderungen"
 
-5\. `php artisan key:generate`
+Historie anzeigen
+git log --oneline
 
-6\. `php artisan migrate`
+Troubleshooting
 
-7\. `php artisan db:seed`
+Falls Server nicht startet
+php artisan cache:clear
+php artisan config:clear
+php artisan route:clear
 
-8\. `php artisan serve`
+Falls Datenbank-Probleme
+php artisan migrate:fresh --seed
 
+Wichtige Pfade
 
-
-\### Standard-Login
-
-Nach dem Seeding sind Testdaten vorhanden.
-
-
-
-\### Features
-
-\- Mitarbeiterverwaltung
-
-\- Projektverwaltung
-
-\- Intelligente Kapazitätsplanung
-
-\- Abwesenheitstracking
-
+Projekt: C:\xampp\htdocs\mein-projekt
+phpMyAdmin: http://localhost/phpmyadmin
+Datenbank: terminplanungstool

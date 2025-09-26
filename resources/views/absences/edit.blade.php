@@ -9,7 +9,7 @@
             Mitarbeiter: <strong>{{ $absence->employee->first_name }} {{ $absence->employee->last_name }}</strong>
         </p>
 
-        <form method="POST" action="/absences/{{ $absence->id }}" style="margin-top: 20px;">
+        <form method="POST" action="{{ route('absences.update', $absence->id) }}" style="margin-top: 20px;">
             @csrf
             @method('PUT')
 
@@ -41,12 +41,20 @@
             </div>
 
             <div style="margin-top: 20px;">
-                <button type="submit" style="padding: 10px 30px; background: #28a745; color: white;
-                                            border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+                <button type="submit" style="padding: 12px 24px; background: #ffffff; color: #374151;
+                                            border: none; border-radius: 12px; cursor: pointer; margin-right: 10px;
+                                            font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                            onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                                            onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                     Änderungen speichern
                 </button>
-                <a href="/absences" style="padding: 10px 30px; background: #6c757d; color: white;
-                                          border-radius: 4px; text-decoration: none; display: inline-block;">
+                <a href="/absences" style="padding: 12px 24px; background: #ffffff; color: #374151;
+                                          border: none; border-radius: 12px; text-decoration: none; display: inline-block;
+                                          font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                                          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                          onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                                          onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                     Abbrechen
                 </a>
             </div>

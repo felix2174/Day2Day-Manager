@@ -52,9 +52,9 @@ class DashboardController extends Controller
             return $b['utilization'] <=> $a['utilization'];
         });
         
-        // Projekte laden
+        // Projekte laden (alle Projekte, nicht nur aktive)
         $projects = DB::table('projects')
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'planning'])
             ->get();
         
         $projectData = [];
@@ -63,19 +63,10 @@ class DashboardController extends Controller
                 ->where('project_id', $project->id)
                 ->sum('weekly_hours');
             
-            // Berechne Fortschritt basierend auf Datum
-            $startDate = Carbon::parse($project->start_date);
-            $endDate = Carbon::parse($project->end_date);
-            $today = Carbon::now();
-            
-            $totalDays = $startDate->diffInDays($endDate);
-            $elapsedDays = $startDate->diffInDays($today);
-            $progress = $totalDays > 0 ? min(100, ($elapsedDays / $totalDays) * 100) : 0;
-            
             $projectData[] = [
                 'project' => $project,
                 'weekly_hours' => $projectAssignments,
-                'progress' => round($progress, 0)
+                'progress' => $project->progress ?? 0
             ];
         }
         
@@ -102,12 +93,47 @@ class DashboardController extends Controller
         // Aktuelle Kalenderwoche
         $currentWeek = Carbon::now()->weekOfYear;
         
+        // Zusätzliche Statistiken für das neue Dashboard - konsistente Definitionen
+        $employeesCount = DB::table('employees')->count();
+        $activeEmployeesCount = DB::table('employees')->where('is_active', true)->count();
+        $projectsCount = DB::table('projects')->count();
+        $activeProjectsCount = DB::table('projects')->whereIn('status', ['active', 'planning'])->count();
+        $teamsCount = DB::table('teams')->count();
+        $assignmentsCount = DB::table('assignments')->count();
+        $activeAssignmentsCount = DB::table('assignments')
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now())
+            ->count();
+
+        // Recent Projects
+        $recentProjects = DB::table('projects')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        // Current Absences
+        $currentAbsences = DB::table('absences')
+            ->join('employees', 'absences.employee_id', '=', 'employees.id')
+            ->where('absences.start_date', '<=', now())
+            ->where('absences.end_date', '>=', now())
+            ->select('absences.*', 'employees.first_name', 'employees.last_name')
+            ->get();
+
         return view('dashboard', compact(
             'employeeWorkloads',
             'projectData',
             'absences',
             'resourceOverview',
-            'currentWeek'
+            'currentWeek',
+            'employeesCount',
+            'activeEmployeesCount',
+            'projectsCount',
+            'activeProjectsCount',
+            'teamsCount',
+            'assignmentsCount',
+            'activeAssignmentsCount',
+            'recentProjects',
+            'currentAbsences'
         ));
     }
 }

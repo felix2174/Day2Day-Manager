@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
+use Exception;
 
 class EmployeeController extends Controller
 {
@@ -59,20 +61,71 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Show import form
+     */
+    public function importForm()
+    {
+        return view('employees.import');
+    }
+
+    /**
+     * Process import
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048'
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getPathname(), 'r');
+        
+        // Skip header
+        fgetcsv($handle, 1000, ';');
+        
+        $imported = 0;
+        $errors = [];
+        
+        while (($data = fgetcsv($handle, 1000, ';')) !== false) {
+            try {
+                if (count($data) >= 6) {
+                    Employee::create([
+                        'first_name' => $data[0],
+                        'last_name' => $data[1],
+                        'department' => $data[2],
+                        'weekly_capacity' => (int)$data[3],
+                        'is_active' => $data[4] === '1' || strtolower($data[4]) === 'true',
+                        'email' => $data[5] ?? null,
+                    ]);
+                    $imported++;
+                }
+            } catch (Exception $e) {
+                $errors[] = "Zeile " . ($imported + 1) . ": " . $e->getMessage();
+            }
+        }
+        
+        fclose($handle);
+        
+        $message = "Erfolgreich {$imported} Mitarbeiter importiert.";
+        if (!empty($errors)) {
+            $message .= " Fehler: " . implode(', ', $errors);
+        }
+        
+        return redirect()->route('employees.index')->with('success', $message);
+    }
+
+    /**
      * Display a listing of the employees.
      */
     public function index()
     {
-        $employees = DB::table('employees')->get();
-
-        // Load assignments for each employee
-        foreach ($employees as $employee) {
-            $employee->assignments = DB::table('assignments')
-                ->where('employee_id', $employee->id)
-                ->where('start_date', '<=', now())
-                ->where('end_date', '>=', now())
-                ->get();
-        }
+        $employees = Employee::with(['assignments' => function($query) {
+            $query->where('start_date', '<=', now())
+                  ->where('end_date', '>=', now());
+        }, 'assignments.project'])
+        ->orderBy('is_active', 'desc')
+        ->orderBy('last_name', 'asc')
+        ->get();
 
         return view('employees.index', compact('employees'));
     }
@@ -113,17 +166,12 @@ class EmployeeController extends Controller
     /**
      * Display the specified employee.
      */
-    public function show($id)
+    public function show(Employee $employee)
     {
-        $employee = DB::table('employees')->find($id);
-
-        if (!$employee) {
-            abort(404);
-        }
 
         $assignments = DB::table('assignments')
             ->join('projects', 'assignments.project_id', '=', 'projects.id')
-            ->where('assignments.employee_id', $id)
+            ->where('assignments.employee_id', $employee->id)
             ->select('assignments.*', 'projects.name as project_name')
             ->get();
 
@@ -133,21 +181,15 @@ class EmployeeController extends Controller
     /**
      * Show the form for editing the specified employee.
      */
-    public function edit($id)
+    public function edit(Employee $employee)
     {
-        $employee = DB::table('employees')->find($id);
-
-        if (!$employee) {
-            abort(404);
-        }
-
         return view('employees.edit', compact('employee'));
     }
 
     /**
      * Update the specified employee in storage.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Employee $employee)
     {
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
@@ -157,7 +199,7 @@ class EmployeeController extends Controller
         ]);
 
         DB::table('employees')
-            ->where('id', $id)
+            ->where('id', $employee->id)
             ->update([
                 'first_name' => $validated['first_name'],
                 'last_name' => $validated['last_name'],
@@ -172,9 +214,9 @@ class EmployeeController extends Controller
     /**
      * Remove the specified employee from storage.
      */
-    public function destroy($id)
+    public function destroy(Employee $employee)
     {
-        DB::table('employees')->where('id', $id)->delete();
+        DB::table('employees')->where('id', $employee->id)->delete();
 
         return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich gelöscht!');
     }

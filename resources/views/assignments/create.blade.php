@@ -32,8 +32,12 @@
                            min="1" max="60" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                 </div>
 
-                <button type="submit" style="padding: 8px 20px; background: #667eea; color: white;
-                                            border: none; border-radius: 4px; cursor: pointer;">
+                <button type="submit" style="padding: 12px 24px; background: #ffffff; color: #374151;
+                                            border: none; border-radius: 12px; cursor: pointer;
+                                            font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                            onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                                            onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                     Verfügbare Mitarbeiter suchen
                 </button>
             </div>
@@ -107,8 +111,12 @@
                            style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                 </div>
 
-                <button type="submit" style="margin-top: 20px; padding: 10px 30px; background: #28a745;
-                                            color: white; border: none; border-radius: 4px; cursor: pointer;">
+                <button type="submit" style="margin-top: 20px; padding: 12px 24px; background: #ffffff;
+                                            color: #374151; border: none; border-radius: 12px; cursor: pointer;
+                                            font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                                            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                                            onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                                            onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                     Zuweisung erstellen
                 </button>
             </form>

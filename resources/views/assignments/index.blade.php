@@ -3,120 +3,149 @@
 @section('title', 'Zuweisungen')
 
 @section('content')
+<div style="width: 100%; margin: 0; padding: 0;">
+    <!-- Page Header -->
+    <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">Zuweisungen-Verwaltung</h1>
+                <p style="color: #6b7280; margin: 5px 0 0 0;">Verwalten Sie die Zuweisungen von Mitarbeitern zu Projekten</p>
+                <div style="display: flex; gap: 20px; margin-top: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #6b7280; font-size: 14px;">Gesamt:</span>
+                        <span style="font-weight: 600; color: #111827;">{{ $assignments->count() }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #6b7280; font-size: 14px;">Aktiv:</span>
+                        <span style="font-weight: 600; color: #059669;">{{ $assignments->where('start_date', '<=', now())->where('end_date', '>=', now())->count() }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #6b7280; font-size: 14px;">Geplant:</span>
+                        <span style="font-weight: 600; color: #3b82f6;">{{ $assignments->where('start_date', '>', now())->count() }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #6b7280; font-size: 14px;">Abgeschlossen:</span>
+                        <span style="font-weight: 600; color: #6b7280;">{{ $assignments->where('end_date', '<', now())->count() }}</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="{{ route('assignments.export') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
+                    📊 Excel Export
+                </a>
+                <a href="{{ route('assignments.import') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
+                    📥 CSV Import
+                </a>
+                <a href="{{ route('assignments.create') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
+                    ➕ Neue Zuweisung
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts -->
     @if(session('success'))
-        <div style="background: #d4edda; color: #155724; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
-            {{ session('success') }}
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+            ✅ {{ session('success') }}
         </div>
     @endif
 
     @if(session('error'))
-        <div style="background: #f8d7da; color: #721c24; padding: 12px; border-radius: 4px; margin-bottom: 20px;">
-            {{ session('error') }}
+        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+            ❌ {{ session('error') }}
         </div>
     @endif
 
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Zuweisungen-Verwaltung</h2>
-            <a href="{{ route('assignments.create') }}"
-               style="background: #667eea; color: white; padding: 10px 20px;
-          border-radius: 4px; text-decoration: none; border: 1px solid #5a67d8;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: all 0.2s;
-          display: inline-block;"
-               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
-               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.15)';">
-                + Neue Zuweisung
-            </a>
-        </div>
-
+    <!-- Assignments Table -->
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
         <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-            <tr style="border-bottom: 2px solid #dee2e6;">
-                <th style="padding: 10px; text-align: left;">Mitarbeiter</th>
-                <th style="padding: 10px; text-align: left;">Projekt</th>
-                <th style="padding: 10px; text-align: center;">Zeitraum</th>
-                <th style="padding: 10px; text-align: center;">Wochenstunden</th>
-                <th style="padding: 10px; text-align: center;">Status</th>
-                <th style="padding: 10px; text-align: center;">Aktionen</th>
-            </tr>
+            <thead style="background: #f9fafb;">
+                <tr>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Mitarbeiter</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Projekt</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Wochenstunden</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Zeitraum</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Priorität</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Aktionen</th>
+                </tr>
             </thead>
             <tbody>
-            @forelse($assignments as $assignment)
-                @php
-                    $start = \Carbon\Carbon::parse($assignment->start_date);
-                    $end = \Carbon\Carbon::parse($assignment->end_date);
-                    $now = \Carbon\Carbon::now();
-                    $isActive = $now->between($start, $end);
-                    $isPast = $now->gt($end);
-                    $isFuture = $now->lt($start);
-                @endphp
-                <tr style="border-bottom: 1px solid #dee2e6;">
-                    <td style="padding: 10px;">
-                        <strong>{{ $assignment->employee_name ?? 'N/A' }}</strong>
-                    </td>
-                    <td style="padding: 10px;">
-                        <strong>{{ $assignment->project_name ?? 'N/A' }}</strong>
-                    </td>
-                    <td style="padding: 10px; text-align: center;">
-                        {{ $start->format('d.m.Y') }} - {{ $end->format('d.m.Y') }}
-                        <br><small style="color: #6c757d;">
-                            ({{ $start->diffInWeeks($end) }} Wochen)
-                        </small>
-                    </td>
-                    <td style="padding: 10px; text-align: center;">
-                        <strong style="font-size: 1.1em;">{{ $assignment->weekly_hours }}h</strong>
-                        <br><small style="color: #6c757d;">pro Woche</small>
-                    </td>
-                    <td style="padding: 10px; text-align: center;">
-                        @if($isActive)
-                            <span style="padding: 3px 8px; border-radius: 3px; font-size: 12px; background: #28a745; color: white;">
-                                Aktiv
+                @forelse($assignments as $assignment)
+                    @php
+                        $isActive = $assignment->start_date <= now() && $assignment->end_date >= now();
+                        $isUpcoming = $assignment->start_date > now();
+                        $isCompleted = $assignment->end_date < now();
+                    @endphp
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px;">
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; margin-right: 12px;">
+                                    {{ substr($assignment->employee->first_name, 0, 1) }}{{ substr($assignment->employee->last_name, 0, 1) }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 500; color: #111827;">{{ $assignment->employee->first_name }} {{ $assignment->employee->last_name }}</div>
+                                    <div style="font-size: 12px; color: #6b7280;">{{ $assignment->employee->department }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 12px;">
+                            <div>
+                                <div style="font-weight: 500; color: #111827;">{{ $assignment->project->name }}</div>
+                                <div style="font-size: 12px; color: #6b7280;">{{ Str::limit($assignment->project->description, 50) }}</div>
+                            </div>
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                                {{ $assignment->weekly_hours }}h/Woche
                             </span>
-                        @elseif($isPast)
-                            <span style="padding: 3px 8px; border-radius: 3px; font-size: 12px; background: #6c757d; color: white;">
-                                Abgeschlossen
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="font-size: 14px; color: #374151;">
+                                {{ \Carbon\Carbon::parse($assignment->start_date)->format('d.m.Y') }} - 
+                                {{ \Carbon\Carbon::parse($assignment->end_date)->format('d.m.Y') }}
+                            </div>
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="background: {{ $assignment->priority_level == 'high' ? '#fee2e2' : ($assignment->priority_level == 'medium' ? '#fef3c7' : '#dcfce7') }}; color: {{ $assignment->priority_level == 'high' ? '#dc2626' : ($assignment->priority_level == 'medium' ? '#d97706' : '#166534') }}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                                {{ ucfirst($assignment->priority_level) }}
                             </span>
-                        @else
-                            <span style="padding: 3px 8px; border-radius: 3px; font-size: 12px; background: #ffc107; color: white;">
-                                Geplant
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="background: {{ $isActive ? '#dcfce7' : ($isUpcoming ? '#dbeafe' : '#f3f4f6') }}; color: {{ $isActive ? '#166534' : ($isUpcoming ? '#1e40af' : '#374151') }}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                                {{ $isActive ? 'Aktiv' : ($isUpcoming ? 'Geplant' : 'Abgeschlossen') }}
                             </span>
-                        @endif
-                    </td>
-                    <td style="padding: 10px; text-align: center;">
-                        <div style="display: flex; gap: 8px; justify-content: center;">
-                            <a href="{{ route('assignments.edit', $assignment->id) }}"
-                               style="background: #667eea; color: white; padding: 6px 12px; border-radius: 4px;
-                  text-decoration: none; font-size: 13px; display: inline-block;
-                  box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: all 0.2s;
-                  font-family: inherit; border: 1px solid #5a67d8;"
-                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
-                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.15)';">
-                                Bearbeiten
-                            </a>
-                            <form method="POST" action="{{ route('assignments.destroy', $assignment->id) }}" style="display: inline; margin: 0;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit"
-                                        onclick="return confirm('Zuweisung wirklich löschen?');"
-                                        style="background: #dc3545; color: white; padding: 6px 12px; border-radius: 4px;
-                           border: 1px solid #c82333; cursor: pointer; font-size: 13px; font-family: inherit;
-                           box-shadow: 0 2px 4px rgba(0,0,0,0.15); transition: all 0.2s;"
-                                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
-                                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.15)';">
-                                    Löschen
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="6" style="padding: 20px; text-align: center; color: #6c757d;">
-                        Keine Zuweisungen vorhanden
-                    </td>
-                </tr>
-            @endforelse
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; gap: 4px;">
+                                <a href="{{ route('assignments.show', $assignment) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;">
+                                    👁 Anzeigen
+                                </a>
+                                <a href="{{ route('assignments.edit', $assignment) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;">
+                                    ✏️ Bearbeiten
+                                </a>
+                                <form action="{{ route('assignments.destroy', $assignment) }}" method="POST" style="display: inline;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" style="background: #ffffff; color: #dc2626; padding: 6px 12px; border-radius: 8px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;" onclick="return confirm('Sind Sie sicher, dass Sie diese Zuweisung löschen möchten?')">
+                                        🗑️ Löschen
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
+                            <div style="display: flex; flex-direction: column; align-items: center;">
+                                <div style="font-size: 48px; margin-bottom: 16px;">🔗</div>
+                                <p style="font-size: 18px; font-weight: 500; margin: 0;">Keine Zuweisungen gefunden</p>
+                            </div>
+                        </td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
+</div>
 @endsection
