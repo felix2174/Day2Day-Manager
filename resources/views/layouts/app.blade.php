@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - enodia IT-Systemhaus | Projektmanagement</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -364,6 +365,16 @@
             <li>
                 <a href="/gantt" class="{{ request()->is('gantt*') ? 'active' : '' }}">
                     Gantt-Diagramm
+                </a>
+            </li>
+            <li>
+                <a href="/time-entries" class="{{ request()->is('time-entries*') ? 'active' : '' }}">
+                    Zeiterfassung
+                </a>
+            </li>
+            <li>
+                <a href="/moco" class="{{ request()->is('moco*') ? 'active' : '' }}">
+                    MOCO Integration
                 </a>
             </li>
         </ul>

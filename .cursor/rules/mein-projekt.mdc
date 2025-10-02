@@ -1,0 +1,79 @@
+---
+alwaysApply: true
+---
+# Kontext
+- Stack: Laravel 12, PHP 8.2, Blade + Alpine + Tailwind, Breeze Auth, PHPUnit.
+- Datenstrategie (Variante B): Live-Read aus MOCO + selektiver Sync in lokale DB.
+- Single Tenant.
+
+# Quellen & Wahrheit
+- Externe Wahrheit: MOCO-API (`https://{subdomain}.mocoapp.com/api/v1`).
+- Lokale Wahrheit: gespiegelt über `moco_id` auf Kernobjekte (Employees, Projects, Assignments, TimeEntries, Absences, Teams).
+
+# Architekturregeln
+- Schichten erzwingen:
+  - `App\Services\Moco\*` → reiner API-Zugriff (Http Client, Retries, Backoff).
+  - `App\Sync\Jobs\*` → Sync-Jobs (inkrementell, voll).
+  - `App\Repositories\*` → Lese-/Schreibzugriff; Quellen: `LocalDbSource`, `MocoApiSource`.
+  - `App\DTO\*` → readonly Transportobjekte.
+  - `App\Http\Requests\*` → Validierung.
+  - `App\Http\Resources\*` → Präsentation/Transform.
+- Business-Logik raus aus Eloquent-Models. Nur Relationen, Casts, Scopes.
+- Neue Dateien immer mit **vollständigem Pfad** vorschlagen.
+
+# MOCO-API
+- Auth: `Authorization: Token token=${MOCO_API_TOKEN}`.
+- Timeouts: `MOCO_TIMEOUT` (Default 10s). Max 3 Retries mit Exponential Backoff bei 429/5xx.
+- Cache: `Cache::remember` 60–300s für GET-Endpunkte. Cache-Key: `moco:{resource}:{params-hash}`.
+- Respektiere Rate-Limit-Header (`X-RateLimit-*`). Bei 429: jitter + backoff.
+
+# Sync-Strategie
+- Jobs:
+  - `SyncProjects`, `SyncEmployees`, `SyncTimeEntries`, `SyncAssignments`, `SyncAbsences`, `SyncTeams`.
+- Planung:
+  - Inkrementell: alle 15 min (nur geänderte seit `updated_at`).
+  - Vollabgleich: täglich 03:00.
+- Idizes: auf `moco_id` + Fremdschlüssel. Upserts nutzen.
+- Konflikte: MOCO dominiert. Lokale Änderungen nur, wenn explizit „local override“ Flag gesetzt.
+
+# Tests
+- Bevorzugt Feature-Tests gegen Repositories und HTTP-Fakes:
+  - API: `Http::fake([...])`, Fixtures unter `tests/Fixtures/moco/*.json`.
+  - Repos: Contract-Tests (einheitliche Schnittstelle für LocalDb/MocoApi).
+- Blade: `assertViewHas`, `assertSee`.
+- Jobs: Queue-fake, Assertions auf `dispatched`.
+
+# Indexing-Hinweise (Cursor)
+- Kontext-Priorität: Route/Controller → Request/Resource → Repository → Service(MOCO) → View.
+- Bevorzugte Pfade (Include):
+  - `app/Http/Controllers/**`
+  - `app/Repositories/**`
+  - `app/Services/Moco/**`
+  - `app/Sync/Jobs/**`
+  - `app/DTO/**`
+  - `app/Http/Requests/**`
+  - `app/Http/Resources/**`
+  - `app/Models/**`
+  - `routes/**`
+  - `resources/views/**`
+  - `tests/**`
+- Exclude:
+  - `vendor/**`, `node_modules/**`, `storage/**`, `bootstrap/**`, `public/**`.
+
+# Code-Stil & Sicherheit
+- PSR-12. Strict types, readonly DTOs, typed properties.
+- Secrets nur aus `.env`: `MOCO_API_TOKEN`, `MOCO_SUBDOMAIN`, `MOCO_TIMEOUT`.
+- Eingaben über FormRequests validieren. Blade standard-escaped. Keine Businesslogik in Views.
+
+# Performance
+- Pagination serverseitig. Filter an API durchreichen.
+- N+1 vermeiden. Eager Loading bei lokalen Reads.
+- Leichte Aggregationen lokal, schwere über vorberechnete Tabellen oder API-Reports.
+
+# Beobachtbarkeit
+- Eigener Log-Channel `moco` (API-Fehler, Latenzen, Rate-Limits).
+- Metriken: Fehlerquote, Retry-Anzahl, Cache-Hit-Rate.
+
+# Output-Regel
+- Erst kurz den Ansatz erklären, dann minimalen, lauffähigen Code.
+- Bei neuen Artefakten: Dateiname, Pfad, Befehl zum Anlegen/Registrieren angeben.

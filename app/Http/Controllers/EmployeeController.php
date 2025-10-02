@@ -1,223 +1,294 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use App\Models\Employee;
-use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use App\Services\Moco\EmployeesService;
 
-class EmployeeController extends Controller
+final class EmployeeController extends Controller
 {
     /**
-     * Export employees to CSV
+     * Listet Mitarbeiter mit einfacher Suche und Pagination.
      */
-    public function export()
+    public function index(Request $request): View
     {
-        $employees = DB::table('employees')->where('is_active', true)->get();
+        $q = trim((string) $request->get('q', ''));
 
-        $filename = 'mitarbeiter-auslastung-' . date('Y-m-d') . '.csv';
+        $employees = Employee::query()
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('first_name', 'like', "%{$q}%")
+                        ->orWhere('last_name', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->paginate(20)
+            ->withQueryString();
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function() use ($employees) {
-            $file = fopen('php://output', 'w');
-
-            // UTF-8 BOM für Excel
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            // Header
-            fputcsv($file, ['Mitarbeiter', 'Abteilung', 'Wochenkapazität (h)', 'Verplant (h)', 'Verfügbar (h)', 'Auslastung (%)'], ';');
-
-            // Daten
-            foreach ($employees as $employee) {
-                $assignments = DB::table('assignments')
-                    ->where('employee_id', $employee->id)
-                    ->where('start_date', '<=', now())
-                    ->where('end_date', '>=', now())
-                    ->sum('weekly_hours');
-
-                $utilization = $employee->weekly_capacity > 0
-                    ? round(($assignments / $employee->weekly_capacity) * 100)
-                    : 0;
-
-                fputcsv($file, [
-                    $employee->first_name . ' ' . $employee->last_name,
-                    $employee->department,
-                    $employee->weekly_capacity,
-                    $assignments,
-                    $employee->weekly_capacity - $assignments,
-                    $utilization
-                ], ';');
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return view('employees.index', compact('employees', 'q'));
     }
 
     /**
-     * Show import form
+     * Formular: Mitarbeiter anlegen.
      */
-    public function importForm()
-    {
-        return view('employees.import');
-    }
-
-    /**
-     * Process import
-     */
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048'
-        ]);
-
-        $file = $request->file('file');
-        $handle = fopen($file->getPathname(), 'r');
-        
-        // Skip header
-        fgetcsv($handle, 1000, ';');
-        
-        $imported = 0;
-        $errors = [];
-        
-        while (($data = fgetcsv($handle, 1000, ';')) !== false) {
-            try {
-                if (count($data) >= 6) {
-                    Employee::create([
-                        'first_name' => $data[0],
-                        'last_name' => $data[1],
-                        'department' => $data[2],
-                        'weekly_capacity' => (int)$data[3],
-                        'is_active' => $data[4] === '1' || strtolower($data[4]) === 'true',
-                        'email' => $data[5] ?? null,
-                    ]);
-                    $imported++;
-                }
-            } catch (Exception $e) {
-                $errors[] = "Zeile " . ($imported + 1) . ": " . $e->getMessage();
-            }
-        }
-        
-        fclose($handle);
-        
-        $message = "Erfolgreich {$imported} Mitarbeiter importiert.";
-        if (!empty($errors)) {
-            $message .= " Fehler: " . implode(', ', $errors);
-        }
-        
-        return redirect()->route('employees.index')->with('success', $message);
-    }
-
-    /**
-     * Display a listing of the employees.
-     */
-    public function index()
-    {
-        $employees = Employee::with(['assignments' => function($query) {
-            $query->where('start_date', '<=', now())
-                  ->where('end_date', '>=', now());
-        }, 'assignments.project'])
-        ->orderBy('is_active', 'desc')
-        ->orderBy('last_name', 'asc')
-        ->get();
-
-        return view('employees.index', compact('employees'));
-    }
-
-    /**
-     * Show the form for creating a new employee.
-     */
-    public function create()
+    public function create(): View
     {
         return view('employees.create');
     }
 
     /**
-     * Store a newly created employee in storage.
+     * Speichert neuen Mitarbeiter.
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'department' => 'required|string|max:255',
-            'weekly_capacity' => 'required|numeric|min:0|max:40',
-        ]);
+        $data = $this->validated($request);
 
-        DB::table('employees')->insert([
-            'first_name' => $validated['first_name'],
-            'last_name' => $validated['last_name'],
-            'department' => $validated['department'],
-            'weekly_capacity' => $validated['weekly_capacity'],
-            'is_active' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $employee = Employee::create($data);
 
-        return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich angelegt!');
+        return redirect()
+            ->route('employees.show', $employee)
+            ->with('status', 'Employee created.');
     }
 
     /**
-     * Display the specified employee.
+     * Detailseite: lädt optional MOCO-User über Service.
+     * Kein HTTP in Views.
      */
-    public function show(Employee $employee)
+    public function show(Employee $employee, EmployeesService $moco): View
     {
+        $mocoUser = null;
 
-        $assignments = DB::table('assignments')
-            ->join('projects', 'assignments.project_id', '=', 'projects.id')
-            ->where('assignments.employee_id', $employee->id)
-            ->select('assignments.*', 'projects.name as project_name')
-            ->get();
+        if (!empty($employee->moco_id)) {
+            try {
+                $mocoUser = $moco->getById($employee->moco_id);
+            } catch (\Throwable $e) {
+                // Leise degradieren; Details gehen ins Log im HTTP-Client
+                $mocoUser = null;
+            }
+        }
 
-        return view('employees.show', compact('employee', 'assignments'));
+        return view('employees.show', [
+            'employee' => $employee,
+            'mocoUser' => $mocoUser,
+        ]);
     }
 
     /**
-     * Show the form for editing the specified employee.
+     * Formular: Mitarbeiter bearbeiten.
      */
-    public function edit(Employee $employee)
+    public function edit(Employee $employee): View
     {
         return view('employees.edit', compact('employee'));
     }
 
     /**
-     * Update the specified employee in storage.
+     * Aktualisiert Mitarbeiterdaten.
      */
-    public function update(Request $request, Employee $employee)
+    public function update(Request $request, Employee $employee): RedirectResponse
     {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'department' => 'required|string|max:255',
-            'weekly_capacity' => 'required|numeric|min:0|max:40',
-        ]);
+        $data = $this->validated($request, $employee->id);
 
-        DB::table('employees')
-            ->where('id', $employee->id)
-            ->update([
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
-                'department' => $validated['department'],
-                'weekly_capacity' => $validated['weekly_capacity'],
-                'updated_at' => now(),
-            ]);
+        $employee->update($data);
 
-        return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich aktualisiert!');
+        return redirect()
+            ->route('employees.show', $employee)
+            ->with('status', 'Employee updated.');
     }
 
     /**
-     * Remove the specified employee from storage.
+     * Löscht Mitarbeiter.
      */
-    public function destroy(Employee $employee)
+    public function destroy(Employee $employee): RedirectResponse
     {
-        DB::table('employees')->where('id', $employee->id)->delete();
+        $employee->delete();
 
-        return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich gelöscht!');
+        return redirect()
+            ->route('employees.index')
+            ->with('status', 'Employee deleted.');
+    }
+
+    /**
+     * Export als CSV (UTF-8 mit BOM für Excel).
+     */
+    public function export()
+    {
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="employees.csv"',
+        ];
+
+        $callback = function () {
+            $out = fopen('php://output', 'w');
+            // BOM
+            fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            // Header
+            fputcsv($out, [
+                'id', 'first_name', 'last_name', 'email', 'moco_id',
+                'weekly_capacity', 'active', 'created_at', 'updated_at',
+            ]);
+
+            Employee::query()
+                ->orderBy('id')
+                ->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $e) {
+                        fputcsv($out, [
+                            $e->id,
+                            $e->first_name,
+                            $e->last_name,
+                            $e->email,
+                            $e->moco_id,
+                            $e->weekly_capacity,
+                            (int) ($e->active ?? 1),
+                            optional($e->created_at)->toDateTimeString(),
+                            optional($e->updated_at)->toDateTimeString(),
+                        ]);
+                    }
+                });
+
+            fclose($out);
+        };
+
+        return Response::stream($callback, 200, $headers);
+    }
+
+    /**
+     * Formular: Import anzeigen.
+     */
+    public function importForm(): View
+    {
+        return view('employees.import');
+    }
+
+    /**
+     * CSV-Import: Upsert nach E-Mail oder ID.
+     * Erwartet Kopfzeile wie im Export.
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $v = Validator::make($request->all(), [
+            'file' => ['required', 'file', 'mimes:csv,txt'],
+        ]);
+        $v->validate();
+
+        $path = $request->file('file')->store('imports');
+
+        $handle = fopen(Storage::path($path), 'r');
+        if ($handle === false) {
+            return back()->withErrors(['file' => 'File could not be opened.']);
+        }
+
+        // Skip BOM
+        $firstBytes = fread($handle, 3);
+        if ($firstBytes !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+            // Not BOM, rewind to start
+            fseek($handle, 0);
+        }
+
+        // Header
+        $header = fgetcsv($handle);
+        $map = $this->headerMap($header);
+
+        $count = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            $data = $this->rowToEmployeeData($row, $map);
+
+            // Upsert anhand E-Mail oder ID
+            $employee = null;
+
+            if (!empty($data['id'])) {
+                $employee = Employee::find((int) $data['id']);
+            }
+
+            if (!$employee && !empty($data['email'])) {
+                $employee = Employee::where('email', $data['email'])->first();
+            }
+
+            if ($employee) {
+                $employee->update($data);
+            } else {
+                Employee::create($data);
+            }
+
+            $count++;
+        }
+
+        fclose($handle);
+
+        return redirect()
+            ->route('employees.index')
+            ->with('status', "Imported {$count} employees.");
+    }
+
+    /**
+     * Validierung für Create/Update.
+     */
+    private function validated(Request $request, ?int $ignoreId = null): array
+    {
+        $emailRule = 'nullable|email';
+        if ($ignoreId) {
+            $emailRule .= '|unique:employees,email,' . $ignoreId;
+        } else {
+            $emailRule .= '|unique:employees,email';
+        }
+
+        return $request->validate([
+            'first_name'      => ['required', 'string', 'max:100'],
+            'last_name'       => ['required', 'string', 'max:100'],
+            'email'           => [$emailRule],
+            'moco_id'         => ['nullable', 'integer'],
+            'weekly_capacity' => ['nullable', 'numeric', 'min:0'],
+            'active'          => ['nullable', 'boolean'],
+        ]);
+    }
+
+    /**
+     * Mappt CSV-Header auf Indizes.
+     */
+    private function headerMap(?array $header): array
+    {
+        $map = [];
+        if (!$header) {
+            return $map;
+        }
+
+        foreach ($header as $i => $col) {
+            $key = strtolower(trim((string) $col));
+            $map[$key] = $i;
+        }
+
+        return $map;
+    }
+
+    /**
+     * Wandelt eine CSV-Zeile in Employee-Attribute um.
+     */
+    private function rowToEmployeeData(array $row, array $map): array
+    {
+        $get = function (string $key, $default = null) use ($row, $map) {
+            if (!array_key_exists($key, $map)) {
+                return $default;
+            }
+            $v = $row[$map[$key]] ?? $default;
+            return is_string($v) ? trim($v) : $v;
+        };
+
+        return [
+            'id'              => $get('id') !== null ? (int) $get('id') : null,
+            'first_name'      => $get('first_name', $get('firstname', '')),
+            'last_name'       => $get('last_name', $get('lastname', '')),
+            'email'           => $get('email'),
+            'moco_id'         => $get('moco_id') !== null ? (int) $get('moco_id') : null,
+            'weekly_capacity' => $get('weekly_capacity') !== null ? (float) $get('weekly_capacity') : null,
+            'active'          => $get('active') !== null ? (bool) $get('active') : true,
+        ];
     }
 }

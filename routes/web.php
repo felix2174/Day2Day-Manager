@@ -8,6 +8,8 @@ use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\GanttController;
+use App\Http\Controllers\MocoController;
+use App\Http\Controllers\TimeEntryController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -109,6 +111,30 @@ Route::middleware('auth')->group(function () {
     Route::get('/gantt', [GanttController::class, 'index'])->name('gantt.index');
     Route::get('/gantt/export', [GanttController::class, 'export'])->name('gantt.export');
     Route::get('/gantt/bottlenecks', [GanttController::class, 'bottlenecks'])->name('gantt.bottlenecks');
+
+    // MOCO Integration
+    Route::get('/moco', [MocoController::class, 'index'])->name('moco.index');
+    Route::get('/moco/test-connection', [MocoController::class, 'testConnection'])->name('moco.test-connection');
+    Route::get('/moco/projects', [MocoController::class, 'getProjects'])->name('moco.projects');
+    Route::get('/moco/users', [MocoController::class, 'getUsers'])->name('moco.users');
+    Route::get('/moco/activities', [MocoController::class, 'getActivities'])->name('moco.activities');
+    Route::get('/moco/companies', [MocoController::class, 'getCompanies'])->name('moco.companies');
+    Route::get('/moco/contacts', [MocoController::class, 'getContacts'])->name('moco.contacts');
+    Route::get('/moco/deals', [MocoController::class, 'getDeals'])->name('moco.deals');
+    Route::get('/moco/invoices', [MocoController::class, 'getInvoices'])->name('moco.invoices');
+    Route::get('/moco/offers', [MocoController::class, 'getOffers'])->name('moco.offers');
+    Route::get('/moco/planning-entries', [MocoController::class, 'getPlanningEntries'])->name('moco.planning-entries');
+    Route::get('/moco/profile', [MocoController::class, 'getProfile'])->name('moco.profile');
+    Route::post('/moco/sync-projects', [MocoController::class, 'syncProjects'])->name('moco.sync-projects');
+Route::post('/moco/update-capacities', [MocoController::class, 'updateCapacities'])->name('moco.update-capacities');
+    Route::post('/moco/projects', [MocoController::class, 'createProject'])->name('moco.create-project');
+    Route::put('/moco/projects/{id}', [MocoController::class, 'updateProject'])->name('moco.update-project');
+    Route::delete('/moco/projects/{id}', [MocoController::class, 'deleteProject'])->name('moco.delete-project');
+
+    // Time Entries (Zeiterfassung)
+    Route::resource('time-entries', TimeEntryController::class);
+    Route::post('/time-entries/update-all-progress', [TimeEntryController::class, 'updateAllProgress'])->name('time-entries.update-all-progress');
+    Route::get('/time-entries/statistics', [TimeEntryController::class, 'getStatistics'])->name('time-entries.statistics');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

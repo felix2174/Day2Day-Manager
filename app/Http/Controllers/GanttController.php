@@ -18,28 +18,40 @@ class GanttController extends Controller
         $dateFrom = $request->get('date_from', now()->format('Y-m-d'));
         $dateTo = $request->get('date_to', now()->addMonths(6)->format('Y-m-d'));
         
-        $projects = Project::whereNotNull('start_date')
-            ->whereNotNull('end_date')
+        // Lade alle Projekte (inkl. MOCO-Projekte) mit oder ohne Start-/Enddaten
+        $projects = Project::with(['assignments.employee', 'responsible'])
             ->where(function($query) use ($dateFrom, $dateTo) {
-                $query->whereBetween('start_date', [$dateFrom, $dateTo])
-                      ->orWhereBetween('end_date', [$dateFrom, $dateTo])
-                      ->orWhere(function($q) use ($dateFrom, $dateTo) {
-                          $q->where('start_date', '<=', $dateFrom)
-                            ->where('end_date', '>=', $dateTo);
+                // Projekte mit Zeiträumen im gewählten Bereich
+                $query->where(function($q) use ($dateFrom, $dateTo) {
+                    $q->whereNotNull('start_date')
+                      ->whereNotNull('end_date')
+                      ->where(function($subQ) use ($dateFrom, $dateTo) {
+                          $subQ->whereBetween('start_date', [$dateFrom, $dateTo])
+                               ->orWhereBetween('end_date', [$dateFrom, $dateTo])
+                               ->orWhere(function($innerQ) use ($dateFrom, $dateTo) {
+                                   $innerQ->where('start_date', '<=', $dateFrom)
+                                         ->where('end_date', '>=', $dateTo);
+                               });
                       });
+                })
+                // ODER MOCO-Projekte ohne lokale Zeiträume (zeige alle)
+                ->orWhereNotNull('moco_id');
             })
-            ->with(['assignments.employee', 'responsible'])
             ->orderBy('start_date')
+            ->orderBy('name')
             ->get();
 
         // Abwesenheits-Analyse für Gantt-Diagramm
         $absenceWarnings = $this->analyzeAbsences($projects);
 
+        // Erweiterte Bottleneck-Analyse
+        $bottleneckAnalysis = $this->analyzeAdvancedBottlenecks($projects);
+
         // Timeline-Ansicht (Tag, Woche, Monat)
         $timelineView = $request->get('view', 'day'); // Standard: Tag
         $timelineData = $this->generateTimelineData($timelineView, $dateFrom, $dateTo);
 
-        return view('gantt.index', compact('projects', 'absenceWarnings', 'timelineData', 'timelineView', 'dateFrom', 'dateTo'));
+        return view('gantt.index', compact('projects', 'absenceWarnings', 'bottleneckAnalysis', 'timelineData', 'timelineView', 'dateFrom', 'dateTo'));
     }
 
     private function analyzeAbsences($projects)
@@ -91,6 +103,61 @@ class GanttController extends Controller
         }
 
         return $absenceWarnings;
+    }
+
+    /**
+     * Erweiterte Bottleneck-Analyse für alle Projekte
+     */
+    private function analyzeAdvancedBottlenecks($projects)
+    {
+        $bottlenecks = [];
+        $resourceConflicts = [];
+        $criticalPaths = [];
+
+        foreach ($projects as $project) {
+            $projectAnalysis = $project->analyzeMocoData();
+            
+            // Projekt-spezifische Bottlenecks
+            if ($projectAnalysis['bottlenecks']['total_count'] > 0) {
+                $bottlenecks[] = [
+                    'project' => $project,
+                    'bottlenecks' => $projectAnalysis['bottlenecks']['bottlenecks'],
+                    'critical_count' => $projectAnalysis['bottlenecks']['critical_count'],
+                    'warning_count' => $projectAnalysis['bottlenecks']['warning_count']
+                ];
+            }
+
+            // Ressourcen-Konflikte zwischen Projekten
+            $teamMembers = $projectAnalysis['team']['team_members'];
+            foreach ($teamMembers as $member) {
+                if ($member['utilization'] > 100) {
+                    $resourceConflicts[] = [
+                        'employee' => $member['employee'],
+                        'project' => $project,
+                        'utilization' => $member['utilization'],
+                        'overload' => $member['utilization'] - 100
+                    ];
+                }
+            }
+
+            // Kritische Pfade (überfällige Projekte)
+            if ($projectAnalysis['timeline'] && $projectAnalysis['timeline']['is_overdue']) {
+                $criticalPaths[] = [
+                    'project' => $project,
+                    'overdue_days' => abs($projectAnalysis['timeline']['remaining_days']),
+                    'budget_utilization' => $projectAnalysis['budget']['budget_utilization']
+                ];
+            }
+        }
+
+        return [
+            'project_bottlenecks' => $bottlenecks,
+            'resource_conflicts' => $resourceConflicts,
+            'critical_paths' => $criticalPaths,
+            'total_bottlenecks' => count($bottlenecks),
+            'total_conflicts' => count($resourceConflicts),
+            'total_critical' => count($criticalPaths)
+        ];
     }
 
     private function generateTimelineData($view, $dateFrom = null, $dateTo = null)

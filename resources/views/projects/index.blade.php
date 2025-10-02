@@ -13,19 +13,19 @@
                 <div style="display: flex; gap: 20px; margin-top: 10px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="color: #6b7280; font-size: 14px;">Gesamt:</span>
-                        <span style="font-weight: 600; color: #111827;">{{ $projects->count() }}</span>
+                        <span style="font-weight: 600; color: #111827;">{{ $totalCount }}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="color: #6b7280; font-size: 14px;">Aktiv:</span>
-                        <span style="font-weight: 600; color: #059669;">{{ $projects->where('status', 'active')->count() }}</span>
+                        <span style="font-weight: 600; color: #059669;">{{ $activeCount }}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="color: #6b7280; font-size: 14px;">Geplant:</span>
-                        <span style="font-weight: 600; color: #3b82f6;">{{ $projects->where('status', 'planning')->count() }}</span>
+                        <span style="font-weight: 600; color: #3b82f6;">{{ $planningCount }}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="color: #6b7280; font-size: 14px;">Abgeschlossen:</span>
-                        <span style="font-weight: 600; color: #6b7280;">{{ $projects->where('status', 'completed')->count() }}</span>
+                        <span style="font-weight: 600; color: #6b7280;">{{ $completedCount }}</span>
                     </div>
                 </div>
             </div>
@@ -61,7 +61,35 @@
         @forelse($projects as $project)
             <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <!-- Project Header -->
-                <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                <div style="padding: 20px; border-bottom: 1px solid #e5e7eb; position: relative;">
+                    @php
+                        $isCritical = $project->status == 'active' && 
+                                     ($project->calculated_progress ?? $project->progress) < 50 && 
+                                     \Carbon\Carbon::parse($project->end_date)->diffInDays(now()) < 30;
+                        $isOverBudget = isset($project->budget_utilization) && $project->budget_utilization > 100;
+                        $isOverTeam = isset($project->team_utilization) && $project->team_utilization > 100;
+                    @endphp
+                    
+                    @if($isCritical || $isOverBudget || $isOverTeam)
+                        <div style="position: absolute; top: 8px; right: 8px; display: flex; gap: 4px;">
+                            @if($isCritical)
+                                <span style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 600;">
+                                    KRITISCH
+                                </span>
+                            @endif
+                            @if($isOverBudget)
+                                <span style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 600;">
+                                    ÜBER BUDGET
+                                </span>
+                            @endif
+                            @if($isOverTeam)
+                                <span style="background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 600;">
+                                    ÜBERLASTET
+                                </span>
+                            @endif
+                        </div>
+                    @endif
+                    
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                         <div style="flex: 1;">
                             <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">{{ $project->name }}</h3>
@@ -84,22 +112,42 @@
                     <div style="margin-bottom: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <span style="font-size: 14px; font-weight: 500; color: #374151;">Fortschritt</span>
-                            <span style="font-size: 14px; font-weight: 600; color: #111827;">{{ round($project->progress) }}%</span>
+                            <span style="font-size: 14px; font-weight: 600; color: #111827;">{{ round($project->calculated_progress ?? $project->progress) }}%</span>
                         </div>
                         <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
-                            <div style="background: #2563eb; height: 100%; width: {{ $project->progress }}%; transition: width 0.3s;"></div>
+                            <div style="background: {{ ($project->calculated_progress ?? $project->progress) >= 100 ? '#10b981' : (($project->calculated_progress ?? $project->progress) >= 75 ? '#f59e0b' : '#2563eb') }}; height: 100%; width: {{ $project->calculated_progress ?? $project->progress }}%; transition: width 0.3s;"></div>
                         </div>
                     </div>
 
                     <!-- Project Stats -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                         <div>
-                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Geschätzte Stunden</div>
-                            <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ $project->estimated_hours }}h</div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Arbeitsstunden</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">
+                                @if(($project->actual_hours ?? 0) > 0)
+                                    {{ number_format($project->actual_hours, 1) }}h
+                                    @if($project->estimated_hours > 0)
+                                        <span style="font-size: 12px; color: #6b7280;">/ {{ $project->estimated_hours }}h</span>
+                                    @endif
+                                @else
+                                    <span style="color: #9ca3af; font-size: 14px;">Keine Zeiterfassung</span>
+                                @endif
+                            </div>
                         </div>
                         <div>
-                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Stundensatz</div>
-                            <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ number_format($project->hourly_rate, 2) }}€</div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Kosten</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">
+                                @if(($project->actual_cost ?? 0) > 0)
+                                    {{ number_format($project->actual_cost, 0) }}€
+                                    @if($project->budget_utilization > 0)
+                                        <span style="font-size: 12px; color: {{ $project->budget_utilization > 100 ? '#dc2626' : ($project->budget_utilization > 80 ? '#f59e0b' : '#6b7280') }};">
+                                            ({{ round($project->budget_utilization) }}%)
+                                        </span>
+                                    @endif
+                                @else
+                                    <span style="color: #9ca3af; font-size: 14px;">Keine Kosten</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
 
@@ -112,7 +160,36 @@
                         </div>
                     </div>
 
-                    <!-- Team Members -->
+                    <!-- Team Members & Budget Info -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Team</div>
+                            <div style="font-size: 14px; color: #374151;">
+                                @if(($project->team_members_count ?? $project->assignments->count()) > 0)
+                                    {{ $project->team_members_count ?? $project->assignments->count() }} Mitglieder
+                                    @if(isset($project->team_utilization) && $project->team_utilization > 0)
+                                        <span style="font-size: 12px; color: {{ $project->team_utilization > 100 ? '#dc2626' : ($project->team_utilization > 80 ? '#f59e0b' : '#6b7280') }};">
+                                            ({{ round($project->team_utilization) }}% ausgelastet)
+                                        </span>
+                                    @endif
+                                @else
+                                    <span style="color: #9ca3af;">Kein Team zugewiesen</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Budget</div>
+                            <div style="font-size: 14px; color: #374151;">
+                                @if($project->budget > 0)
+                                    {{ number_format($project->remaining_budget ?? $project->budget, 0) }}€ verbleibend
+                                @else
+                                    <span style="color: #9ca3af;">Kein Budget gesetzt</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Team Members List -->
                     @if($project->assignments->count() > 0)
                         <div style="margin-bottom: 16px;">
                             <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">Team-Mitglieder</div>
@@ -127,6 +204,23 @@
                                         +{{ $project->assignments->count() - 3 }} weitere
                                     </div>
                                 @endif
+                            </div>
+                        </div>
+                    @else
+                        <!-- Konfigurations-Hinweise für leere Projekte -->
+                        <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">
+                            <div style="font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 500;">💡 Konfiguration erforderlich:</div>
+                            <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
+                                @if($project->budget == 0)
+                                    • Budget setzen für Kostenverfolgung<br>
+                                @endif
+                                @if($project->assignments->count() == 0)
+                                    • Team-Mitglieder zuweisen<br>
+                                @endif
+                                @if(($project->actual_hours ?? 0) == 0)
+                                    • Zeiterfassung aktivieren<br>
+                                @endif
+                                <span style="color: #3b82f6;">→ Projekt bearbeiten</span>
                             </div>
                         </div>
                     @endif
@@ -155,10 +249,7 @@
             <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px;">
                 <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
                 <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0 0 8px 0;">Keine Projekte</h3>
-                <p style="color: #6b7280; margin: 0 0 24px 0;">Beginnen Sie mit der Erstellung Ihres ersten Projekts.</p>
-                <a href="{{ route('projects.create') }}" style="background: #ffffff; color: #374151; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    ➕ Neues Projekt erstellen
-                </a>
+                <p style="color: #6b7280; margin: 0;">Der Bereich Projekt-Verwaltung ist derzeit leer.</p>
             </div>
         @endforelse
     </div>

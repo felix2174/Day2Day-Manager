@@ -1,202 +1,325 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
 use App\Models\Project;
-use App\Models\Employee;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-use Exception;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use App\Services\Projects\ProjectProgressService;
+use App\Services\Projects\BudgetAnalysisService;
+use App\Services\Projects\TeamAnalysisService;
+use App\Services\Projects\TimelineAnalysisService;
+use App\Services\Projects\BottleneckAnalyzer;
+use App\Services\MocoService;
+use Illuminate\Support\Facades\Log;
 
-class ProjectController extends Controller
+
+
+final class ProjectController extends Controller
 {
-    /**
-     * Display the specified project.
-     */
-    public function show(Project $project)
+    public function index(Request $request): View
     {
+        $q = trim((string) $request->get('q', ''));
 
-        // Lade alle Zuweisungen mit Mitarbeiter-Details
-        $assignments = DB::table('assignments')
-            ->join('employees', 'assignments.employee_id', '=', 'employees.id')
-            ->where('assignments.project_id', $project->id)
-            ->select(
-                'assignments.*',
-                DB::raw("employees.first_name || ' ' || employees.last_name as employee_name"),
-                'employees.department as employee_department'
-            )
-            ->get();
+        $projects = Project::query()
+            ->with(['assignments.employee', 'timeEntries', 'responsible'])
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('name', 'like', "%{$q}%")
+                        ->orWhere('description', 'like', "%{$q}%")
+                        ->orWhere('identifier', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('projects.show', compact('project', 'assignments'));
+        // Service-Instanzen für Berechnungen
+        $progressService = new ProjectProgressService();
+        $budgetService = new BudgetAnalysisService();
+        $teamService = new TeamAnalysisService();
+
+        // Für jedes Projekt die berechneten Daten hinzufügen
+        $projects->getCollection()->transform(function ($project) use ($progressService, $budgetService, $teamService) {
+            // Fortschritt berechnen
+            $progressData = $progressService->cachedDetails($project, 60);
+            
+            // Budget-Daten berechnen
+            $budgetData = $budgetService->cached($project, 60);
+            
+            // Team-Daten berechnen
+            $teamData = $teamService->summary($project);
+            
+            // Berechnete Werte dem Projekt hinzufügen
+            $project->calculated_progress = $progressData['automatic'];
+            $project->actual_hours = $progressData['total_hours_worked'];
+            $project->actual_cost = $budgetData['actual_cost'];
+            $project->budget_utilization = $budgetData['budget_utilization'];
+            $project->remaining_budget = $budgetData['remaining_budget'];
+            $project->team_members_count = count($teamData['members']);
+            $project->team_utilization = $teamData['team_utilization'];
+            
+            return $project;
+        });
+
+        // Statistiken für die View
+        $totalCount = Project::count();
+        $activeCount = Project::where('status', 'active')->count();
+        $planningCount = Project::where('status', 'planning')->count();
+        $completedCount = Project::where('status', 'completed')->count();
+
+        return view('projects.index', compact('projects', 'q', 'totalCount', 'activeCount', 'planningCount', 'completedCount'));
     }
 
-    public function index()
+    public function create(): View
     {
-        $projects = Project::withCount('assignments')
-            ->with(['assignments.employee', 'responsible'])
-            ->get();
-        return view('projects.index', compact('projects'));
+        return view('projects.create');
     }
 
-    public function create()
+    public function store(Request $request): RedirectResponse
     {
-        $employees = Employee::where('is_active', true)->get();
-        return view('projects.create', compact('employees'));
+        $data = $this->validated($request);
+
+        $project = Project::create($data);
+
+        return redirect()
+            ->route('projects.show', $project)
+            ->with('status', 'Project created.');
     }
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|max:100',
-            'description' => 'nullable',
-            'status' => 'required|in:planning,active,completed',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after:start_date',
-            'estimated_hours' => 'nullable|integer|min:0',
-            'hourly_rate' => 'nullable|numeric|min:0',
-            'progress' => 'nullable|integer|min:0|max:100',
-            'responsible_id' => 'nullable|exists:employees,id'
-        ]);
-
-        Project::create($validated);
-        return redirect('/projects')->with('success', 'Projekt erfolgreich angelegt');
-    }
-
-    public function edit(Project $project)
-    {
-        $employees = Employee::where('is_active', true)->get();
-        return view('projects.edit', compact('project', 'employees'));
-    }
-
-    public function importForm()
-    {
-        return view('projects.import');
-    }
-
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file' => 'required|file|mimes:csv,txt|max:2048'
-        ]);
-
-        $file = $request->file('file');
-        $handle = fopen($file->getPathname(), 'r');
+    public function show(
+        Project $project,
+        ProjectProgressService $progress,
+        BudgetAnalysisService $budget,
+        TeamAnalysisService $team,
+        TimelineAnalysisService $timeline,
+        BottleneckAnalyzer $bottlenecks,
+        MocoService $mocoService
+    ): View {
+        $progressDetails = $progress->cachedDetails($project, 60);
+        $budgetDetails   = $budget->cached($project, 60);
+        $teamSummary     = $team->summary($project);
+        $timelineSummary = $timeline->cached($project, 60);
+        $bn              = $bottlenecks->analyze($project, $teamSummary, $budgetDetails, $timelineSummary, $progressDetails);
         
-        // Skip header
-        fgetcsv($handle, 1000, ';');
-        
-        $imported = 0;
-        $errors = [];
-        
-        while (($data = fgetcsv($handle, 1000, ';')) !== false) {
+        // MOCO-Daten abrufen, falls moco_id vorhanden
+        $mocoData = null;
+        if ($project->moco_id) {
             try {
-                if (count($data) >= 6) {
-                    // Find responsible employee by name
-                    $responsibleId = null;
-                    if (isset($data[8]) && !empty($data[8])) {
-                        $responsibleName = $data[8];
-                        $responsible = Employee::whereRaw("CONCAT(first_name, ' ', last_name) = ?", [$responsibleName])->first();
-                        if ($responsible) {
-                            $responsibleId = $responsible->id;
-                        }
-                    }
-
-                    Project::create([
-                        'name' => $data[0],
-                        'description' => $data[1] ?? null,
-                        'status' => $data[2] ?? 'planning',
-                        'start_date' => $data[3] ? Carbon::createFromFormat('d.m.Y', $data[3]) : null,
-                        'end_date' => $data[4] ? Carbon::createFromFormat('d.m.Y', $data[4]) : null,
-                        'progress' => (int)($data[5] ?? 0),
-                        'estimated_hours' => $data[6] ? (int)$data[6] : null,
-                        'hourly_rate' => $data[7] ? (float)$data[7] : null,
-                        'responsible_id' => $responsibleId,
-                    ]);
-                    $imported++;
-                }
-            } catch (Exception $e) {
-                $errors[] = "Zeile " . ($imported + 1) . ": " . $e->getMessage();
+                $mocoData = $mocoService->getProjectComprehensive($project->moco_id);
+            } catch (\Exception $e) {
+                // Log error but don't break the page
+                Log::warning("MOCO data fetch failed for project {$project->id}: " . $e->getMessage());
             }
         }
-        
-        fclose($handle);
-        
-        $message = "Erfolgreich {$imported} Projekte importiert.";
-        if (!empty($errors)) {
-            $message .= " Fehler: " . implode(', ', $errors);
-        }
-        
-        return redirect()->route('projects.index')->with('success', $message);
+    
+        return view('projects.show', [
+            'project'     => $project,
+            'progress'    => $progressDetails,
+            'budget'      => $budgetDetails,
+            'team'        => $teamSummary,
+            'timeline'    => $timelineSummary,
+            'bottlenecks' => $bn,
+            'mocoData'    => $mocoData,
+        ]);
+    }
+    
+    
+
+    public function edit(Project $project): View
+    {
+        return view('projects.edit', compact('project'));
+    }
+
+    public function update(Request $request, Project $project): RedirectResponse
+    {
+        $data = $this->validated($request, $project->id);
+
+        $project->update($data);
+
+        return redirect()
+            ->route('projects.show', $project)
+            ->with('status', 'Project updated.');
+    }
+
+    public function destroy(Project $project): RedirectResponse
+    {
+        $project->delete();
+
+        return redirect()
+            ->route('projects.index')
+            ->with('status', 'Project deleted.');
     }
 
     public function export()
     {
-        $projects = Project::withCount('assignments')->get();
-
-        $filename = 'projekte-uebersicht-' . date('Y-m-d') . '.csv';
-
         $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="projects.csv"',
         ];
 
-        $callback = function() use ($projects) {
-            $file = fopen('php://output', 'w');
+        $callback = function () {
+            $out = fopen('php://output', 'w');
+            fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM
+            fputcsv($out, [
+                'id','name','description','status','identifier',
+                'start_date','end_date','estimated_hours','hourly_rate','progress',
+                'billable','budget','moco_id','created_at','updated_at',
+            ]);
 
-            // UTF-8 BOM für Excel
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            Project::query()
+                ->orderBy('id')
+                ->chunk(500, function ($rows) use ($out) {
+                    foreach ($rows as $p) {
+                        fputcsv($out, [
+                            $p->id,
+                            $p->name,
+                            $p->description,
+                            $p->status,
+                            $p->identifier,
+                            (string) $p->start_date,
+                            (string) $p->end_date,
+                            $p->estimated_hours,
+                            $p->hourly_rate,
+                            $p->progress,
+                            (int) ($p->billable ?? 0),
+                            $p->budget,
+                            $p->moco_id,
+                            optional($p->created_at)->toDateTimeString(),
+                            optional($p->updated_at)->toDateTimeString(),
+                        ]);
+                    }
+                });
 
-            // Header
-            fputcsv($file, ['Projekt', 'Beschreibung', 'Status', 'Startdatum', 'Enddatum', 'Fortschritt (%)', 'Geschätzte Stunden', 'Stundensatz (€)', 'Verantwortlicher', 'Zuweisungen'], ';');
-
-            // Daten
-            foreach ($projects as $project) {
-                fputcsv($file, [
-                    $project->name,
-                    $project->description ?? '',
-                    ucfirst($project->status),
-                    Carbon::parse($project->start_date)->format('d.m.Y'),
-                    $project->end_date ? Carbon::parse($project->end_date)->format('d.m.Y') : '',
-                    $project->progress ?? 0,
-                    $project->estimated_hours ?? '',
-                    $project->hourly_rate ?? '',
-                    $project->responsible ? $project->responsible->first_name . ' ' . $project->responsible->last_name : '',
-                    $project->assignments_count
-                ], ';');
-            }
-
-            fclose($file);
+            fclose($out);
         };
 
-        return response()->stream($callback, 200, $headers);
+        return Response::stream($callback, 200, $headers);
     }
 
-    public function update(Request $request, Project $project)
+    public function importForm(): View
     {
-        $validated = $request->validate([
-            'name' => 'required|max:100',
-            'description' => 'nullable',
-            'status' => 'required|in:planning,active,completed',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after:start_date',
-            'estimated_hours' => 'nullable|integer|min:0',
-            'hourly_rate' => 'nullable|numeric|min:0',
-            'progress' => 'nullable|integer|min:0|max:100',
-            'responsible_id' => 'nullable|exists:employees,id'
+        return view('projects.import');
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $v = Validator::make($request->all(), [
+            'file' => ['required', 'file', 'mimes:csv,txt'],
         ]);
+        $v->validate();
 
-        $project->update($validated);
-        return redirect('/projects')->with('success', 'Projekt erfolgreich aktualisiert');
-    }
+        $path = $request->file('file')->store('imports');
 
-    public function destroy(Project $project)
-    {
-        if ($project->assignments()->count() > 0) {
-            return back()->with('error', 'Projekt kann nicht gelöscht werden - es gibt noch Zuweisungen');
+        $handle = fopen(Storage::path($path), 'r');
+        if ($handle === false) {
+            return back()->withErrors(['file' => 'File could not be opened.']);
         }
 
-        $project->delete();
-        return redirect('/projects')->with('success', 'Projekt erfolgreich gelöscht');
+        $firstBytes = fread($handle, 3);
+        if ($firstBytes !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
+            fseek($handle, 0);
+        }
+
+        $header = fgetcsv($handle);
+        $map = $this->headerMap($header);
+
+        $count = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            $data = $this->rowToProjectData($row, $map);
+
+            $project = null;
+            if (!empty($data['id'])) {
+                $project = Project::find((int) $data['id']);
+            }
+            if (!$project && !empty($data['identifier'])) {
+                $project = Project::where('identifier', $data['identifier'])->first();
+            }
+
+            if ($project) {
+                $project->update($data);
+            } else {
+                Project::create($data);
+            }
+            $count++;
+        }
+
+        fclose($handle);
+
+        return redirect()
+            ->route('projects.index')
+            ->with('status', "Imported {$count} projects.");
+    }
+
+    private function validated(Request $request, ?int $ignoreId = null): array
+    {
+        $identifierRule = 'nullable|string|max:100';
+        if ($ignoreId) {
+            $identifierRule .= '|unique:projects,identifier,' . $ignoreId;
+        } else {
+            $identifierRule .= '|unique:projects,identifier';
+        }
+
+        return $request->validate([
+            'name'            => ['required', 'string', 'max:255'],
+            'description'     => ['nullable', 'string'],
+            'status'          => ['nullable', 'string', 'max:100'],
+            'identifier'      => [$identifierRule],
+            'start_date'      => ['nullable', 'date'],
+            'end_date'        => ['nullable', 'date', 'after_or_equal:start_date'],
+            'estimated_hours' => ['nullable', 'numeric', 'min:0'],
+            'hourly_rate'     => ['nullable', 'numeric', 'min:0'],
+            'progress'        => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'billable'        => ['nullable', 'boolean'],
+            'budget'          => ['nullable', 'numeric', 'min:0'],
+            'moco_id'         => ['nullable', 'integer'],
+            'responsible_id'  => ['nullable', 'integer'],
+        ]);
+    }
+
+    private function headerMap(?array $header): array
+    {
+        $map = [];
+        if (!$header) {
+            return $map;
+        }
+        foreach ($header as $i => $col) {
+            $key = strtolower(trim((string) $col));
+            $map[$key] = $i;
+        }
+        return $map;
+    }
+
+    private function rowToProjectData(array $row, array $map): array
+    {
+        $get = function (string $key, $default = null) use ($row, $map) {
+            if (!array_key_exists($key, $map)) {
+                return $default;
+            }
+            $v = $row[$map[$key]] ?? $default;
+            return is_string($v) ? trim($v) : $v;
+        };
+
+        return [
+            'id'              => $get('id') !== null ? (int) $get('id') : null,
+            'name'            => $get('name', ''),
+            'description'     => $get('description'),
+            'status'          => $get('status'),
+            'identifier'      => $get('identifier'),
+            'start_date'      => $get('start_date') ?: null,
+            'end_date'        => $get('end_date') ?: null,
+            'estimated_hours' => $get('estimated_hours') !== null ? (float) $get('estimated_hours') : null,
+            'hourly_rate'     => $get('hourly_rate') !== null ? (float) $get('hourly_rate') : null,
+            'progress'        => $get('progress') !== null ? (float) $get('progress') : null,
+            'billable'        => $get('billable') !== null ? (bool) $get('billable') : null,
+            'budget'          => $get('budget') !== null ? (float) $get('budget') : null,
+            'moco_id'         => $get('moco_id') !== null ? (int) $get('moco_id') : null,
+            'responsible_id'  => $get('responsible_id') !== null ? (int) $get('responsible_id') : null,
+        ];
     }
 }

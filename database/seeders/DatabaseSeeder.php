@@ -9,15 +9,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            UserSeeder::class,
-            EmployeeSeeder::class,
-            TeamSeeder::class,
-            ProjectSeeder::class,
-            AssignmentSeeder::class,
-            AbsenceSeeder::class,
-            TeamAssignmentSeeder::class,
-            TimeEntrySeeder::class,
-            AssignProjectResponsiblesSeeder::class,
+            MocoDataSeeder::class,
         ]);
     }
 }
