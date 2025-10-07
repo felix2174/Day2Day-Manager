@@ -265,6 +265,52 @@ class AssignmentSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+
+            // --- Zusätzliche Lastspitzen für Engpässe ---
+            // Thomas: zusätzliche Datenbank-Aufgabe (Engpass Backend)
+            [
+                'employee_id' => $employees['thomas'],
+                'project_id' => $projects['database'],
+                'start_date' => Carbon::now()->addDays(3),
+                'end_date' => Carbon::now()->addWeeks(6),
+                'weekly_hours' => 25,
+                'priority_level' => 'high',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            // Sarah: zusätzliches CRM-Feature (Engpass Frontend)
+            [
+                'employee_id' => $employees['sarah'],
+                'project_id' => $projects['crm'],
+                'start_date' => Carbon::now()->addDays(2),
+                'end_date' => Carbon::now()->addWeeks(10),
+                'weekly_hours' => 20,
+                'priority_level' => 'high',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            // Lisa: zusätzliches Mobile-Redesign (Engpass Frontend)
+            [
+                'employee_id' => $employees['lisa'],
+                'project_id' => $projects['mobile'],
+                'start_date' => Carbon::now()->addDays(1),
+                'end_date' => Carbon::now()->addWeeks(8),
+                'weekly_hours' => 15,
+                'priority_level' => 'high',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            // Michael: Security-Hardening zusätzlich zu eCommerce/DB (Engpass Backend)
+            [
+                'employee_id' => $employees['michael'],
+                'project_id' => $projects['security'],
+                'start_date' => Carbon::now(),
+                'end_date' => Carbon::now()->addWeeks(7),
+                'weekly_hours' => 20,
+                'priority_level' => 'high',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
         ]);
 
         echo "Erweiterte Zuweisungen erfolgreich erstellt!\n";

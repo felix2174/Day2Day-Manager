@@ -112,6 +112,25 @@ class AbsenceSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+            // Engpass-Fokus: Sarah und Lisa (Frontend) fallen in kritischer Phase teilweise aus
+            [
+                'employee_id' => $employees['sarah'],
+                'type' => 'fortbildung',
+                'start_date' => Carbon::now()->addDays(6)->format('Y-m-d'),
+                'end_date' => Carbon::now()->addDays(8)->format('Y-m-d'),
+                'reason' => 'Zertifizierung',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'employee_id' => $employees['lisa'],
+                'type' => 'krankheit',
+                'start_date' => Carbon::now()->addDays(9)->format('Y-m-d'),
+                'end_date' => Carbon::now()->addDays(12)->format('Y-m-d'),
+                'reason' => 'Infekt',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
             [
                 'employee_id' => $employees['nadine'],
                 'type' => 'urlaub',

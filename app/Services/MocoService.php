@@ -29,8 +29,25 @@ class MocoService
             throw new RuntimeException('MOCO_BASE_URL is not set. Please add MOCO_BASE_URL to your .env file.');
         }
 
-        // Ensure base URL does not end with a trailing slash to avoid double slashes
+        // Normalize base URL and domain
         $baseUrl = rtrim($baseUrl, '/');
+
+        // If a tenant URL like https://{domain}.mocoapp.com/api/v1 is supplied,
+        // extract the domain and switch to the canonical API host
+        $parsed = parse_url($baseUrl);
+        if (!empty($parsed['host']) && str_ends_with($parsed['host'], '.mocoapp.com')) {
+            // Derive domain from subdomain part if not explicitly set (leave host as provided)
+            $parts = explode('.', $parsed['host']);
+            if (count($parts) >= 3) {
+                $derivedDomain = $parts[0];
+                if ($this->domain === '' && $derivedDomain !== 'api') {
+                    $this->domain = $derivedDomain;
+                }
+            }
+        }
+
+        // Ensure trailing slash so relative paths resolve as <base>/<endpoint>
+        $baseUrl = rtrim($baseUrl, '/') . '/';
 
         $headers = [
             'Authorization' => 'Token token=' . $this->apiKey,
@@ -49,6 +66,7 @@ class MocoService
             'headers' => $headers,
             'timeout' => 30,
         ]);
+        Log::info('MOCO base_uri set to: ' . $baseUrl . ' domain=' . $this->domain);
     }
 
     /**
@@ -60,7 +78,7 @@ class MocoService
     public function getProjects(array $params = []): array
     {
         try {
-            $response = $this->client->get('/projects', [
+            $response = $this->client->get('projects', [
                 'query' => $params,
             ]);
 
@@ -80,7 +98,7 @@ class MocoService
     public function getProject(int $projectId): ?array
     {
         try {
-            $response = $this->client->get("/projects/{$projectId}");
+            $response = $this->client->get("projects/{$projectId}");
             return json_decode($response->getBody()->getContents(), true);
         } catch (GuzzleException $e) {
             Log::error("MOCO API Error (getProject {$projectId}): " . $e->getMessage());
@@ -97,14 +115,24 @@ class MocoService
     public function getUsers(array $params = []): array
     {
         try {
-            $response = $this->client->get('/users', [
+            // Some tenants expose people under /users or /people
+            $response = $this->client->get('users', [
                 'query' => $params,
             ]);
-
-            return json_decode($response->getBody()->getContents(), true);
+            $data = json_decode($response->getBody()->getContents(), true);
+            if (!is_array($data)) { $data = []; }
+            return $data;
         } catch (GuzzleException $e) {
-            Log::error('MOCO API Error (getUsers): ' . $e->getMessage());
-            throw $e;
+            // Try fallback endpoint
+            try {
+                $response = $this->client->get('people', [ 'query' => $params ]);
+                $data = json_decode($response->getBody()->getContents(), true);
+                if (!is_array($data)) { $data = []; }
+                return $data;
+            } catch (GuzzleException $e2) {
+                Log::error('MOCO API Error (getUsers): ' . $e->getMessage());
+                throw $e2;
+            }
         }
     }
 
@@ -117,7 +145,7 @@ class MocoService
     public function getUser(int $userId): ?array
     {
         try {
-            $response = $this->client->get("/users/{$userId}");
+            $response = $this->client->get("users/{$userId}");
             return json_decode($response->getBody()->getContents(), true);
         } catch (GuzzleException $e) {
             Log::error("MOCO API Error (getUser {$userId}): " . $e->getMessage());
@@ -134,7 +162,7 @@ class MocoService
     public function getActivities(array $params = []): array
     {
         try {
-            $response = $this->client->get('/activities', [
+            $response = $this->client->get('activities', [
                 'query' => $params,
             ]);
 
@@ -154,7 +182,7 @@ class MocoService
     public function getActivity(int $activityId): ?array
     {
         try {
-            $response = $this->client->get("/activities/{$activityId}");
+            $response = $this->client->get("activities/{$activityId}");
             return json_decode($response->getBody()->getContents(), true);
         } catch (GuzzleException $e) {
             Log::error("MOCO API Error (getActivity {$activityId}): " . $e->getMessage());
@@ -171,7 +199,7 @@ class MocoService
     public function getProjectAssignments(array $params = []): array
     {
         try {
-            $response = $this->client->get('/project_assignments', [
+            $response = $this->client->get('project_assignments', [
                 'query' => $params,
             ]);
 
@@ -191,7 +219,7 @@ class MocoService
     public function getAbsences(array $params = []): array
     {
         try {
-            $response = $this->client->get('/schedules/absences', [
+            $response = $this->client->get('schedules/absences', [
                 'query' => $params,
             ]);
 
@@ -210,13 +238,35 @@ class MocoService
     public function testConnection(): bool
     {
         try {
-            $response = $this->client->get('/users', [
-                'query' => ['limit' => 1],
-            ]);
-            
-            return $response->getStatusCode() === 200;
+            $endpointsToProbe = ['projects', 'activities', 'users'];
+            $lastError = null;
+            foreach ($endpointsToProbe as $endpoint) {
+                try {
+                    $response = $this->client->get($endpoint, [
+                        'query' => ['limit' => 1],
+                    ]);
+                    if ($response->getStatusCode() === 200) {
+                        return true;
+                    }
+                } catch (GuzzleException $inner) {
+                    // remember last error and try next endpoint
+                    $status = method_exists($inner, 'getResponse') && $inner->getResponse() ? $inner->getResponse()->getStatusCode() : null;
+                    $msg = $inner->getMessage();
+                    $lastError = "endpoint=$endpoint status=" . ($status ?? 'n/a') . " msg=$msg";
+                    continue;
+                }
+            }
+
+            if ($lastError) {
+                Log::error('MOCO API Connection Test Failed (all endpoints): ' . $lastError);
+            } else {
+                Log::error('MOCO API Connection Test Failed: unknown error');
+            }
+            return false;
         } catch (GuzzleException $e) {
-            Log::error('MOCO API Connection Test Failed: ' . $e->getMessage());
+            $status = method_exists($e, 'getResponse') && $e->getResponse() ? $e->getResponse()->getStatusCode() : null;
+            $body = method_exists($e, 'getResponse') && $e->getResponse() ? (string) $e->getResponse()->getBody() : '';
+            Log::error('MOCO API Connection Test Failed: ' . $e->getMessage() . ($status ? " (status {$status})" : '') . ($body ? " body: {$body}" : ''));
             return false;
         }
     }

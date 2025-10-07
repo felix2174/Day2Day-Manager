@@ -1,55 +1,32 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('MOCO Integration') }}
-            </h2>
+@extends('layouts.app')
+
+@section('title', 'MOCO Integration')
+
+@section('content')
+<div style="width: 100%; margin: 0; padding: 20px;">
+    @if (session('success'))
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;">
+            {{ session('success') }}
         </div>
-    </x-slot>
+    @endif
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
-            @if (session('success'))
-                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-                    <span class="block sm:inline">{{ session('success') }}</span>
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <span class="block sm:inline">{{ session('error') }}</span>
-                </div>
-            @endif
-
-            <!-- Navigation Tabs -->
-            <div class="mb-6">
-                <div class="border-b border-gray-200">
-                    <nav class="-mb-px flex space-x-8">
-                        <a href="{{ route('moco.index') }}" 
-                           class="@if(request()->routeIs('moco.index')) border-blue-500 text-blue-600 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('moco.statistics') }}" 
-                           class="@if(request()->routeIs('moco.statistics')) border-blue-500 text-blue-600 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                            Statistiken
-                        </a>
-                        <a href="{{ route('moco.logs') }}" 
-                           class="@if(request()->routeIs('moco.logs')) border-blue-500 text-blue-600 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                            Sync-History
-                        </a>
-                        <a href="{{ route('moco.mappings') }}" 
-                           class="@if(request()->routeIs('moco.mappings')) border-blue-500 text-blue-600 @else border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 @endif whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                            Mappings
-                        </a>
-                    </nav>
-                </div>
-            </div>
-
-            <!-- Content -->
-            @yield('content')
-
+    @if (session('error'))
+        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;">
+            {{ session('error') }}
         </div>
+    @endif
+
+    <!-- Top Tabs (consistent minimal link row) -->
+    <div style="margin-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+        <nav style="display: flex; gap: 20px;">
+            <a href="{{ route('moco.index') }}" style="padding: 10px 4px; border-bottom: 2px solid {{ request()->routeIs('moco.index') ? '#3b82f6' : 'transparent' }}; color: {{ request()->routeIs('moco.index') ? '#1d4ed8' : '#6b7280' }}; text-decoration: none; font-weight: 500;">Dashboard</a>
+            <a href="{{ route('moco.statistics') }}" style="padding: 10px 4px; border-bottom: 2px solid {{ request()->routeIs('moco.statistics') ? '#3b82f6' : 'transparent' }}; color: {{ request()->routeIs('moco.statistics') ? '#1d4ed8' : '#6b7280' }}; text-decoration: none; font-weight: 500;">Statistiken</a>
+            <a href="{{ route('moco.logs') }}" style="padding: 10px 4px; border-bottom: 2px solid {{ request()->routeIs('moco.logs') ? '#3b82f6' : 'transparent' }}; color: {{ request()->routeIs('moco.logs') ? '#1d4ed8' : '#6b7280' }}; text-decoration: none; font-weight: 500;">Sync-History</a>
+            <a href="{{ route('moco.mappings') }}" style="padding: 10px 4px; border-bottom: 2px solid {{ request()->routeIs('moco.mappings') ? '#3b82f6' : 'transparent' }}; color: {{ request()->routeIs('moco.mappings') ? '#1d4ed8' : '#6b7280' }}; text-decoration: none; font-weight: 500;">Mappings</a>
+        </nav>
     </div>
-</x-app-layout>
+
+    @yield('content')
+</div>
+@endsection
 

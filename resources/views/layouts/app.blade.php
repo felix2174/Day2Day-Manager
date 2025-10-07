@@ -367,7 +367,7 @@
                 </a>
             </li>
             <li>
-                <a href="/moco" class="{{ request()->is('moco*') ? 'active' : '' }}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-left-color: #f59e0b;">
+                <a href="/moco" class="{{ request()->is('moco*') ? 'active' : '' }}">
                     MOCO Integration
                 </a>
             </li>

@@ -41,7 +41,12 @@ class SyncMocoEmployees extends Command
                 $params['active'] = true;
             }
 
-            $mocoUsers = $mocoService->getUsers($params);
+            try {
+                $mocoUsers = $mocoService->getUsers($params);
+            } catch (\Throwable $e) {
+                $this->error('Failed to fetch users from MOCO: ' . $e->getMessage());
+                return Command::FAILURE;
+            }
             $this->info('Found ' . count($mocoUsers) . ' employees in MOCO');
 
             $synced = 0;
@@ -50,14 +55,15 @@ class SyncMocoEmployees extends Command
 
             foreach ($mocoUsers as $mocoUser) {
                 // Find or create employee
+                if (!isset($mocoUser['id'])) { continue; }
                 $employee = Employee::where('moco_id', $mocoUser['id'])->first();
 
                 $employeeData = [
-                    'first_name' => $mocoUser['firstname'],
-                    'last_name' => $mocoUser['lastname'],
-                    'department' => $mocoUser['unit']['name'] ?? 'Keine Abteilung',
+                    'first_name' => $mocoUser['firstname'] ?? ($mocoUser['first_name'] ?? 'Unknown'),
+                    'last_name' => $mocoUser['lastname'] ?? ($mocoUser['last_name'] ?? ''),
+                    'department' => ($mocoUser['unit']['name'] ?? ($mocoUser['department'] ?? 'Keine Abteilung')),
                     'weekly_capacity' => $this->calculateWeeklyCapacity($mocoUser),
-                    'is_active' => $mocoUser['active'] ?? true,
+                    'is_active' => (bool)($mocoUser['active'] ?? true),
                     'moco_id' => $mocoUser['id'],
                 ];
 
