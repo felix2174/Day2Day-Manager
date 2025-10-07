@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - enodia IT-Systemhaus | Projektmanagement</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -368,12 +367,7 @@
                 </a>
             </li>
             <li>
-                <a href="/time-entries" class="{{ request()->is('time-entries*') ? 'active' : '' }}">
-                    Zeiterfassung
-                </a>
-            </li>
-            <li>
-                <a href="/moco" class="{{ request()->is('moco*') ? 'active' : '' }}">
+                <a href="/moco" class="{{ request()->is('moco*') ? 'active' : '' }}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-left-color: #f59e0b;">
                     MOCO Integration
                 </a>
             </li>

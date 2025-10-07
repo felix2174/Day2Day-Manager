@@ -50,6 +50,49 @@
             font-weight: 600;
             color: #111827;
         }
+        .progress-meter {
+            background: #e5e7eb;
+            height: 32px;
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            transition: width 0.3s ease;
+        }
+        .team-member {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
         .status-badge {
             padding: 4px 10px;
             border-radius: 4px;
@@ -58,522 +101,132 @@
             display: inline-block;
         }
         .status-active { background: #d4edda; color: #155724; }
-        .status-inactive { background: #f8d7da; color: #721c24; }
-        .status-planning { background: #cce5ff; color: #1e40af; }
-        .status-completed { background: #f3f4f6; color: #6b7280; }
-        .avatar {
-            width: 80px;
-            height: 80px;
-            background: #667eea;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 24px;
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .data-table th {
-            background: #f3f4f6;
-            padding: 12px;
-            text-align: left;
-            font-size: 12px;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #e5e7eb;
-        }
-        .data-table td {
-            padding: 12px;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 14px;
-            color: #111827;
-        }
-        .data-table tr:hover {
-            background: #f9fafb;
-        }
+        .status-planning { background: #fff3cd; color: #856404; }
+        .status-completed { background: #e2e3e5; color: #383d41; }
     </style>
 
     <div class="detail-container">
         <!-- Header -->
         <div class="info-card">
             <div class="info-header">
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div class="avatar">
-                        {{ substr($project->name, 0, 2) }}
-        </div>
-        <div>
-                        <h1 style="margin: 0;">{{ $project->name }}</h1>
-                        <p style="color: #6c757d; margin: 0.5rem 0;">{{ $project->description ?: 'Keine Beschreibung' }}</p>
-                    </div>
-        </div>
-        <div>
-                    <a href="{{ route('projects.edit', $project) }}"
+                <div>
+                    <h1 style="margin: 0;">{{ $project->name }}</h1>
+                    @if($project->description)
+                        <p style="color: #6c757d; margin: 0.5rem 0;">{{ $project->description }}</p>
+                    @endif
+                </div>
+                <div>
+                    <a href="/projects/{{ $project->id }}/edit"
                        style="background: #ffffff; color: #374151; padding: 12px 24px; border-radius: 12px;
                           text-decoration: none; margin-right: 10px; border: none;
-                          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); font-size: 14px; font-weight: 500;">
+                          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                          onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                          onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                         Bearbeiten
                     </a>
-                    <a href="{{ route('projects.index') }}"
+                    <a href="/projects"
                        style="background: #ffffff; color: #374151; padding: 12px 24px; border-radius: 12px;
                           text-decoration: none; border: none;
-                          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); font-size: 14px; font-weight: 500;">
+                          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); font-size: 14px; font-weight: 500; transition: all 0.2s ease;
+                          onmouseover='this.style.transform=\"translateY(-1px)\"; this.style.boxShadow=\"0 4px 8px rgba(0, 0, 0, 0.15)\"; this.style.background=\"#f9fafb\";'
+                          onmouseout='this.style.transform=\"translateY(0)\"; this.style.boxShadow=\"0 2px 4px rgba(0, 0, 0, 0.1)\"; this.style.background=\"#ffffff\";'">
                         Zurück zur Übersicht
                     </a>
                 </div>
             </div>
-        </div>
 
-        <!-- Projekt-Grunddaten -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">Projekt-Grunddaten</h2>
+            <!-- Projekt-Informationen -->
             <div class="info-grid">
                 <div class="info-item">
-                    <div class="info-label">Identifier</div>
-                    <div class="info-value">{{ $project->identifier ?: 'Nicht verfügbar' }}</div>
+                    <div class="info-label">Projekt-ID</div>
+                    <div class="info-value">#{{ $project->id }}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Status</div>
                     <div class="info-value">
-                        @if($project->status === 'active')
+                        @if($project->status == 'active')
                             <span class="status-badge status-active">Aktiv</span>
-                        @elseif($project->status === 'planning')
-                            <span class="status-badge status-planning">Geplant</span>
-                        @elseif($project->status === 'completed')
+                        @elseif($project->status == 'planning')
+                            <span class="status-badge status-planning">In Planung</span>
+                        @else
                             <span class="status-badge status-completed">Abgeschlossen</span>
-                        @else
-                            <span class="status-badge status-inactive">{{ ucfirst($project->status ?: 'Unbekannt') }}</span>
-                        @endif
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Abrechenbar</div>
-                    <div class="info-value">
-                        @if($project->billable)
-                            <span class="status-badge status-active">Ja</span>
-                        @else
-                            <span class="status-badge" style="background: #f3f4f6; color: #6b7280;">Nein</span>
                         @endif
                     </div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Startdatum</div>
-                    <div class="info-value">{{ $project->start_date ? \Carbon\Carbon::parse($project->start_date)->format('d.m.Y') : 'Nicht verfügbar' }}</div>
+                    <div class="info-value">{{ \Carbon\Carbon::parse($project->start_date)->format('d.m.Y') }}</div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Enddatum</div>
-                    <div class="info-value">{{ $project->end_date ? \Carbon\Carbon::parse($project->end_date)->format('d.m.Y') : 'Nicht verfügbar' }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Verantwortlich</div>
-                    <div class="info-value">{{ $project->responsible ? $project->responsible->first_name . ' ' . $project->responsible->last_name : 'Nicht zugewiesen' }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">MOCO ID</div>
-                    <div class="info-value">{{ $project->moco_id ?: 'Nicht verfügbar' }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Erstellt am</div>
-                    <div class="info-value">{{ $project->created_at ? \Carbon\Carbon::parse($project->created_at)->format('d.m.Y H:i') : 'Nicht verfügbar' }}</div>
-        </div>
-                <div class="info-item">
-                    <div class="info-label">Aktualisiert am</div>
-                    <div class="info-value">{{ $project->updated_at ? \Carbon\Carbon::parse($project->updated_at)->format('d.m.Y H:i') : 'Nicht verfügbar' }}</div>
-        </div>
-        </div>
-    </div>
-
-    @if(isset($progress))
-        <!-- Fortschritt -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">Fortschritt</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Automatisch</div>
-                    <div class="info-value">{{ $progress['automatic'] }}%</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Nach Stunden</div>
-                    <div class="info-value">{{ $progress['hours'] }}%</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Nach Zeit</div>
-                    <div class="info-value">{{ $progress['time'] }}%</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Manuell</div>
-                    <div class="info-value">{{ $progress['manual'] }}%</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Gearbeitete Stunden</div>
-                    <div class="info-value">{{ $progress['total_hours_worked'] }}h</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Geschätzte Stunden</div>
-                    <div class="info-value">{{ $progress['estimated_hours'] }}h</div>
-                </div>
-        </div>
-    </div>
-    @endif
-
-    @if(isset($budget))
-        <!-- Budget -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">Budget</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Gesamtbudget</div>
-                    <div class="info-value">{{ number_format($budget['total_budget'], 2, ',', '.') }} €</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Stundensatz</div>
-                    <div class="info-value">{{ number_format($budget['hourly_rate'], 2, ',', '.') }} €</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Geschätzte Stunden</div>
-                    <div class="info-value">{{ $budget['estimated_hours'] }}h</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Tatsächliche Stunden</div>
-                    <div class="info-value">{{ $budget['actual_hours'] }}h</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Tatsächliche Kosten</div>
-                    <div class="info-value">{{ number_format($budget['actual_cost'], 2, ',', '.') }} €</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Verbleibendes Budget</div>
-                    <div class="info-value">{{ number_format($budget['remaining_budget'], 2, ',', '.') }} €</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Auslastung</div>
-                    <div class="info-value">{{ round($budget['budget_utilization'], 1) }}%</div>
-                </div>
-        </div>
-    </div>
-    @endif
-
-    @if(isset($team))
-        <!-- Team -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">Team</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Team-Auslastung</div>
-                    <div class="info-value">{{ round($team['team_utilization'], 1) }}%</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Gesamt zugewiesen</div>
-                    <div class="info-value">{{ $team['total_assigned'] }}h/Woche</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Gesamtkapazität</div>
-                    <div class="info-value">{{ $team['total_capacity'] }}h/Woche</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Überlastete Mitglieder</div>
-                    <div class="info-value">{{ count($team['overloaded_members']) }}</div>
-                </div>
-        </div>
-
-        @if(count($team['overloaded_members']) > 0)
-                <div style="margin-top: 1rem;">
-                    <h3 style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Überlastete Teammitglieder:</h3>
-                    <ul style="list-style: disc; margin-left: 20px; font-size: 14px;">
-                        @foreach($team['overloaded_members'] as $member)
-                            <li style="margin-bottom: 4px;">{{ $member['name'] }} ({{ round($member['utilization']) }}%)</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-    </div>
-@endif
-
-@if(isset($timeline))
-        <!-- Timeline -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">Timeline</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Phase</div>
-                    <div class="info-value">{{ ucfirst($timeline['phase']) }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Zeitfortschritt</div>
-                    <div class="info-value">{{ $timeline['time_progress'] }}%</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Verbleibende Tage</div>
                     <div class="info-value">
-                @if($timeline['phase'] === 'planned')
-                            Startet in {{ $timeline['days_to_start'] }} Tagen
-                @elseif($timeline['phase'] === 'running')
-                            {{ $timeline['days_remaining'] }} Tage
-                @else
-                    —
-                @endif
-            </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Überfällig</div>
-                    <div class="info-value">
-                        @if($timeline['overdue_days'] > 0)
-                            <span class="status-badge status-inactive">{{ $timeline['overdue_days'] }} Tage</span>
+                        @if($project->end_date)
+                            {{ \Carbon\Carbon::parse($project->end_date)->format('d.m.Y') }}
                         @else
-                            <span class="status-badge status-active">Nein</span>
+                            <span style="color: #6c757d;">Nicht festgelegt</span>
                         @endif
                     </div>
                 </div>
-        </div>
-    </div>
-@endif
+            </div>
 
-@if(isset($bottlenecks) && $bottlenecks['total_count'] > 0)
-        <!-- Bottlenecks -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">Engpässe</h2>
-            <div style="margin-bottom: 1rem; font-size: 14px; color: #6b7280;">
-                Kritisch: {{ $bottlenecks['critical_count'] }} · Warnungen: {{ $bottlenecks['warning_count'] }}
-        </div>
-            <ul style="list-style: disc; margin-left: 20px; font-size: 14px;">
-                @foreach($bottlenecks['bottlenecks'] as $bottleneck)
-                    <li style="margin-bottom: 8px;">
-                        <span style="color: {{ $bottleneck['severity'] === 'critical' ? '#dc2626' : '#d97706' }}; font-weight: 600;">
-                            [{{ strtoupper($bottleneck['severity']) }}]
-                    </span>
-                        {{ $bottleneck['message'] }}
-                </li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-
-        @if(isset($mocoData) && $mocoData && !isset($mocoData['error']))
-        <!-- MOCO-Projektdaten -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">MOCO-Projektdaten</h2>
-            @if($mocoData['project'])
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">MOCO ID</div>
-                        <div class="info-value">#{{ $mocoData['project']['id'] ?? 'Nicht verfügbar' }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Kunde</div>
-                        <div class="info-value">{{ $mocoData['project']['customer']['name'] ?? 'Nicht zugewiesen' }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Projektleiter</div>
-                        <div class="info-value">{{ $mocoData['project']['leader']['firstname'] ?? '' }} {{ $mocoData['project']['leader']['lastname'] ?? '' }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Co-Leiter</div>
-                        <div class="info-value">{{ $mocoData['project']['co_leader']['firstname'] ?? '' }} {{ $mocoData['project']['co_leader']['lastname'] ?? '' }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Währung</div>
-                        <div class="info-value">{{ $mocoData['project']['currency'] ?? 'EUR' }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Abrechnungsvariante</div>
-                        <div class="info-value">{{ $mocoData['project']['billing_variant'] ?? 'Nicht verfügbar' }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Feste Preise</div>
-                        <div class="info-value">
-                            @if(isset($mocoData['project']['fixed_price']) && $mocoData['project']['fixed_price'])
-                                <span class="status-badge status-active">Ja</span>
-                            @else
-                                <span class="status-badge" style="background: #f3f4f6; color: #6b7280;">Nein</span>
-                            @endif
+            <!-- Projekt-Fortschritt -->
+            @if($project->end_date)
+                @php
+                    $start = \Carbon\Carbon::parse($project->start_date);
+                    $end = \Carbon\Carbon::parse($project->end_date);
+                    $remaining_days = round(now()->diffInDays($end, false));
+                    // Verwende den gespeicherten Fortschritt oder berechne ihn
+                    $progress = $project->progress ?? 0;
+                @endphp
+                <div style="margin-top: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">Projekt-Fortschritt</h3>
+                    <div class="progress-meter">
+                        <div class="progress-fill"
+                             style="width: {{ $progress }}%;
+                                background: {{ $progress >= 80 ? '#28a745' : ($progress >= 50 ? '#ffc107' : '#dc3545') }};">
+                            {{ $progress }}%
                         </div>
                     </div>
-                    <div class="info-item">
-                        <div class="info-label">Retainer</div>
-                        <div class="info-value">
-                            @if(isset($mocoData['project']['retainer']) && $mocoData['project']['retainer'])
-                                <span class="status-badge status-active">Ja</span>
-                            @else
-                                <span class="status-badge" style="background: #f3f4f6; color: #6b7280;">Nein</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Erstellt in MOCO</div>
-                        <div class="info-value">{{ isset($mocoData['project']['created_at']) ? \Carbon\Carbon::parse($mocoData['project']['created_at'])->format('d.m.Y H:i') : 'Nicht verfügbar' }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Aktualisiert in MOCO</div>
-                        <div class="info-value">{{ isset($mocoData['project']['updated_at']) ? \Carbon\Carbon::parse($mocoData['project']['updated_at'])->format('d.m.Y H:i') : 'Nicht verfügbar' }}</div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                        <span>Gestartet: {{ $start->format('d.m.Y') }}</span>
+                        <span>Geplant bis: {{ $end->format('d.m.Y') }}</span>
                     </div>
                 </div>
             @endif
         </div>
 
-        <!-- MOCO-Zusammenfassung -->
-        @if($mocoData['summary'])
+        <!-- Team-Mitglieder -->
         <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">MOCO-Zusammenfassung</h2>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Gesamtstunden</div>
-                    <div class="info-value">{{ $mocoData['summary']['total_hours'] ?? 0 }}h</div>
+            <h2 style="margin-bottom: 1.5rem;">Team-Mitglieder</h2>
+            @if($assignments->count() > 0)
+                @php
+                    $total_weekly_hours = $assignments->sum('weekly_hours');
+                @endphp
+                <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 6px;">
+                    <strong>Gesamt-Wochenstunden: {{ $total_weekly_hours }}h</strong>
                 </div>
-                <div class="info-item">
-                    <div class="info-label">Gesamtkosten</div>
-                    <div class="info-value">{{ number_format($mocoData['summary']['total_cost'] ?? 0, 2, ',', '.') }} €</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Abrechenbare Stunden</div>
-                    <div class="info-value">{{ $mocoData['summary']['billable_hours'] ?? 0 }}h</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Nicht-abrechenbare Stunden</div>
-                    <div class="info-value">{{ $mocoData['summary']['non_billable_hours'] ?? 0 }}h</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Abgeschlossene Tasks</div>
-                    <div class="info-value">{{ $mocoData['summary']['completed_tasks'] ?? 0 }}/{{ $mocoData['summary']['total_tasks'] ?? 0 }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Task-Fortschritt</div>
-                    <div class="info-value">{{ round($mocoData['summary']['task_completion_rate'] ?? 0, 1) }}%</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Teammitglieder</div>
-                    <div class="info-value">{{ $mocoData['summary']['team_members'] ?? 0 }}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Aktive Zuweisungen</div>
-                    <div class="info-value">{{ $mocoData['summary']['active_assignments'] ?? 0 }}</div>
-                </div>
-            </div>
-        </div>
-        @endif
-
-        <!-- MOCO-Aktivitäten -->
-        @if(!empty($mocoData['activities']))
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">MOCO-Aktivitäten ({{ count($mocoData['activities']) }})</h2>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Datum</th>
-                        <th>Mitarbeiter</th>
-                        <th>Task</th>
-                        <th>Stunden</th>
-                        <th>Kosten</th>
-                        <th>Abrechenbar</th>
-                        <th>Beschreibung</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach(array_slice($mocoData['activities'], 0, 20) as $activity)
-                    <tr>
-                        <td>{{ \Carbon\Carbon::parse($activity['date'])->format('d.m.Y') }}</td>
-                        <td>{{ $activity['user']['firstname'] ?? '' }} {{ $activity['user']['lastname'] ?? '' }}</td>
-                        <td>{{ $activity['task']['name'] ?? '-' }}</td>
-                        <td><strong>{{ $activity['hours'] ?? 0 }}h</strong></td>
-                        <td>{{ number_format($activity['cost'] ?? 0, 2, ',', '.') }} €</td>
-                        <td>
-                            @if(isset($activity['billable']) && $activity['billable'])
-                                <span class="status-badge status-active">Ja</span>
-                            @else
-                                <span class="status-badge" style="background: #f3f4f6; color: #6b7280;">Nein</span>
-                            @endif
-                        </td>
-                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                            {{ $activity['description'] ?? '-' }}
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            @if(count($mocoData['activities']) > 20)
-                <div style="margin-top: 1rem; color: #6b7280; font-size: 14px;">
-                    Zeige 20 von {{ count($mocoData['activities']) }} Aktivitäten
-                </div>
+                @foreach($assignments as $assignment)
+                    <div class="team-member">
+                        <div class="member-info">
+                            <div class="member-avatar">
+                                {{ substr($assignment->employee_name, 0, 1) }}
+                            </div>
+                            <div>
+                                <strong>{{ $assignment->employee_name }}</strong>
+                                <br>
+                                <small style="color: #6c757d;">{{ $assignment->employee_department ?? 'N/A' }}</small>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <strong style="color: #667eea; font-size: 1.25rem;">{{ $assignment->weekly_hours }}h</strong>
+                            <br>
+                            <small style="color: #6c757d;">pro Woche</small>
+                        </div>
+                    </div>
+                @endforeach
+            @else
+                <p style="color: #6c757d;">Noch keine Mitarbeiter zugewiesen</p>
             @endif
         </div>
-        @endif
-
-        <!-- MOCO-Tasks -->
-        @if(!empty($mocoData['tasks']))
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">MOCO-Tasks ({{ count($mocoData['tasks']) }})</h2>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Task</th>
-                        <th>Zugewiesen an</th>
-                        <th>Stunden</th>
-                        <th>Abrechenbare Stunden</th>
-                        <th>Letzte Aktivität</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($mocoData['tasks'] as $task)
-                    <tr>
-                        <td><strong>{{ $task['name'] ?? 'Unbekannter Task' }}</strong></td>
-                        <td>{{ $task['user']['firstname'] ?? '' }} {{ $task['user']['lastname'] ?? '' }}</td>
-                        <td><strong>{{ $task['total_hours'] ?? 0 }}h</strong></td>
-                        <td>{{ $task['billable_hours'] ?? 0 }}h</td>
-                        <td>{{ isset($task['last_activity']) ? \Carbon\Carbon::parse($task['last_activity'])->format('d.m.Y') : '-' }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        @endif
-
-        <!-- MOCO-Team-Mitglieder -->
-        @if(!empty($mocoData['assignments']))
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">MOCO-Team-Mitglieder ({{ count($mocoData['assignments']) }})</h2>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Mitarbeiter</th>
-                        <th>Gesamtstunden</th>
-                        <th>Abrechenbare Stunden</th>
-                        <th>Letzte Aktivität</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($mocoData['assignments'] as $assignment)
-                    <tr>
-                        <td><strong>{{ $assignment['user']['firstname'] ?? '' }} {{ $assignment['user']['lastname'] ?? '' }}</strong></td>
-                        <td><strong>{{ $assignment['total_hours'] ?? 0 }}h</strong></td>
-                        <td>{{ $assignment['billable_hours'] ?? 0 }}h</td>
-                        <td>{{ isset($assignment['last_activity']) ? \Carbon\Carbon::parse($assignment['last_activity'])->format('d.m.Y') : '-' }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-        @endif
-
-        @elseif(isset($mocoData) && isset($mocoData['error']))
-        <!-- MOCO-Fehler -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">MOCO-Daten</h2>
-            <div style="padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #dc2626;">
-                <strong>Fehler beim Laden der MOCO-Daten:</strong><br>
-                {{ $mocoData['error'] }}
-            </div>
-        </div>
-        @else
-        <!-- Keine MOCO-Daten -->
-        <div class="info-card">
-            <h2 style="margin-bottom: 1.5rem;">MOCO-Daten</h2>
-            <div style="padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; color: #6b7280;">
-                <strong>Keine MOCO-Daten verfügbar</strong><br>
-                Dieses Projekt hat keine MOCO-ID oder die Daten konnten nicht geladen werden.
-            </div>
     </div>
-        @endif
-</div>
 @endsection

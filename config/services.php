@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'moco' => [
+        'api_key' => env('MOCO_API_KEY'),
+        'domain' => env('MOCO_DOMAIN'), // z.B. 'beispiel.mocoapp.com'
+        'base_url' => env('MOCO_BASE_URL', 'https://api.mocoapp.com/api/v1'),
+    ],
+
 ];

@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
+use App\Models\Project;
+use App\Models\TimeEntry;
+use App\Models\MocoSyncLog;
 use App\Services\MocoService;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Exception;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class MocoController extends Controller
 {
-    protected $mocoService;
+    protected MocoService $mocoService;
 
     public function __construct(MocoService $mocoService)
     {
@@ -17,471 +22,270 @@ class MocoController extends Controller
     }
 
     /**
-     * Display MOCO integration dashboard
+     * Show MOCO integration dashboard
      */
     public function index()
     {
-        try {
-            // Verify API connection
-            $apiStatus = $this->mocoService->verifyApiKey();
-            
-            return view('moco.index', [
-                'apiStatus' => $apiStatus,
-                'apiKey' => config('moco.api_key'),
-                'baseUrl' => config('moco.base_url')
-            ]);
-        } catch (Exception $e) {
-            return view('moco.index', [
-                'apiStatus' => ['valid' => false, 'error' => $e->getMessage()],
-                'apiKey' => config('moco.api_key'),
-                'baseUrl' => config('moco.base_url')
-            ]);
-        }
+        // Test MOCO connection
+        $connectionStatus = $this->mocoService->testConnection();
+
+        // Get statistics
+        $stats = [
+            'employees' => [
+                'total' => Employee::count(),
+                'synced' => Employee::whereNotNull('moco_id')->count(),
+            ],
+            'projects' => [
+                'total' => Project::count(),
+                'synced' => Project::whereNotNull('moco_id')->count(),
+            ],
+            'timeEntries' => [
+                'total' => TimeEntry::count(),
+                'synced' => TimeEntry::whereNotNull('moco_id')->count(),
+            ],
+        ];
+
+        // Get recent sync logs
+        $recentLogs = MocoSyncLog::with('user')
+            ->orderBy('started_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Get last successful sync per type
+        $lastSyncs = [
+            'employees' => MocoSyncLog::ofType('employees')->successful()->latest('completed_at')->first(),
+            'projects' => MocoSyncLog::ofType('projects')->successful()->latest('completed_at')->first(),
+            'activities' => MocoSyncLog::ofType('activities')->successful()->latest('completed_at')->first(),
+            'all' => MocoSyncLog::ofType('all')->successful()->latest('completed_at')->first(),
+        ];
+
+        return view('moco.index', [
+            'connectionStatus' => $connectionStatus,
+            'stats' => $stats,
+            'recentLogs' => $recentLogs,
+            'lastSyncs' => $lastSyncs,
+        ]);
     }
 
     /**
-     * Test API connection
+     * Sync employees from MOCO
      */
-    public function testConnection(): JsonResponse
+    public function syncEmployees(Request $request)
     {
         try {
-            $result = $this->mocoService->verifyApiKey();
-            return response()->json($result);
-        } catch (Exception $e) {
-            return response()->json([
-                'valid' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get projects from MOCO
-     */
-    public function getProjects(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['active', 'billable', 'company_id']);
-            $projects = $this->mocoService->getProjects($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $projects,
-                'count' => count($projects)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get users from MOCO
-     */
-    public function getUsers(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['active', 'company_id']);
-            $users = $this->mocoService->getUsers($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $users,
-                'count' => count($users)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get activities from MOCO
-     */
-    public function getActivities(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['from', 'to', 'user_id', 'project_id']);
-            $activities = $this->mocoService->getActivities($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $activities,
-                'count' => count($activities)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get companies from MOCO
-     */
-    public function getCompanies(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['active']);
-            $companies = $this->mocoService->getCompanies($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $companies,
-                'count' => count($companies)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get contacts from MOCO
-     */
-    public function getContacts(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['company_id', 'active']);
-            $contacts = $this->mocoService->getContacts($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $contacts,
-                'count' => count($contacts)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get deals from MOCO
-     */
-    public function getDeals(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['company_id', 'user_id', 'state']);
-            $deals = $this->mocoService->getDeals($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $deals,
-                'count' => count($deals)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get invoices from MOCO
-     */
-    public function getInvoices(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['from', 'to', 'company_id', 'state']);
-            $invoices = $this->mocoService->getInvoices($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $invoices,
-                'count' => count($invoices)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get offers from MOCO
-     */
-    public function getOffers(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['company_id', 'user_id', 'state']);
-            $offers = $this->mocoService->getOffers($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $offers,
-                'count' => count($offers)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get planning entries from MOCO
-     */
-    public function getPlanningEntries(Request $request): JsonResponse
-    {
-        try {
-            $params = $request->only(['from', 'to', 'user_id', 'project_id']);
-            $entries = $this->mocoService->getPlanningEntries($params);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $entries,
-                'count' => count($entries)
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get user profile from MOCO
-     */
-    public function getProfile(): JsonResponse
-    {
-        try {
-            $profile = $this->mocoService->getProfile();
-            
-            return response()->json([
-                'success' => true,
-                'data' => $profile
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Sync projects from MOCO to local database
-     */
-    public function syncProjects(): JsonResponse
-    {
-        try {
-            $result = $this->mocoService->syncProjects();
-            
-            return response()->json($result);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Create a new project in MOCO
-     */
-    public function createProject(Request $request): JsonResponse
-    {
-        try {
-            $data = $request->validate([
-                'name' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'company_id' => 'nullable|integer',
-                'user_id' => 'nullable|integer',
-                'active' => 'boolean',
-                'billable' => 'boolean',
-                'fixed_price' => 'boolean',
-                'budget' => 'nullable|numeric',
-                'hourly_rate' => 'nullable|numeric',
-            ]);
-
-            $project = $this->mocoService->createProject($data);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $project
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Update a project in MOCO
-     */
-    public function updateProject(Request $request, int $id): JsonResponse
-    {
-        try {
-            $data = $request->validate([
-                'name' => 'sometimes|string|max:255',
-                'description' => 'nullable|string',
-                'company_id' => 'nullable|integer',
-                'user_id' => 'nullable|integer',
-                'active' => 'boolean',
-                'billable' => 'boolean',
-                'fixed_price' => 'boolean',
-                'budget' => 'nullable|numeric',
-                'hourly_rate' => 'nullable|numeric',
-            ]);
-
-            $project = $this->mocoService->updateProject($id, $data);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $project
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Delete a project in MOCO
-     */
-    public function deleteProject(int $id): JsonResponse
-    {
-        try {
-            $result = $this->mocoService->deleteProject($id);
-            
-            return response()->json([
-                'success' => true,
-                'data' => $result
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Update employee capacities based on MOCO planning entries
-     */
-    public function updateCapacities(): JsonResponse
-    {
-        try {
-            // Hole Planungseinträge aus MOCO
-            $planningEntries = $this->mocoService->getPlanningEntries();
-            
-            if (!$planningEntries) {
-                return response()->json(['success' => false, 'message' => 'Keine Planungseinträge gefunden']);
+            $options = [];
+            if ($request->boolean('active_only')) {
+                $options['--active'] = true;
             }
 
-            // Analysiere geplante Arbeitszeiten pro Mitarbeiter
-            $employeePlanningHours = [];
-            $updatedCount = 0;
+            Artisan::call('moco:sync-employees', $options);
+            $output = Artisan::output();
 
-            foreach ($planningEntries as $entry) {
-                try {
-                    if (!isset($entry['user']['id'])) {
-                        continue;
-                    }
-
-                    $userId = $entry['user']['id'];
-                    $hoursPerDay = $entry['hours_per_day'] ?? 0;
-                    $startsOn = isset($entry['starts_on']) ? \Carbon\Carbon::parse($entry['starts_on']) : null;
-                    $endsOn = isset($entry['ends_on']) ? \Carbon\Carbon::parse($entry['ends_on']) : null;
-
-                    if (!$startsOn || !$endsOn || $hoursPerDay <= 0) {
-                        continue;
-                    }
-
-                    // Berechne Anzahl Arbeitstage
-                    $workDays = $startsOn->diffInDays($endsOn) + 1;
-                    $totalHours = $hoursPerDay * $workDays;
-
-                    // Gruppiere nach Mitarbeiter
-                    if (!isset($employeePlanningHours[$userId])) {
-                        $employeePlanningHours[$userId] = [
-                            'name' => $entry['user']['firstname'] . ' ' . $entry['user']['lastname'],
-                            'total_hours' => 0,
-                            'total_days' => 0
-                        ];
-                    }
-                    
-                    $employeePlanningHours[$userId]['total_hours'] += $totalHours;
-                    $employeePlanningHours[$userId]['total_days'] += $workDays;
-
-                } catch (Exception $e) {
-                    \Log::warn("Fehler beim Analysieren von Planungseintrag: " . $e->getMessage());
-                }
-            }
-
-            // Aktualisiere Kapazitäten
-            foreach ($employeePlanningHours as $userId => $data) {
-                $averageHoursPerDay = $data['total_days'] > 0 ? $data['total_hours'] / $data['total_days'] : 0;
-                $averageHoursPerWeek = $averageHoursPerDay * 5; // 5 Arbeitstage pro Woche
-                
-                // Finde lokalen Mitarbeiter
-                $employee = \App\Models\Employee::where('moco_id', $userId)->first();
-                if (!$employee) {
-                    continue;
-                }
-
-                $oldCapacity = $employee->weekly_capacity;
-                $newCapacity = $this->getRecommendedCapacity($averageHoursPerWeek, $oldCapacity);
-                
-                if ($newCapacity != $oldCapacity) {
-                    $employee->update(['weekly_capacity' => $newCapacity]);
-                    $updatedCount++;
-                }
-            }
-
-            return response()->json([
-                'success' => true, 
-                'message' => "Kapazitäten erfolgreich aktualisiert! {$updatedCount} Mitarbeiter-Kapazitäten wurden angepasst.",
-                'updated_count' => $updatedCount,
-                'analyzed_employees' => count($employeePlanningHours)
-            ]);
-
-        } catch (Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Fehler bei der Kapazitäts-Aktualisierung: ' . $e->getMessage()]);
+            return redirect()->back()->with('success', 'Mitarbeiter erfolgreich synchronisiert!');
+        } catch (\Exception $e) {
+            Log::error('MOCO Employee Sync Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
         }
     }
 
-    private function getRecommendedCapacity($averageHoursPerWeek, $currentCapacity): int
+    /**
+     * Sync projects from MOCO
+     */
+    public function syncProjects(Request $request)
     {
-        if ($averageHoursPerWeek == 0) {
-            return $currentCapacity;
+        try {
+            $options = [];
+            if ($request->boolean('active_only')) {
+                $options['--active'] = true;
+            }
+
+            Artisan::call('moco:sync-projects', $options);
+            $output = Artisan::output();
+
+            return redirect()->back()->with('success', 'Projekte erfolgreich synchronisiert!');
+        } catch (\Exception $e) {
+            Log::error('MOCO Project Sync Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Sync activities from MOCO
+     */
+    public function syncActivities(Request $request)
+    {
+        try {
+            $options = [];
+            
+            if ($request->has('from')) {
+                $options['--from'] = $request->input('from');
+            }
+            
+            if ($request->has('to')) {
+                $options['--to'] = $request->input('to');
+            }
+            
+            if ($request->has('days')) {
+                $options['--days'] = $request->input('days', 30);
+            }
+
+            Artisan::call('moco:sync-activities', $options);
+            $output = Artisan::output();
+
+            return redirect()->back()->with('success', 'Zeiterfassungen erfolgreich synchronisiert!');
+        } catch (\Exception $e) {
+            Log::error('MOCO Activities Sync Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Sync all data from MOCO
+     */
+    public function syncAll(Request $request)
+    {
+        try {
+            $options = [];
+            
+            if ($request->boolean('active_only')) {
+                $options['--active'] = true;
+            }
+            
+            if ($request->has('days')) {
+                $options['--days'] = $request->input('days', 30);
+            }
+
+            Artisan::call('moco:sync-all', $options);
+            $output = Artisan::output();
+
+            return redirect()->back()->with('success', 'Alle Daten erfolgreich synchronisiert!');
+        } catch (\Exception $e) {
+            Log::error('MOCO Full Sync Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Test MOCO API connection
+     */
+    public function testConnection()
+    {
+        try {
+            $isConnected = $this->mocoService->testConnection();
+
+            if ($isConnected) {
+                return redirect()->back()->with('success', 'Verbindung zur MOCO API erfolgreich!');
+            } else {
+                return redirect()->back()->with('error', 'Verbindung zur MOCO API fehlgeschlagen. Bitte prüfen Sie Ihre Zugangsdaten.');
+            }
+        } catch (\Exception $e) {
+            Log::error('MOCO Connection Test Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Fehler beim Verbindungstest: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show sync history/logs
+     */
+    public function logs(Request $request)
+    {
+        $query = MocoSyncLog::with('user')->orderBy('started_at', 'desc');
+
+        // Filter by type
+        if ($request->has('type') && $request->type !== 'all') {
+            $query->where('sync_type', $request->type);
         }
 
-        $recommended = round($averageHoursPerWeek);
-        
-        if ($recommended < 20) return 20;
-        if ($recommended > 50) return 50;
-        
-        $standardCapacities = [20, 25, 30, 35, 40, 45, 50];
-        $closest = $standardCapacities[0];
-        $minDiff = abs($recommended - $closest);
-        
-        foreach ($standardCapacities as $capacity) {
-            $diff = abs($recommended - $capacity);
-            if ($diff < $minDiff) {
-                $minDiff = $diff;
-                $closest = $capacity;
-            }
+        // Filter by status
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
         }
-        
-        return $closest;
+
+        $logs = $query->paginate(20);
+
+        return view('moco.logs', [
+            'logs' => $logs,
+            'currentType' => $request->get('type', 'all'),
+            'currentStatus' => $request->get('status', 'all'),
+        ]);
+    }
+
+    /**
+     * Show mapping management (items without MOCO ID)
+     */
+    public function mappings()
+    {
+        $unmappedEmployees = Employee::whereNull('moco_id')->get();
+        $unmappedProjects = Project::whereNull('moco_id')->get();
+        $unmappedTimeEntries = TimeEntry::whereNull('moco_id')->get();
+
+        return view('moco.mappings', [
+            'unmappedEmployees' => $unmappedEmployees,
+            'unmappedProjects' => $unmappedProjects,
+            'unmappedTimeEntries' => $unmappedTimeEntries,
+        ]);
+    }
+
+    /**
+     * Show statistics and insights
+     */
+    public function statistics()
+    {
+        // Sync statistics by month
+        $syncStats = MocoSyncLog::selectRaw('
+            DATE_FORMAT(started_at, "%Y-%m") as month,
+            sync_type,
+            COUNT(*) as total_syncs,
+            SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as successful,
+            SUM(CASE WHEN status = "failed" THEN 1 ELSE 0 END) as failed,
+            SUM(items_created) as total_created,
+            SUM(items_updated) as total_updated,
+            AVG(duration_seconds) as avg_duration
+        ')
+        ->where('started_at', '>=', Carbon::now()->subMonths(6))
+        ->groupBy('month', 'sync_type')
+        ->orderBy('month', 'desc')
+        ->get();
+
+        // Overall statistics
+        $overallStats = [
+            'total_syncs' => MocoSyncLog::count(),
+            'successful_syncs' => MocoSyncLog::where('status', 'completed')->count(),
+            'failed_syncs' => MocoSyncLog::where('status', 'failed')->count(),
+            'total_items_synced' => MocoSyncLog::sum('items_processed'),
+            'avg_duration' => MocoSyncLog::where('status', 'completed')->avg('duration_seconds'),
+        ];
+
+        // Data coverage
+        $coverage = [
+            'employees' => [
+                'total' => Employee::count(),
+                'synced' => Employee::whereNotNull('moco_id')->count(),
+                'percentage' => Employee::count() > 0 
+                    ? round((Employee::whereNotNull('moco_id')->count() / Employee::count()) * 100, 2)
+                    : 0,
+            ],
+            'projects' => [
+                'total' => Project::count(),
+                'synced' => Project::whereNotNull('moco_id')->count(),
+                'percentage' => Project::count() > 0 
+                    ? round((Project::whereNotNull('moco_id')->count() / Project::count()) * 100, 2)
+                    : 0,
+            ],
+            'timeEntries' => [
+                'total' => TimeEntry::count(),
+                'synced' => TimeEntry::whereNotNull('moco_id')->count(),
+                'percentage' => TimeEntry::count() > 0 
+                    ? round((TimeEntry::whereNotNull('moco_id')->count() / TimeEntry::count()) * 100, 2)
+                    : 0,
+            ],
+        ];
+
+        return view('moco.statistics', [
+            'syncStats' => $syncStats,
+            'overallStats' => $overallStats,
+            'coverage' => $coverage,
+        ]);
     }
 }
+

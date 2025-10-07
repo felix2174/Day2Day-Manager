@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
-            //
+        Schema::table('time_entries', function (Blueprint $table) {
+            $table->integer('moco_id')->nullable()->unique()->after('id');
+            $table->boolean('billable')->default(true)->after('description');
         });
     }
 
@@ -21,8 +22,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
-            //
+        Schema::table('time_entries', function (Blueprint $table) {
+            $table->dropColumn(['moco_id', 'billable']);
         });
     }
 };
+

@@ -1,294 +1,223 @@
 <?php
-declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\Employee;
 use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Response;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
-use App\Services\Moco\EmployeesService;
+use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
+use Exception;
 
-final class EmployeeController extends Controller
+class EmployeeController extends Controller
 {
     /**
-     * Listet Mitarbeiter mit einfacher Suche und Pagination.
-     */
-    public function index(Request $request): View
-    {
-        $q = trim((string) $request->get('q', ''));
-
-        $employees = Employee::query()
-            ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($sub) use ($q) {
-                    $sub->where('first_name', 'like', "%{$q}%")
-                        ->orWhere('last_name', 'like', "%{$q}%")
-                        ->orWhere('email', 'like', "%{$q}%");
-                });
-            })
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->paginate(20)
-            ->withQueryString();
-
-        return view('employees.index', compact('employees', 'q'));
-    }
-
-    /**
-     * Formular: Mitarbeiter anlegen.
-     */
-    public function create(): View
-    {
-        return view('employees.create');
-    }
-
-    /**
-     * Speichert neuen Mitarbeiter.
-     */
-    public function store(Request $request): RedirectResponse
-    {
-        $data = $this->validated($request);
-
-        $employee = Employee::create($data);
-
-        return redirect()
-            ->route('employees.show', $employee)
-            ->with('status', 'Employee created.');
-    }
-
-    /**
-     * Detailseite: lädt optional MOCO-User über Service.
-     * Kein HTTP in Views.
-     */
-    public function show(Employee $employee, EmployeesService $moco): View
-    {
-        $mocoUser = null;
-
-        if (!empty($employee->moco_id)) {
-            try {
-                $mocoUser = $moco->getById($employee->moco_id);
-            } catch (\Throwable $e) {
-                // Leise degradieren; Details gehen ins Log im HTTP-Client
-                $mocoUser = null;
-            }
-        }
-
-        return view('employees.show', [
-            'employee' => $employee,
-            'mocoUser' => $mocoUser,
-        ]);
-    }
-
-    /**
-     * Formular: Mitarbeiter bearbeiten.
-     */
-    public function edit(Employee $employee): View
-    {
-        return view('employees.edit', compact('employee'));
-    }
-
-    /**
-     * Aktualisiert Mitarbeiterdaten.
-     */
-    public function update(Request $request, Employee $employee): RedirectResponse
-    {
-        $data = $this->validated($request, $employee->id);
-
-        $employee->update($data);
-
-        return redirect()
-            ->route('employees.show', $employee)
-            ->with('status', 'Employee updated.');
-    }
-
-    /**
-     * Löscht Mitarbeiter.
-     */
-    public function destroy(Employee $employee): RedirectResponse
-    {
-        $employee->delete();
-
-        return redirect()
-            ->route('employees.index')
-            ->with('status', 'Employee deleted.');
-    }
-
-    /**
-     * Export als CSV (UTF-8 mit BOM für Excel).
+     * Export employees to CSV
      */
     public function export()
     {
+        $employees = DB::table('employees')->where('is_active', true)->get();
+
+        $filename = 'mitarbeiter-auslastung-' . date('Y-m-d') . '.csv';
+
         $headers = [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="employees.csv"',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function () {
-            $out = fopen('php://output', 'w');
-            // BOM
-            fwrite($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+        $callback = function() use ($employees) {
+            $file = fopen('php://output', 'w');
+
+            // UTF-8 BOM für Excel
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
             // Header
-            fputcsv($out, [
-                'id', 'first_name', 'last_name', 'email', 'moco_id',
-                'weekly_capacity', 'active', 'created_at', 'updated_at',
-            ]);
+            fputcsv($file, ['Mitarbeiter', 'Abteilung', 'Wochenkapazität (h)', 'Verplant (h)', 'Verfügbar (h)', 'Auslastung (%)'], ';');
 
-            Employee::query()
-                ->orderBy('id')
-                ->chunk(500, function ($rows) use ($out) {
-                    foreach ($rows as $e) {
-                        fputcsv($out, [
-                            $e->id,
-                            $e->first_name,
-                            $e->last_name,
-                            $e->email,
-                            $e->moco_id,
-                            $e->weekly_capacity,
-                            (int) ($e->active ?? 1),
-                            optional($e->created_at)->toDateTimeString(),
-                            optional($e->updated_at)->toDateTimeString(),
-                        ]);
-                    }
-                });
+            // Daten
+            foreach ($employees as $employee) {
+                $assignments = DB::table('assignments')
+                    ->where('employee_id', $employee->id)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now())
+                    ->sum('weekly_hours');
 
-            fclose($out);
+                $utilization = $employee->weekly_capacity > 0
+                    ? round(($assignments / $employee->weekly_capacity) * 100)
+                    : 0;
+
+                fputcsv($file, [
+                    $employee->first_name . ' ' . $employee->last_name,
+                    $employee->department,
+                    $employee->weekly_capacity,
+                    $assignments,
+                    $employee->weekly_capacity - $assignments,
+                    $utilization
+                ], ';');
+            }
+
+            fclose($file);
         };
 
-        return Response::stream($callback, 200, $headers);
+        return response()->stream($callback, 200, $headers);
     }
 
     /**
-     * Formular: Import anzeigen.
+     * Show import form
      */
-    public function importForm(): View
+    public function importForm()
     {
         return view('employees.import');
     }
 
     /**
-     * CSV-Import: Upsert nach E-Mail oder ID.
-     * Erwartet Kopfzeile wie im Export.
+     * Process import
      */
-    public function import(Request $request): RedirectResponse
+    public function import(Request $request)
     {
-        $v = Validator::make($request->all(), [
-            'file' => ['required', 'file', 'mimes:csv,txt'],
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048'
         ]);
-        $v->validate();
 
-        $path = $request->file('file')->store('imports');
-
-        $handle = fopen(Storage::path($path), 'r');
-        if ($handle === false) {
-            return back()->withErrors(['file' => 'File could not be opened.']);
-        }
-
-        // Skip BOM
-        $firstBytes = fread($handle, 3);
-        if ($firstBytes !== chr(0xEF) . chr(0xBB) . chr(0xBF)) {
-            // Not BOM, rewind to start
-            fseek($handle, 0);
-        }
-
-        // Header
-        $header = fgetcsv($handle);
-        $map = $this->headerMap($header);
-
-        $count = 0;
-        while (($row = fgetcsv($handle)) !== false) {
-            $data = $this->rowToEmployeeData($row, $map);
-
-            // Upsert anhand E-Mail oder ID
-            $employee = null;
-
-            if (!empty($data['id'])) {
-                $employee = Employee::find((int) $data['id']);
+        $file = $request->file('file');
+        $handle = fopen($file->getPathname(), 'r');
+        
+        // Skip header
+        fgetcsv($handle, 1000, ';');
+        
+        $imported = 0;
+        $errors = [];
+        
+        while (($data = fgetcsv($handle, 1000, ';')) !== false) {
+            try {
+                if (count($data) >= 6) {
+                    Employee::create([
+                        'first_name' => $data[0],
+                        'last_name' => $data[1],
+                        'department' => $data[2],
+                        'weekly_capacity' => (int)$data[3],
+                        'is_active' => $data[4] === '1' || strtolower($data[4]) === 'true',
+                        'email' => $data[5] ?? null,
+                    ]);
+                    $imported++;
+                }
+            } catch (Exception $e) {
+                $errors[] = "Zeile " . ($imported + 1) . ": " . $e->getMessage();
             }
-
-            if (!$employee && !empty($data['email'])) {
-                $employee = Employee::where('email', $data['email'])->first();
-            }
-
-            if ($employee) {
-                $employee->update($data);
-            } else {
-                Employee::create($data);
-            }
-
-            $count++;
         }
-
+        
         fclose($handle);
-
-        return redirect()
-            ->route('employees.index')
-            ->with('status', "Imported {$count} employees.");
+        
+        $message = "Erfolgreich {$imported} Mitarbeiter importiert.";
+        if (!empty($errors)) {
+            $message .= " Fehler: " . implode(', ', $errors);
+        }
+        
+        return redirect()->route('employees.index')->with('success', $message);
     }
 
     /**
-     * Validierung für Create/Update.
+     * Display a listing of the employees.
      */
-    private function validated(Request $request, ?int $ignoreId = null): array
+    public function index()
     {
-        $emailRule = 'nullable|email';
-        if ($ignoreId) {
-            $emailRule .= '|unique:employees,email,' . $ignoreId;
-        } else {
-            $emailRule .= '|unique:employees,email';
-        }
+        $employees = Employee::with(['assignments' => function($query) {
+            $query->where('start_date', '<=', now())
+                  ->where('end_date', '>=', now());
+        }, 'assignments.project'])
+        ->orderBy('is_active', 'desc')
+        ->orderBy('last_name', 'asc')
+        ->get();
 
-        return $request->validate([
-            'first_name'      => ['required', 'string', 'max:100'],
-            'last_name'       => ['required', 'string', 'max:100'],
-            'email'           => [$emailRule],
-            'moco_id'         => ['nullable', 'integer'],
-            'weekly_capacity' => ['nullable', 'numeric', 'min:0'],
-            'active'          => ['nullable', 'boolean'],
+        return view('employees.index', compact('employees'));
+    }
+
+    /**
+     * Show the form for creating a new employee.
+     */
+    public function create()
+    {
+        return view('employees.create');
+    }
+
+    /**
+     * Store a newly created employee in storage.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'department' => 'required|string|max:255',
+            'weekly_capacity' => 'required|numeric|min:0|max:40',
         ]);
+
+        DB::table('employees')->insert([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'department' => $validated['department'],
+            'weekly_capacity' => $validated['weekly_capacity'],
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich angelegt!');
     }
 
     /**
-     * Mappt CSV-Header auf Indizes.
+     * Display the specified employee.
      */
-    private function headerMap(?array $header): array
+    public function show(Employee $employee)
     {
-        $map = [];
-        if (!$header) {
-            return $map;
-        }
 
-        foreach ($header as $i => $col) {
-            $key = strtolower(trim((string) $col));
-            $map[$key] = $i;
-        }
+        $assignments = DB::table('assignments')
+            ->join('projects', 'assignments.project_id', '=', 'projects.id')
+            ->where('assignments.employee_id', $employee->id)
+            ->select('assignments.*', 'projects.name as project_name')
+            ->get();
 
-        return $map;
+        return view('employees.show', compact('employee', 'assignments'));
     }
 
     /**
-     * Wandelt eine CSV-Zeile in Employee-Attribute um.
+     * Show the form for editing the specified employee.
      */
-    private function rowToEmployeeData(array $row, array $map): array
+    public function edit(Employee $employee)
     {
-        $get = function (string $key, $default = null) use ($row, $map) {
-            if (!array_key_exists($key, $map)) {
-                return $default;
-            }
-            $v = $row[$map[$key]] ?? $default;
-            return is_string($v) ? trim($v) : $v;
-        };
+        return view('employees.edit', compact('employee'));
+    }
 
-        return [
-            'id'              => $get('id') !== null ? (int) $get('id') : null,
-            'first_name'      => $get('first_name', $get('firstname', '')),
-            'last_name'       => $get('last_name', $get('lastname', '')),
-            'email'           => $get('email'),
-            'moco_id'         => $get('moco_id') !== null ? (int) $get('moco_id') : null,
-            'weekly_capacity' => $get('weekly_capacity') !== null ? (float) $get('weekly_capacity') : null,
-            'active'          => $get('active') !== null ? (bool) $get('active') : true,
-        ];
+    /**
+     * Update the specified employee in storage.
+     */
+    public function update(Request $request, Employee $employee)
+    {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'department' => 'required|string|max:255',
+            'weekly_capacity' => 'required|numeric|min:0|max:40',
+        ]);
+
+        DB::table('employees')
+            ->where('id', $employee->id)
+            ->update([
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'department' => $validated['department'],
+                'weekly_capacity' => $validated['weekly_capacity'],
+                'updated_at' => now(),
+            ]);
+
+        return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich aktualisiert!');
+    }
+
+    /**
+     * Remove the specified employee from storage.
+     */
+    public function destroy(Employee $employee)
+    {
+        DB::table('employees')->where('id', $employee->id)->delete();
+
+        return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich gelöscht!');
     }
 }

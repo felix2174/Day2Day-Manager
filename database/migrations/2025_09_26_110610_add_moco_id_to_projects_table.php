@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->integer('moco_id')->nullable()->after('id');
-            $table->index('moco_id');
+            //
         });
     }
 
@@ -23,8 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->dropIndex(['moco_id']);
-            $table->dropColumn('moco_id');
+            //
         });
     }
 };

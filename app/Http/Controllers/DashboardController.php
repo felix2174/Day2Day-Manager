@@ -52,30 +52,21 @@ class DashboardController extends Controller
             return $b['utilization'] <=> $a['utilization'];
         });
         
-        // Projekte laden mit automatischer Fortschritts-Berechnung
-        $projects = \App\Models\Project::whereIn('status', ['active', 'planning'])
-            ->with(['assignments', 'timeEntries'])
+        // Projekte laden (alle Projekte, nicht nur aktive)
+        $projects = DB::table('projects')
+            ->whereIn('status', ['active', 'planning'])
             ->get();
         
         $projectData = [];
         foreach ($projects as $project) {
-            // Automatischen Fortschritt berechnen
-            $automaticProgress = $project->calculateAutomaticProgress();
-            
-            // Fortschritt aktualisieren falls nötig
-            if (abs($project->progress - $automaticProgress) > 1) {
-                $project->updateProgress();
-            }
-            
-            $projectAssignments = $project->assignments->sum('weekly_hours');
-            $totalHoursWorked = $project->timeEntries->sum('hours');
+            $projectAssignments = DB::table('assignments')
+                ->where('project_id', $project->id)
+                ->sum('weekly_hours');
             
             $projectData[] = [
                 'project' => $project,
                 'weekly_hours' => $projectAssignments,
-                'progress' => $automaticProgress,
-                'total_hours_worked' => $totalHoursWorked,
-                'progress_details' => $project->getProgressDetails()
+                'progress' => $project->progress ?? 0
             ];
         }
         
