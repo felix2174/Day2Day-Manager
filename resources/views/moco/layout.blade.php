@@ -4,6 +4,9 @@
 
 @section('content')
 <div style="width: 100%; margin: 0; padding: 20px;">
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;">
+        <strong>Hinweis:</strong> Diese Umgebung nutzt manuelle Synchronisation. Bitte führen Sie bei Bedarf den MOCO-Sync über die Buttons oder Artisan-Kommandos aus.
+    </div>
     @if (session('success'))
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px;">
             {{ session('success') }}

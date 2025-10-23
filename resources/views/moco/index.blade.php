@@ -1,6 +1,30 @@
 @extends('moco.layout')
 
 @section('content')
+            <!-- Global Warnings -->
+            @if(!$connectionStatus)
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #b91c1c;">
+                    <strong>Hinweis:</strong> Verbindung zur MOCO API aktuell nicht verfügbar. Bitte Zugangsdaten prüfen oder später erneut versuchen.
+                </div>
+            @endif
+
+            @if($lastFailedSync)
+                <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #92400e;">
+                    <strong>Letzter fehlgeschlagener Sync:</strong> {{ $lastFailedSync->sync_type }} am {{ $lastFailedSync->started_at->format('d.m.Y H:i') }} – {{ $lastFailedSync->error_message ?? 'Keine Fehlermeldung vorhanden' }}.
+                </div>
+            @endif
+
+            @if(!empty($syncWarnings))
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #047857;">
+                    <strong>Sync-Empfehlungen:</strong>
+                    <ul style="margin: 12px 0 0 20px; color: #065f46;">
+                        @foreach($syncWarnings as $warning)
+                            <li>{{ $warning }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <!-- Connection Status -->
             <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 20px;">
                 <div style="padding: 20px; color: #111827;">
@@ -14,6 +38,13 @@
                                 @else
                                     <span style="font-size: 18px;">✗</span>
                                     <span style="font-weight: 600;">Nicht verbunden</span>
+                                @endif
+                            </div>
+                            <div style="margin-top: 8px; color:#6b7280; font-size: 12px;">
+                                @if($lastConnectionCheck)
+                                    Letzter erfolgreicher Health-Check: {{ \Carbon\Carbon::parse($lastConnectionCheck)->diffForHumans() }}
+                                @else
+                                    Noch kein erfolgreicher Health-Check gespeichert.
                                 @endif
                             </div>
                         </div>
@@ -181,6 +212,74 @@
 
             </div>
 
+            <!-- Debug Section -->
+            <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 20px;">
+                <div style="padding: 20px; color:#111827;">
+                    <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 8px 0;">Debug - MOCO API Daten</h3>
+                    <p style="color:#6b7280; margin: 0 0 16px 0;">Rohdaten aus der MOCO API als JSON anzeigen (nur für Debugging).</p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <!-- All Users -->
+                        <a href="{{ route('moco.debug.users') }}" target="_blank" 
+                           style="display: block; padding: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; text-decoration: none; color: #374151; font-size: 14px; text-align: center; transition: all 0.2s;"
+                           onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                            <strong>Alle Benutzer</strong><br>
+                            <span style="font-size: 12px; color: #6b7280;">/moco/debug/users</span>
+                        </a>
+
+                        <!-- All Projects -->
+                        <a href="{{ route('moco.debug.projects') }}" target="_blank"
+                           style="display: block; padding: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; text-decoration: none; color: #374151; font-size: 14px; text-align: center; transition: all 0.2s;"
+                           onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                            <strong>Alle Projekte</strong><br>
+                            <span style="font-size: 12px; color: #6b7280;">/moco/debug/projects</span>
+                        </a>
+
+                        <!-- All Activities -->
+                        <a href="{{ route('moco.debug.activities') }}" target="_blank"
+                           style="display: block; padding: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; text-decoration: none; color: #374151; font-size: 14px; text-align: center; transition: all 0.2s;"
+                           onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                            <strong>Alle Aktivitäten</strong><br>
+                            <span style="font-size: 12px; color: #6b7280;">/moco/debug/activities</span>
+                        </a>
+
+                        <!-- All Absences -->
+                        <a href="{{ route('moco.debug.absences') }}" target="_blank"
+                           style="display: block; padding: 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; text-decoration: none; color: #374151; font-size: 14px; text-align: center; transition: all 0.2s;"
+                           onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                            <strong>Alle Abwesenheiten</strong><br>
+                            <span style="font-size: 12px; color: #6b7280;">/moco/debug/absences</span>
+                        </a>
+
+                        <!-- Specific User -->
+                        <div style="padding: 12px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+                            <strong style="color: #92400e; font-size: 14px;">Bestimmter Benutzer</strong><br>
+                            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                <input type="number" id="userId" placeholder="User ID" 
+                                       style="flex: 1; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px;">
+                                <button onclick="debugUser()" 
+                                        style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                    Anzeigen
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Specific Project -->
+                        <div style="padding: 12px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
+                            <strong style="color: #92400e; font-size: 14px;">Bestimmtes Projekt</strong><br>
+                            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                <input type="number" id="projectId" placeholder="Projekt ID" 
+                                       style="flex: 1; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 4px; font-size: 12px;">
+                                <button onclick="debugProject()" 
+                                        style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                                    Anzeigen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Recent Sync Logs -->
             @if($recentLogs->count() > 0)
             <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
@@ -243,5 +342,27 @@
             </div>
             @endif
 
+@endsection
+
+@section('scripts')
+<script>
+function debugUser() {
+    const userId = document.getElementById('userId').value;
+    if (!userId) {
+        alert('Bitte geben Sie eine User ID ein.');
+        return;
+    }
+    window.open(`/moco/debug/user/${userId}`, '_blank');
+}
+
+function debugProject() {
+    const projectId = document.getElementById('projectId').value;
+    if (!projectId) {
+        alert('Bitte geben Sie eine Projekt ID ein.');
+        return;
+    }
+    window.open(`/moco/debug/project/${projectId}`, '_blank');
+}
+</script>
 @endsection
 

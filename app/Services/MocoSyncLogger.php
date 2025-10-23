@@ -53,7 +53,7 @@ class MocoSyncLogger
         }
 
         $completedAt = Carbon::now();
-        $duration = $completedAt->diffInSeconds($this->currentLog->started_at);
+        $duration = max(0, $completedAt->diffInSeconds($this->currentLog->started_at, false));
 
         $this->currentLog->update([
             'status' => 'completed',
@@ -78,7 +78,7 @@ class MocoSyncLogger
         }
 
         $completedAt = Carbon::now();
-        $duration = $completedAt->diffInSeconds($this->currentLog->started_at);
+        $duration = max(0, $completedAt->diffInSeconds($this->currentLog->started_at, false));
 
         $this->currentLog->update([
             'status' => 'failed',

@@ -15,8 +15,13 @@ return new class extends Migration
             $table->id();
             $table->string('first_name', 50);
             $table->string('last_name', 50);
-            $table->string('department', 100);
-            $table->integer('weekly_capacity');
+            $table->string('department', 100)->nullable();
+            $table->integer('weekly_capacity')->nullable();
+            $table->string('email')->nullable();
+            $table->string('phone')->nullable();
+            $table->string('role')->nullable();
+            $table->string('position')->nullable();
+            $table->decimal('hourly_rate', 10, 2)->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

@@ -13,6 +13,10 @@ class ProjectSeeder extends Seeder
      */
     public function run(): void
     {
+        if (!config('app.enable_demo_seeders', false)) {
+            return;
+        }
+
         DB::table('projects')->insert([
             // Bestehende Projekte
             [

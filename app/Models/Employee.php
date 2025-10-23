@@ -2,17 +2,25 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Employee extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'first_name',
         'last_name',
         'department',
         'weekly_capacity',
         'is_active',
-        'moco_id'
+        'timeline_order',
+        'email',
+        'phone',
+        'role',
+        'position',
+        'hourly_rate'
     ];
 
     // Relationship: Ein Mitarbeiter hat viele Zuweisungen

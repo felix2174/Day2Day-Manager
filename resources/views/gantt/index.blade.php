@@ -1,246 +1,315 @@
 @extends('layouts.app')
 
-@section('title', 'Gantt-Diagramm')
+@section('title', 'Projektübersicht')
 
 @section('content')
 <div style="width: 100%; margin: 0; padding: 20px;">
-    <!-- Page Header -->
     <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">Gantt-Diagramm</h1>
-                <p style="color: #6b7280; margin: 5px 0 0 0;">Zeitliche Übersicht aller Projekte und deren Fortschritt</p>
-                <div style="display: flex; gap: 20px; margin-top: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Projekte:</span>
-                        <span style="font-weight: 600; color: #111827;">{{ $projects->count() }}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Aktiv:</span>
-                        <span style="font-weight: 600; color: #059669;">{{ $projects->where('status', 'active')->count() }}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Geplant:</span>
-                        <span style="font-weight: 600; color: #3b82f6;">{{ $projects->where('status', 'planning')->count() }}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Abgeschlossen:</span>
-                        <span style="font-weight: 600; color: #6b7280;">{{ $projects->where('status', 'completed')->count() }}</span>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <a href="{{ route('gantt.export') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    📊 Excel Export
-                </a>
-            </div>
-        </div>
-    </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 12px;">
+                {{-- Dropdown Menu Button + Title --}}
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div x-data="{ open: false }" style="position: relative;">
+                        <button @click="open = !open" 
+                                type="button"
+                                style="background: #f9fafb; color: #374151; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center;"
+                                onmouseover="this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db'"
+                                onmouseout="this.style.background='#f9fafb'; this.style.borderColor='#e5e7eb'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="5" r="1.5"/>
+                                <circle cx="12" cy="12" r="1.5"/>
+                                <circle cx="12" cy="19" r="1.5"/>
+                            </svg>
+                        </button>
 
-    <!-- Gantt Chart Container -->
-    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-        <!-- Chart Header -->
-        <div style="background: #f9fafb; padding: 20px; border-bottom: 1px solid #e5e7eb;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">Projekt-Timeline</h3>
-                <div style="display: flex; gap: 8px;">
-                    <button onclick="zoomIn()" style="background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">🔍+</button>
-                    <button onclick="zoomOut()" style="background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">🔍-</button>
-                </div>
-            </div>
-        </div>
+                        {{-- Dropdown Menu --}}
+                        <div x-show="open" 
+                             @click.away="open = false"
+                             x-transition:enter="transition ease-out duration-100"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             style="position: absolute; left: 0; top: 100%; margin-top: 8px; z-index: 1000; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); min-width: 220px; overflow: hidden;">
+                            
+                            @if($viewMode === 'projects')
+                                {{-- Filter & Suche --}}
+                                <button type="button" 
+                                        @click="toggleFilters(); open = false"
+                                        style="width: 100%; text-align: left; padding: 12px 16px; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 14px; color: #374151; transition: background 0.15s ease;"
+                                        onmouseover="this.style.background='#f9fafb'"
+                                        onmouseout="this.style.background='transparent'">
+                                    <svg style="width: 20px; height: 20px; color: #3b82f6;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <span style="font-weight: 500;">Filter & Suche</span>
+                                    <span id="menuFilterIndicator" style="display: {{ count(array_filter(Session::get('gantt_filters', []))) > 0 ? 'inline-flex' : 'none' }}; background: #ef4444; color: white; border-radius: 999px; width: 18px; height: 18px; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; margin-left: auto;">{{ count(array_filter(Session::get('gantt_filters', []))) }}</span>
+                                </button>
 
-        <!-- Chart Content -->
-        <div style="padding: 20px; overflow-x: hidden;">
-            @if($projects->count() > 0)
-                @php
-                    // Engpass-Übersicht vorbereiten (Top 5 nach größtem Defizit)
-                    $bnList = [];
-                    foreach ($projects as $p) {
-                        $pStart = \Carbon\Carbon::parse($p->start_date);
-                        $pEnd = \Carbon\Carbon::parse($p->end_date);
-                        $req = \DB::table('assignments')->where('project_id', $p->id)->sum('weekly_hours');
-                        $empIds = \DB::table('assignments')->where('project_id', $p->id)->pluck('employee_id');
-                        $avail = 0; $absHit = false;
-                        foreach ($empIds as $eid) {
-                            $emp = \DB::table('employees')->where('id', $eid)->first(); if (!$emp) continue;
-                            $cap = (float)($emp->weekly_capacity ?? 40);
-                            $abs = \DB::table('absences')->where('employee_id', $eid)
-                                ->where('start_date', '<=', $pEnd->format('Y-m-d'))
-                                ->where('end_date', '>=', $pStart->format('Y-m-d'))
-                                ->first();
-                            if ($abs) { $cap *= 0.5; $absHit = true; }
-                            $avail += $cap;
-                        }
-                        $def = max(0, (int)round($req - $avail));
-                        if ($def > 0) {
-                            $bnList[] = [
-                                'project' => $p,
-                                'deficit' => $def,
-                                'required' => (int)round($req),
-                                'available' => (int)round($avail),
-                                'hasAbsence' => $absHit,
-                            ];
-                        }
-                    }
-                    usort($bnList, fn($a,$b) => $b['deficit'] <=> $a['deficit']);
-                    $bnTop = array_slice($bnList, 0, 5);
-                @endphp
+                                <div style="height: 1px; background: #e5e7eb; margin: 4px 0;"></div>
+                            @endif
 
-                @if(count($bnTop) > 0)
-                <div style="border:1px solid #fecaca; background:#fef2f2; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; gap:8px; color:#991b1b; font-weight:600; margin-bottom:6px;">
-                        ⚠ Engpass-Übersicht (Top {{ count($bnTop) }})
-                    </div>
-                    <ul style="list-style:none; padding:0; margin:0; display:grid; gap:6px;">
-                        @foreach($bnTop as $bn)
-                        <li style="display:flex; justify-content:space-between; align-items:center; background:#fff; border:1px dashed #fecaca; border-radius:6px; padding:8px 10px;">
-                            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                                <span style="font-weight:600; color:#111827;">{{ $bn['project']->name }}</span>
-                                <span style="font-size:12px; color:#6b7280;">({{ \Carbon\Carbon::parse($bn['project']->start_date)->format('d.m.') }}–{{ \Carbon\Carbon::parse($bn['project']->end_date)->format('d.m.') }})</span>
-                                @if($bn['hasAbsence'])
-                                    <span style="font-size:12px; color:#b91c1c;">Abwesenheit wirkt sich aus</span>
-                                @endif
+                            {{-- Exportieren --}}
+                            <div style="padding: 4px 0;">
+                                <div style="padding: 8px 16px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Exportieren</div>
+                                <a href="{{ route('gantt.export') }}?view={{ $viewMode }}" 
+                                   @click="open = false"
+                                   style="width: 100%; text-align: left; padding: 10px 16px; background: transparent; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 14px; color: #374151; transition: background 0.15s ease;"
+                                   onmouseover="this.style.background='#f9fafb'"
+                                   onmouseout="this.style.background='transparent'">
+                                    <svg style="width: 20px; height: 20px; color: #10b981;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span style="font-weight: 500;">Excel Export</span>
+                                </a>
+                                <button type="button" disabled
+                                        style="width: 100%; text-align: left; padding: 10px 16px; background: transparent; border: none; cursor: not-allowed; display: flex; align-items: center; gap: 10px; font-size: 14px; color: #9ca3af; opacity: 0.6;"
+                                        title="Bald verfügbar">
+                                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
+                                    <span style="font-weight: 500;">PDF Export</span>
+                                    <span style="font-size: 10px; background: #f3f4f6; color: #6b7280; padding: 2px 6px; border-radius: 4px; margin-left: auto;">Bald</span>
+                                </button>
                             </div>
-                            <div style="font-size:12px; color:#991b1b;">
-                                Defizit: <strong>{{ $bn['deficit'] }}h/W</strong>
-                                <span style="color:#6b7280;">(Bedarf {{ $bn['required'] }} • Verfügbar {{ $bn['available'] }})</span>
-                            </div>
-                        </li>
-                        @endforeach
-                    </ul>
+
+                            <div style="height: 1px; background: #e5e7eb; margin: 4px 0;"></div>
+
+                            {{-- Einstellungen --}}
+                            <button type="button" disabled
+                                    style="width: 100%; text-align: left; padding: 12px 16px; background: transparent; border: none; cursor: not-allowed; display: flex; align-items: center; gap: 10px; font-size: 14px; color: #9ca3af; opacity: 0.6;"
+                                    title="Bald verfügbar">
+                                <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span style="font-weight: 500;">Einstellungen</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">{{ $viewMode === 'employees' ? 'Gantt-Diagramm: Mitarbeiter' : 'Gantt-Diagramm: Projekte' }}</h1>
                 </div>
+                <div style="display: flex; gap: 16px; margin-top: 10px; align-items: center; flex-wrap: wrap;">
+                    @if($viewMode === 'employees')
+                        <div style="color: #6b7280; font-size: 14px;">Mitarbeiter:</div>
+                        <div style="font-weight: 600; color: #111827;">{{ $timelineByEmployee->count() }}</div>
+                    @else
+                        <div style="color: #6b7280; font-size: 14px;">Projekte:</div>
+                        <div style="font-weight: 600; color: #111827;">{{ $projects->count() }}</div>
+                        <div style="height: 16px; width: 1px; background: #e5e7eb;"></div>
+                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280; font-size: 14px;">In Bearbeitung:</span>
+                            <span style="font-weight: 600; color: #10b981;">{{ $projects->filter(function ($p) {
+                                if ($p->finish_date) {
+                                    return \Carbon\Carbon::parse($p->finish_date)->isFuture();
+                                }
+                                return $p->status === 'in_bearbeitung' || $p->status === 'active' || $p->status === 'planning';
+                            })->count() }}</span>
+                        </div>
+                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="color: #6b7280; font-size: 14px;">Abgeschlossen:</span>
+                            <span style="font-weight: 600; color: #6b7280;">{{ $projects->filter(function ($p) {
+                                if ($p->finish_date) {
+                                    return \Carbon\Carbon::parse($p->finish_date)->isPast();
+                                }
+                                return $p->status === 'abgeschlossen' || $p->status === 'completed';
+                            })->count() }}</span>
+                        </div>
+                    @endif
+                </div>
+                @if($viewMode === 'employees')
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                        <button id="ganttEmployeeUndo" type="button" disabled style="padding: 10px 16px; background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; opacity: 0.5; transition: all 0.2s ease;">Änderung rückgängig</button>
+                        <span style="font-size: 12px; color: #6b7280;">Snapping & Undo aktiv – Änderungen werden übernommen, sobald du loslässt.</span>
+                    </div>
                 @endif
-                <!-- Timeline Header -->
-                <div style="display: grid; grid-template-columns: 260px repeat(12, 1fr); gap: 1px; margin-bottom: 1px;">
-                    <div style="background: #f3f4f6; padding: 12px; font-weight: 600; color: #374151; border: 1px solid #e5e7eb;">Projekt</div>
-                    @for($i = 0; $i < 12; $i++)
-                        @php
-                            $month = now()->addMonths($i);
-                        @endphp
-                        <div style="background: #f3f4f6; padding: 12px; text-align: center; font-weight: 600; color: #374151; border: 1px solid #e5e7eb; font-size: 12px;">
-                            {{ $month->format('M Y') }}
-                        </div>
-                    @endfor
-                </div>
-
-                <!-- Project Rows -->
-                @foreach($projects as $project)
-                    @php
-                        $startDate = \Carbon\Carbon::parse($project->start_date);
-                        $endDate = \Carbon\Carbon::parse($project->end_date);
-                        $startMonth = $startDate->diffInMonths(now());
-                        $durationMonths = $startDate->diffInMonths($endDate) + 1;
-
-                        // Bottleneck-Heuristik: Summe der wöchentlichen benötigten Stunden im Projekt
-                        $requiredPerWeek = \DB::table('assignments')
-                            ->where('project_id', $project->id)
-                            ->sum('weekly_hours');
-
-                        // Verfügbare Kapazität der zugewiesenen Mitarbeiter (unter Abzug von Abwesenheiten in Projektzeitraum)
-                        $employeeIds = \DB::table('assignments')->where('project_id', $project->id)->pluck('employee_id');
-                        $availablePerWeek = 0;
-                        foreach ($employeeIds as $eid) {
-                            $emp = \DB::table('employees')->where('id', $eid)->first();
-                            if (!$emp) continue;
-                            $capacity = (float)($emp->weekly_capacity ?? 40);
-                            // Wenn Mitarbeiter innerhalb des Projektzeitraums abwesend ist, reduziere grob um 50% (vereinfachte Annahme)
-                            $absence = \DB::table('absences')
-                                ->where('employee_id', $eid)
-                                ->where('start_date', '<=', $endDate->format('Y-m-d'))
-                                ->where('end_date', '>=', $startDate->format('Y-m-d'))
-                                ->first();
-                            if ($absence) {
-                                $capacity *= 0.5;
-                            }
-                            $availablePerWeek += $capacity;
-                        }
-
-                        $bottleneck = $requiredPerWeek > $availablePerWeek && $availablePerWeek > 0;
-                        $bnColor = $bottleneck ? '#ef4444' : ($project->status == 'active' ? '#10b981' : ($project->status == 'planning' ? '#3b82f6' : '#6b7280'));
-                    @endphp
-                    <div style="display: grid; grid-template-columns: 260px repeat(12, 1fr); gap: 1px; margin-bottom: 1px;">
-                        <!-- Project Name -->
-                        <div style="background: white; padding: 12px; border: 1px solid #e5e7eb; display: flex; align-items: center;">
-                            <div style="width: 8px; height: 8px; background: {{ $project->status == 'active' ? '#10b981' : ($project->status == 'planning' ? '#3b82f6' : '#6b7280') }}; border-radius: 50%; margin-right: 8px;"></div>
-                            <div>
-                                <div style="font-weight: 500; color: #111827; font-size: 14px;">{{ $project->name }}</div>
-                                <div style="color: #6b7280; font-size: 12px;">{{ round($project->progress) }}%</div>
-                                @if($bottleneck)
-                                <div style="color:#b91c1c; font-size: 12px; display:flex; align-items:center; gap:6px;">
-                                    ⚠ Engpass: Bedarf {{ (int)$requiredPerWeek }}h/W  • Verfügbar {{ (int)$availablePerWeek }}h/W
-                                </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- Timeline Cells -->
-                        @for($i = 0; $i < 12; $i++)
-                            @php
-                                $isInRange = $i >= $startMonth && $i < ($startMonth + $durationMonths);
-                                $isCurrent = $i == $startMonth;
-                            @endphp
-                            <div style="background: {{ $isInRange ? ($bottleneck ? '#fee2e2' : ($project->status == 'active' ? '#dcfce7' : ($project->status == 'planning' ? '#dbeafe' : '#f3f4f6'))) : 'white' }}; border: 1px solid #e5e7eb; position: relative; min-height: 40px;">
-                                @if($isInRange)
-                                    <div style="position: absolute; top: 50%; left: 0; right: 0; height: 8px; background: {{ $bnColor }}; transform: translateY(-50%); border-radius: 4px;"></div>
-                                    @if($isCurrent)
-                                        <div style="position: absolute; top: 50%; left: 0; right: 0; height: 8px; background: #f59e0b; transform: translateY(-50%); border-radius: 4px; width: {{ $project->progress }}%;"></div>
-                                    @endif
-                                @endif
-                            </div>
-                        @endfor
-                    </div>
-                @endforeach
-
-                <!-- Legend -->
-                <div style="margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 6px;">
-                    <h4 style="font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 12px 0;">Legende</h4>
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></div>
-                            <span style="font-size: 12px; color: #374151;">Aktive Projekte</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 12px; height: 12px; background: #3b82f6; border-radius: 2px;"></div>
-                            <span style="font-size: 12px; color: #374151;">Geplante Projekte</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 12px; height: 12px; background: #ef4444; border-radius: 2px;"></div>
-                            <span style="font-size: 12px; color: #374151;">Engpass (Kapazität < Bedarf)</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 12px; height: 12px; background: #f59e0b; border-radius: 2px;"></div>
-                            <span style="font-size: 12px; color: #374151;">Aktueller Fortschritt</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 12px; height: 12px; background: #6b7280; border-radius: 2px;"></div>
-                            <span style="font-size: 12px; color: #374151;">Abgeschlossene Projekte</span>
-                        </div>
-                    </div>
-                </div>
-            @else
-                <div style="text-align: center; padding: 60px 20px; color: #6b7280;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-                    <h3 style="font-size: 18px; font-weight: 500; color: #111827; margin: 0 0 8px 0;">Keine Projekte</h3>
-                    <p style="margin: 0 0 24px 0;">Erstellen Sie Projekte, um das Gantt-Diagramm zu sehen.</p>
-                    <a href="{{ route('projects.create') }}" style="background: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500;">
-                        ➕ Erstes Projekt erstellen
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                {{-- View Mode Toggle --}}
+                <div style="background: #f3f4f6; border-radius: 999px; padding: 4px; display: inline-flex;">
+                    <a href="{{ route('gantt.index', ['view' => 'projects']) }}"
+                       style="padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; text-decoration: none; color: {{ $viewMode === 'projects' ? '#ffffff' : '#374151' }}; background: {{ $viewMode === 'projects' ? '#111827' : 'transparent' }}; transition: all 0.2s ease;">
+                        Projekte
+                    </a>
+                    <a href="{{ route('gantt.index', ['view' => 'employees']) }}"
+                       style="padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; text-decoration: none; color: {{ $viewMode === 'employees' ? '#ffffff' : '#374151' }}; background: {{ $viewMode === 'employees' ? '#111827' : 'transparent' }}; transition: all 0.2s ease;">
+                        Mitarbeiter
                     </a>
                 </div>
-            @endif
+
+                {{-- Zoom Controls --}}
+                <div style="display: flex; gap: 6px; align-items: center; background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px;">
+                    <span style="font-size: 12px; color: #6b7280; font-weight: 500; padding: 0 8px;">🔍 Zoom:</span>
+                    @php
+                        $zoomOptions = [
+                            '12m' => ['label' => '12M', 'title' => '12 Monate'],
+                            '6m' => ['label' => '6M', 'title' => '6 Monate'],
+                            '3m' => ['label' => '3M', 'title' => '3 Monate'],
+                            '12w' => ['label' => '12W', 'title' => '12 Wochen'],
+                            '6w' => ['label' => '6W', 'title' => '6 Wochen'],
+                            '3w' => ['label' => '3W', 'title' => '3 Wochen'],
+                        ];
+                    @endphp
+                    @foreach($zoomOptions as $zoomKey => $zoomData)
+                        <a href="{{ route('gantt.index', array_merge(request()->query(), ['zoom' => $zoomKey])) }}"
+                           title="{{ $zoomData['title'] }}"
+                           style="padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: {{ $currentZoom === $zoomKey ? '#ffffff' : '#374151' }}; background: {{ $currentZoom === $zoomKey ? '#3b82f6' : 'transparent' }}; transition: all 0.15s ease;"
+                           onmouseover="this.style.background = '{{ $currentZoom === $zoomKey ? '#2563eb' : '#f3f4f6' }}'"
+                           onmouseout="this.style.background = '{{ $currentZoom === $zoomKey ? '#3b82f6' : 'transparent' }}'">
+                            {{ $zoomData['label'] }}
+                        </a>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
+
+    {{-- Collapsible Filter Panel (Projects Only) --}}
+    @if($viewMode === 'projects')
+        <div id="filterPanel" style="display: none; background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
+                <button onclick="clearAllFilters()" style="background: #fef2f2; color: #dc2626; padding: 6px 12px; border: 1px solid #fecaca; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;"
+                        onmouseover="this.style.background='#fee2e2'"
+                        onmouseout="this.style.background='#fef2f2'">
+                    🗑️ Filter zurücksetzen
+                </button>
+            </div>
+            <form method="GET" action="{{ route('gantt.index') }}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <input type="hidden" name="view" value="projects">
+                
+                {{-- Search --}}
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Suche</label>
+                    <input type="text" name="search" value="{{ Session::get('gantt_filters.search', '') }}" placeholder="Projektname..." style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                </div>
+
+                {{-- Status --}}
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Status</label>
+                    <select name="status" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                        <option value="">Alle Status</option>
+                        <option value="in_bearbeitung" {{ Session::get('gantt_filters.status') === 'in_bearbeitung' ? 'selected' : '' }}>In Bearbeitung</option>
+                        <option value="abgeschlossen" {{ Session::get('gantt_filters.status') === 'abgeschlossen' ? 'selected' : '' }}>Abgeschlossen</option>
+                    </select>
+                </div>
+
+                {{-- Employee --}}
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Mitarbeiter</label>
+                    <select name="employee" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                        <option value="">Alle Mitarbeiter</option>
+                        @foreach($availableEmployees ?? [] as $emp)
+                            <option value="{{ $emp->id }}" {{ Session::get('gantt_filters.employee') == $emp->id ? 'selected' : '' }}>
+                                {{ $emp->first_name }} {{ $emp->last_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Timeframe --}}
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Zeitraum</label>
+                    <select name="timeframe" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                        <option value="">Alle Zeiträume</option>
+                        <option value="current" {{ Session::get('gantt_filters.timeframe') === 'current' ? 'selected' : '' }}>Aktuelle Projekte</option>
+                        <option value="future" {{ Session::get('gantt_filters.timeframe') === 'future' ? 'selected' : '' }}>Zukünftig</option>
+                        <option value="past" {{ Session::get('gantt_filters.timeframe') === 'past' ? 'selected' : '' }}>Abgeschlossen</option>
+                        <option value="this-month" {{ Session::get('gantt_filters.timeframe') === 'this-month' ? 'selected' : '' }}>Dieser Monat</option>
+                        <option value="this-quarter" {{ Session::get('gantt_filters.timeframe') === 'this-quarter' ? 'selected' : '' }}>Dieses Quartal</option>
+                    </select>
+                </div>
+
+                {{-- Sort --}}
+                <div>
+                    <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Sortierung</label>
+                    <select name="sort" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                        <option value="">Standard</option>
+                        <option value="name-asc" {{ Session::get('gantt_filters.sort') === 'name-asc' ? 'selected' : '' }}>Name (A-Z)</option>
+                        <option value="name-desc" {{ Session::get('gantt_filters.sort') === 'name-desc' ? 'selected' : '' }}>Name (Z-A)</option>
+                        <option value="date-start-asc" {{ Session::get('gantt_filters.sort') === 'date-start-asc' ? 'selected' : '' }}>Startdatum (aufsteigend)</option>
+                        <option value="date-start-desc" {{ Session::get('gantt_filters.sort') === 'date-start-desc' ? 'selected' : '' }}>Startdatum (absteigend)</option>
+                    </select>
+                </div>
+
+                {{-- Submit Button --}}
+                <div style="display: flex; align-items: flex-end;">
+                    <button type="submit" style="width: 100%; background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                            onmouseover="this.style.background='#2563eb'"
+                            onmouseout="this.style.background='#3b82f6'">
+                        Filter anwenden
+                    </button>
+                </div>
+            </form>
+        </div>
+    @endif
+
+    @if($viewMode === 'employees')
+        @include('gantt.partials.timeline-employees', [
+            'timelineStart' => $timelineStart,
+            'timelineEnd' => $timelineEnd,
+            'totalTimelineDays' => $totalTimelineDays
+        ])
+    @else
+        @include('gantt.partials.timeline-projects', [
+            'timelineStart' => $timelineStart,
+            'timelineEnd' => $timelineEnd,
+            'totalTimelineDays' => $totalTimelineDays
+        ])
+    @endif
 </div>
 
 <script>
-function zoomIn() {
-    // Zoom functionality would be implemented here
-    console.log('Zoom in');
+// Filter Panel Toggle
+function toggleFilters() {
+    const panel = document.getElementById('filterPanel');
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'block';
+    } else {
+        panel.style.display = 'none';
+    }
+    
+    // Update filter indicators
+    updateFilterIndicators();
 }
 
-function zoomOut() {
-    // Zoom functionality would be implemented here
-    console.log('Zoom out');
+function updateFilterIndicators() {
+    const filterCount = {{ count(array_filter(Session::get('gantt_filters', []))) }};
+    const menuIndicator = document.getElementById('menuFilterIndicator');
+    
+    if (menuIndicator) {
+        menuIndicator.style.display = filterCount > 0 ? 'inline-flex' : 'none';
+        menuIndicator.textContent = filterCount;
+    }
+}
+
+// Initialize Alpine.js functions
+document.addEventListener('alpine:init', () => {
+    Alpine.data('dropdownMenu', () => ({
+        open: false,
+        toggleFilters() {
+            toggleFilters();
+            this.open = false;
+        }
+    }));
+});
+        btn.style.color = '#374151';
+        btn.style.borderColor = '#e5e7eb';
+    }
+}
+
+// Clear All Filters
+function clearAllFilters() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('search');
+    url.searchParams.delete('status');
+    url.searchParams.delete('employee');
+    url.searchParams.delete('timeframe');
+    url.searchParams.delete('sort');
+    window.location.href = url.toString();
 }
 </script>
+
 @endsection

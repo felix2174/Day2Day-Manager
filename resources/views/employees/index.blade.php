@@ -4,141 +4,300 @@
 
 @section('content')
 <div style="width: 100%; margin: 0; padding: 0;">
-    <!-- Page Header -->
     <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">Mitarbeiter-Verwaltung</h1>
-                <p style="color: #6b7280; margin: 5px 0 0 0;">Verwalten Sie Ihre Mitarbeiter und deren Kapazitäten</p>
-                <div style="display: flex; gap: 20px; margin-top: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Gesamt:</span>
-                        <span style="font-weight: 600; color: #111827;">{{ $employees->count() }}</span>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;">
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">Mitarbeiter-Verwaltung</h1>
+                        <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 14px;">Auslastung & Bottlenecks auf Basis aktueller MOCO-Daten</p>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Aktiv:</span>
-                        <span style="font-weight: 600; color: #059669;">{{ $employees->where('is_active', true)->count() }}</span>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="{{ route('employees.export') }}" style="background: #ffffff; color: #374151; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #e5e7eb;">Excel Export</a>
+                        <a href="{{ route('employees.import') }}" style="background: #ffffff; color: #374151; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #e5e7eb;">CSV Import</a>
+                        <a href="{{ route('employees.create') }}" style="background: #111827; color: white; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 500;">Neuer Mitarbeiter</a>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Inaktiv:</span>
-                        <span style="font-weight: 600; color: #6b7280;">{{ $employees->where('is_active', false)->count() }}</span>
+                </div>
+
+                <div style="margin-top: 16px; padding: 12px 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; gap: 24px; flex-wrap: wrap;">
+                    <div style="min-width: 140px;">
+                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Gesamt</div>
+                        <div style="color: #111827; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $employees->count() }}</div>
+                    </div>
+                    <div style="min-width: 140px;">
+                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Aktiv</div>
+                        <div style="color: #059669; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $employees->where('is_active', true)->count() }}</div>
+                    </div>
+                    <div style="min-width: 140px;">
+                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Überlastet</div>
+                        <div style="color: #b91c1c; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $statusCounts['critical'] ?? 0 }}</div>
+                    </div>
+                    <div style="min-width: 140px;">
+                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Hohe Auslastung</div>
+                        <div style="color: #f59e0b; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $statusCounts['warning'] ?? 0 }}</div>
+                    </div>
+                    <div style="min-width: 140px;">
+                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Im Soll</div>
+                        <div style="color: #059669; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $statusCounts['balanced'] ?? 0 }}</div>
                     </div>
                 </div>
             </div>
-            <div style="display: flex; gap: 10px;">
-                <a href="{{ route('employees.export') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    📊 Excel Export
-                </a>
-                <a href="{{ route('employees.import') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    📥 CSV Import
-                </a>
-                <a href="{{ route('employees.create') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    ➕ Neuer Mitarbeiter
-                </a>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+            <div style="display: flex; flex-direction: column;">
+                <label for="filter-status" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Status</label>
+                <select id="filter-status" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 160px;">
+                    <option value="all">Alle Status</option>
+                    <option value="critical">Überlastet ({{ $statusCounts['critical'] ?? 0 }})</option>
+                    <option value="warning">Hohe Auslastung ({{ $statusCounts['warning'] ?? 0 }})</option>
+                    <option value="balanced">Im Soll ({{ $statusCounts['balanced'] ?? 0 }})</option>
+                    <option value="underutilized">Unterlast ({{ $statusCounts['underutilized'] ?? 0 }})</option>
+                    <option value="unknown">Ohne Daten ({{ $statusCounts['unknown'] ?? 0 }})</option>
+                </select>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <label style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Bottleneck</label>
+                <label style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; cursor: pointer; font-size: 13px; color: #374151;">
+                    <input type="checkbox" id="filter-bottleneck" style="width: 16px; height: 16px; accent-color: #ef4444;">
+                    Nur kritische Mitarbeiter
+                </label>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <label for="filter-department" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Abteilung</label>
+                <input id="filter-department" type="text" placeholder="Abteilung suchen" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 180px;">
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <label for="filter-search" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Suche</label>
+                <input id="filter-search" type="text" placeholder="Name oder Projekt" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 200px;">
             </div>
         </div>
     </div>
 
-    <!-- Alerts -->
+    @if(!empty($kpiWarnings))
+        <div style="background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            <strong>Hinweis:</strong>
+            <ul style="margin: 8px 0 0 20px;">
+                @foreach($kpiWarnings as $warning)
+                    <li>{{ $warning }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     @if(session('success'))
-        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
-            ✅ {{ session('success') }}
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            {{ session('success') }}
         </div>
     @endif
 
     @if(session('error'))
-        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
-            ❌ {{ session('error') }}
+        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            {{ session('error') }}
         </div>
     @endif
 
-    <!-- Employees Table -->
-    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead style="background: #f9fafb;">
-                <tr>
-                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Name</th>
-                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Abteilung</th>
-                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Kapazität</th>
-                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Auslastung</th>
-                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
-                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Aktionen</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($employees as $employee)
-                    @php
-                        $totalAssignedHours = $employee->assignments->sum('weekly_hours');
-                        $utilizationPercentage = $employee->weekly_capacity > 0 
-                            ? round(($totalAssignedHours / $employee->weekly_capacity) * 100) 
-                            : 0;
-                        $freeHours = $employee->weekly_capacity - $totalAssignedHours;
-                    @endphp
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 12px;">
-                            <div style="display: flex; align-items: center;">
-                                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; margin-right: 12px;">
-                                    {{ substr($employee->first_name, 0, 1) }}{{ substr($employee->last_name, 0, 1) }}
-                                </div>
-                                <div>
-                                    <div style="font-weight: 500; color: #111827;">{{ $employee->first_name }} {{ $employee->last_name }}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td style="padding: 12px;">
-                            <span style="background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
-                                {{ $employee->department }}
-                            </span>
-                        </td>
-                        <td style="padding: 12px; text-align: center;">
-                            {{ $employee->weekly_capacity }}h/Woche
-                        </td>
-                        <td style="padding: 12px;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="flex: 1; max-width: 100px;">
-                                    <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
-                                        <div style="height: 100%; background: {{ $utilizationPercentage > 90 ? '#ef4444' : ($utilizationPercentage > 70 ? '#f59e0b' : '#10b981') }}; width: {{ min(100, max(0, $utilizationPercentage)) }}%; transition: width 0.3s;"></div>
+    <div style="display: flex; gap: 20px;">
+        <div style="flex: 1; background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            <table id="employees-table" style="width: 100%; border-collapse: collapse;">
+                <thead style="background: #f9fafb;">
+                    <tr>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Name</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Abteilung</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Auslastung (4W)</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Auslastung (12W)</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Top-Projekt</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($employees as $employee)
+                        @php
+                            $statusColors = [
+                                'critical' => '#ef4444',
+                                'warning' => '#f59e0b',
+                                'balanced' => '#10b981',
+                                'underutilized' => '#6b7280',
+                                'unknown' => '#9ca3af'
+                            ];
+
+                            $statusLabel = [
+                                'critical' => 'Überlastet',
+                                'warning' => 'Hohe Auslastung',
+                                'balanced' => 'Im Soll',
+                                'underutilized' => 'Unterlast',
+                                'unknown' => 'Unbekannt',
+                            ];
+                        @endphp
+                        <tr class="employee-row" data-status="{{ $employee->kpi_status_4w }}" data-bottleneck="{{ $employee->kpi_bottleneck ? '1' : '0' }}" data-department="{{ strtolower($employee->department) }}" data-search="{{ strtolower($employee->first_name . ' ' . $employee->last_name . ' ' . ($employee->kpi_top_project['name'] ?? '')) }}" style="border-bottom: 1px solid #e5e7eb; background: {{ $employee->kpi_bottleneck ? '#fef2f2' : 'transparent' }};">
+                            <td style="padding: 12px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">
+                                        {{ strtoupper(substr($employee->first_name, 0, 1) . substr($employee->last_name, 0, 1)) }}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; color: #111827;">{{ $employee->first_name }} {{ $employee->last_name }}</div>
+                                        <div style="font-size: 12px; color: #6b7280;">Kapazität: {{ round($employee->moco_weekly_capacity) }}h/Woche</div>
+                                        @if($employee->kpi_absence_alert && $employee->kpi_absence_summary)
+                                            <div style="font-size: 11px; color: #b91c1c; margin-top: 4px;">{{ $employee->kpi_absence_summary }}</div>
+                                        @endif
                                     </div>
                                 </div>
-                                <span style="font-weight: 500; color: #374151; min-width: 40px;">{{ round($utilizationPercentage) }}%</span>
-                                <span style="color: #6b7280; font-size: 12px;">{{ $freeHours }}h frei</span>
-                            </div>
-                        </td>
-                        <td style="padding: 12px; text-align: center;">
-                            <span style="background: {{ $employee->is_active ? '#dcfce7' : '#f3f4f6' }}; color: {{ $employee->is_active ? '#166534' : '#374151' }}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
-                                {{ $employee->is_active ? 'Aktiv' : 'Inaktiv' }}
-                            </span>
-                        </td>
-                        <td style="padding: 12px;">
-                            <div style="display: flex; gap: 4px;">
-                                <a href="{{ route('employees.show', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;">
-                                    👁 Anzeigen
-                                </a>
-                                <a href="{{ route('employees.edit', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;">
-                                    ✏️ Bearbeiten
-                                </a>
-                                <form action="{{ route('employees.destroy', $employee) }}" method="POST" style="display: inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" style="background: #ffffff; color: #dc2626; padding: 6px 12px; border-radius: 8px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;" onclick="return confirm('Sind Sie sicher, dass Sie diesen Mitarbeiter löschen möchten?')">
-                                        🗑️ Löschen
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" style="padding: 40px; text-align: center; color: #6b7280;">
-                            <div style="display: flex; flex-direction: column; align-items: center;">
-                                <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
-                                <p style="font-size: 18px; font-weight: 500; margin: 0;">Keine Mitarbeiter gefunden</p>
-                            </div>
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+                            </td>
+                            <td style="padding: 12px;">
+                                <span style="background: #dbeafe; color: #1d4ed8; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">{{ $employee->department }}</span>
+                            </td>
+                            <td style="padding: 12px;">
+                                @if($employee->kpi_available)
+                                    <div style="font-weight: 600; color: {{ $statusColors[$employee->kpi_status_4w] ?? '#6b7280' }};">{{ $employee->kpi_util_4w }}%</div>
+                                    <div style="font-size: 11px; color: #6b7280;">{{ $employee->kpi_hours_4w }}h</div>
+                                @else
+                                    <span style="font-size: 12px; color: #9ca3af;">Keine Daten</span>
+                                @endif
+                            </td>
+                            <td style="padding: 12px;">
+                                @if($employee->kpi_available)
+                                    <div style="font-weight: 600; color: {{ $statusColors[$employee->kpi_status_12w] ?? '#6b7280' }};">{{ $employee->kpi_util_12w }}%</div>
+                                    <div style="font-size: 11px; color: #6b7280;">{{ $employee->kpi_hours_12w }}h</div>
+                                @else
+                                    <span style="font-size: 12px; color: #9ca3af;">Keine Daten</span>
+                                @endif
+                            </td>
+                            <td style="padding: 12px;">
+                                @if($employee->kpi_available && $employee->kpi_top_project)
+                                    <div style="font-weight: 600; color: #111827;">{{ $employee->kpi_top_project['name'] }}</div>
+                                    <div style="font-size: 11px; color: #6b7280;">{{ $employee->kpi_top_project['hours'] }}h ({{ $employee->kpi_top_project['share'] }}%)</div>
+                                @else
+                                    <span style="font-size: 12px; color: #9ca3af;">Keine Daten</span>
+                                @endif
+                            </td>
+                            <td style="padding: 12px;">
+                                @if($employee->kpi_available)
+                                    <span style="background: {{ ($statusColors[$employee->kpi_status_4w] ?? '#9ca3af') }}15; color: {{ $statusColors[$employee->kpi_status_4w] ?? '#374151' }}; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block;">
+                                        {{ $statusLabel[$employee->kpi_status_4w] }}
+                                    </span>
+                                @else
+                                    <span style="background: #f3f4f6; color: #6b7280; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block;">Unbekannt</span>
+                                @endif
+                            </td>
+                            <td style="padding: 12px;">
+                                <div style="display: flex; gap: 6px;">
+                                    <a href="{{ route('employees.show', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Anzeigen</a>
+                                    <a href="{{ route('employees.edit', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Bearbeiten</a>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">Keine Mitarbeiter gefunden</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div style="width: 360px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+            <div style="padding: 24px;">
+                <div style="margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 16px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">Abwesenheiten</h3>
+                    <p style="font-size: 13px; color: #6b7280; margin: 4px 0 0 0;">Nächste 30 Tage</p>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #e0f2fe, #bfdbfe); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <div style="font-size: 12px; font-weight: 600; color: #0c4a6e; text-transform: uppercase;">Team-Verfügbarkeit</div>
+                    <div style="margin-top: 12px; background: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden; position: relative;">
+                        <div style="background: {{ $teamAvailability >= 80 ? '#22c55e' : ($teamAvailability >= 60 ? '#fbbf24' : '#ef4444') }}; width: {{ $teamAvailability }}%; height: 100%;"></div>
+                        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #111827;">{{ $teamAvailability }}%</div>
+                    </div>
+                    <div style="font-size: 11px; color: #0c4a6e; margin-top: 8px;">{{ $absenceStats['total'] }} Abwesenheiten geplant</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
+                    <div style="background: #dbeafe; border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 20px; font-weight: 700; color: #1d4ed8;">{{ $absenceStats['urlaub'] }}</div>
+                        <div style="font-size: 10px; color: #1d4ed8; text-transform: uppercase;">Urlaub</div>
+                    </div>
+                    <div style="background: #fee2e2; border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 20px; font-weight: 700; color: #dc2626;">{{ $absenceStats['krankheit'] }}</div>
+                        <div style="font-size: 10px; color: #dc2626; text-transform: uppercase;">Krankheit</div>
+                    </div>
+                    <div style="background: #fef3c7; border-radius: 8px; padding: 12px; text-align: center;">
+                        <div style="font-size: 20px; font-weight: 700; color: #d97706;">{{ $absenceStats['fortbildung'] }}</div>
+                        <div style="font-size: 10px; color: #d97706; text-transform: uppercase;">Fortbildung</div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 700; color: #374151; margin: 0 0 12px 0;">Kommende Abwesenheiten</h4>
+                    @if($upcomingAbsences->count() > 0)
+                        <div style="display: grid; gap: 12px; max-height: 500px; overflow-y: auto;">
+                            @foreach($upcomingAbsences as $absence)
+                                @php
+                                    $start = \Carbon\Carbon::parse($absence->start_date);
+                                    $end = \Carbon\Carbon::parse($absence->end_date);
+                                @endphp
+                                <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">
+                                    <div style="font-weight: 600; color: #111827;">{{ $absence->employee_name }}</div>
+                                    <div style="font-size: 11px; color: #6b7280;">{{ $absence->department }}</div>
+                                    <div style="font-size: 12px; color: #1d4ed8; font-weight: 600; margin-top: 6px;">{{ $start->format('d.m.Y') }} - {{ $end->format('d.m.Y') }}</div>
+                                    <div style="font-size: 11px; color: #6b7280;">{{ $absence->type }} • {{ $start->diffInDays($end) + 1 }} Tage</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div style="text-align: center; padding: 24px; border: 1px dashed #e5e7eb; border-radius: 8px; color: #6b7280;">Keine Abwesenheiten geplant</div>
+                    @endif
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+    (function() {
+        const statusFilter = document.getElementById('filter-status');
+        const bottleneckFilter = document.getElementById('filter-bottleneck');
+        const departmentFilter = document.getElementById('filter-department');
+        const searchFilter = document.getElementById('filter-search');
+        const rows = Array.from(document.querySelectorAll('.employee-row'));
+
+        function applyFilters() {
+            const statusValue = statusFilter.value;
+            const bottleneckOnly = bottleneckFilter.checked;
+            const departmentValue = departmentFilter.value.trim().toLowerCase();
+            const searchValue = searchFilter.value.trim().toLowerCase();
+
+            rows.forEach(row => {
+                const rowStatus = row.dataset.status ?? 'unknown';
+                const rowBottleneck = row.dataset.bottleneck === '1';
+                const rowDepartment = row.dataset.department ?? '';
+                const rowSearch = row.dataset.search ?? '';
+
+                let visible = true;
+
+                if (statusValue !== 'all' && rowStatus !== statusValue) {
+                    visible = false;
+                }
+
+                if (visible && bottleneckOnly && !rowBottleneck) {
+                    visible = false;
+                }
+
+                if (visible && departmentValue && !rowDepartment.includes(departmentValue)) {
+                    visible = false;
+                }
+
+                if (visible && searchValue && !rowSearch.includes(searchValue)) {
+                    visible = false;
+                }
+
+                row.style.display = visible ? '' : 'none';
+            });
+        }
+
+        [statusFilter, bottleneckFilter].forEach(el => el.addEventListener('change', applyFilters));
+        [departmentFilter, searchFilter].forEach(el => el.addEventListener('input', applyFilters));
+    })();
+</script>
 @endsection
