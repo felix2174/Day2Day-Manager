@@ -1,0 +1,125 @@
+[33m73bfa0cc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Initial commit - IHK Terminplanungstool für enodia IT-Systemhaus
+[33m1a3fedcf[m[33m ([m[1;31morigin/main[m[33m)[m README hinzugefügt
+[33m98a4c8a5[m Initial commit - IHK Terminplanungstool
+[33m4aeb5602[m[33m ([m[1;33mtag: [m[1;33mv12.3.1[m[33m)[m revert (#6662)
+[33md9d44941[m Use application name from configuration (#6655)
+[33m84501124[m Making sure all related processed are closed when terminating the currently command (#6654)
+[33m730d9b5e[m Bump Pint version (#6653)
+[33m8d8d3b72[m Update CHANGELOG
+[33ma4d121f5[m[33m ([m[1;33mtag: [m[1;33mv12.3.0[m[33m)[m Change composer post-autoload-dump script to Artisan command (#6647)
+[33m902200e7[m Revert "fix" (#6646)
+[33mefc90e28[m Fix Critical Security Vulnerability in form-data Dependency (#6645)
+[33m85481fe4[m Update CHANGELOG
+[33m624fb58a[m[33m ([m[1;33mtag: [m[1;33mv12.2.0[m[33m)[m Add Vite 7 support (#6639)
+[33ma52070f6[m Update CHANGELOG
+[33m4ab12157[m[33m ([m[1;33mtag: [m[1;33mv12.1.0[m[33m)[m [12.x] Fix type casting for environment variables in config files (#6637)
+[33mdd473ead[m fix
+[33m9a177b07[m Change to hyphenate prefixes and cookie names (#6636)
+[33m96164d15[m Reorder environment variables in phpunit.xml for logical grouping (#6634)
+[33m57b467f1[m disable nightwatch in testing (#6632)
+[33mf7992fab[m Update CHANGELOG
+[33m78600b89[m[33m ([m[1;33mtag: [m[1;33mv12.0.11[m[33m)[m Update CHANGELOG
+[33m26ea0b69[m[33m ([m[1;33mtag: [m[1;33mv12.0.10[m[33m)[m [12.x] Fix: Add void return type to withMiddleware and withExceptions to satisfy Rector analysis (#6628)
+[33m2f8a5bf1[m Reduce redundancy and keeps the .gitignore file cleaner (#6629)
+[33mcd854afd[m fix alphabetical order (#6627)
+[33m047ed5ad[m Update CHANGELOG
+[33m66578278[m[33m ([m[1;33mtag: [m[1;33mv12.0.9[m[33m)[m Enhance .gitignore to exclude common OS and log files (#6619)
+[33m1c027454[m Minor language update (#6615)
+[33m3731b09a[m Add JSON Schema to package.json (#6613)
+[33m468d9458[m remove apc (#6611)
+[33m07641526[m Update CHANGELOG
+[33m2d8f5620[m[33m ([m[1;33mtag: [m[1;33mv12.0.8[m[33m)[m remove apc
+[33mf6e4638e[m Clean up URL formatting in README (#6601)
+[33m126a6638[m Update CHANGELOG
+[33me654bf36[m[33m ([m[1;33mtag: [m[1;33mv12.0.7[m[33m)[m Premium partner changes (#6599)
+[33m43ad1946[m Add `composer run test` command (#6598)
+[33mfc42b713[m Update CHANGELOG
+[33m7a701553[m[33m ([m[1;33mtag: [m[1;33mv12.0.6[m[33m)[m use in memory database by default
+[33m14cec1e9[m Update CHANGELOG
+[33m6087e4fd[m[33m ([m[1;33mtag: [m[1;33mv12.0.5[m[33m)[m [12.x] Update `config/mail.php` to match the latest core configuration (#6594)
+[33mf1391517[m Update CHANGELOG
+[33mf308c84b[m[33m ([m[1;33mtag: [m[1;33mv12.0.4[m[33m)[m Bump vite from 6.2.3 to 6.2.4 (#6590)
+[33m4d9e70e4[m Bump vite from 6.0.11 to 6.2.3 - Vulnerability patch (#6586)
+[33m979202df[m Update CHANGELOG
+[33m4d6a75b0[m[33m ([m[1;33mtag: [m[1;33mv12.0.3[m[33m)[m [12.x] Remove Unnecessarily @source (#6584)
+[33m8402e5b6[m Bump axios from 1.7.9 to 1.8.2 (#6572)
+[33m3549033a[m [12.x] Refactor: Structural improvement for clarity (#6574)
+[33m7d1dcad7[m Improves clarity in app.css file (#6569)
+[33mc1f2608e[m Remove reverted change from CHANGELOG.md (#6565)
+[33m27348b7c[m remove change for now
+[33m661e5699[m Update CHANGELOG
+[33m13906723[m[33m ([m[1;33mtag: [m[1;33mv12.0.2[m[33m)[m feat: add type hints for $this in routes/console.php (#6559)
+[33m540728ed[m Switch to `php artisan test` to make it work out of the box (#6555)
+[33mbd44e4a0[m Update CHANGELOG
+[33mc7e8fc4f[m[33m ([m[1;33mtag: [m[1;33mv12.0.1[m[33m)[m [12.x] prefer stable stability (#6548)
+[33mfd518907[m[33m ([m[1;33mtag: [m[1;33mv12.0.0[m[33m)[m Apply fixes from StyleCI
+[33m1b8506b0[m update fonts
+[33mab101086[m Adding new laravel welcome (#6546)
+[33m2a19af7a[m Merge branch '11.x'
+[33mecf6de49[m Don't set CACHE_PREFIX to empty string by default (#6542)
+[33m29037b32[m Merge branch '11.x'
+[33m8c396f12[m Re-add nunomaduro/collision (#6539)
+[33m79a94de4[m remove `APP_TIMEZONE` environment variable (#6536)
+[33m6f1ebe26[m chore: Update `update-changelog.yml`
+[33m55738c0c[m add REDIS_PERSISTENT env var
+[33ma8b5e075[m chore: update changelog CI permission
+[33mcf5aed8c[m Improve static analysis by adding type hints for $app in artisan and public/index.php (#6531)
+[33md24cb962[m [12.x] Update skeleton dependencies (#6532)
+[33mc6dcaf78[m Upgrade to Tailwind CSS v4.0 (#6523)
+[33m9edc9aad[m Update CHANGELOG
+[33me417ebc9[m[33m ([m[1;33mtag: [m[1;33mv11.6.1[m[33m)[m Remove extra hourly() method in console.php (#6525)
+[33m60269b27[m Merge branch '11.x'
+[33m4760fcd6[m Sync `session.lifetime` configuration (#6522)
+[33m1f12f83d[m Update composer.json
+[33mc452e15d[m Update vite dependencies (#6521)
+[33m3dd0323e[m Update CHANGELOG
+[33m91b40964[m[33m ([m[1;33mtag: [m[1;33mv11.6.0[m[33m)[m update filesystem config
+[33mf15301d1[m Preserve X-Xsrf-Token header from .htaccess (#6520)
+[33md4e9385f[m Update CHANGELOG
+[33mf9bedb32[m[33m ([m[1;33mtag: [m[1;33mv11.5.1[m[33m)[m Fix tailwindclass (#6518)
+[33mcb7ab617[m fix css whitespace invalid-calc (#6517)
+[33m658a49a1[m Adding PHP 8.4 to the tests matrix (#6516)
+[33mf08e4f8b[m Update .gitignore to not ignore auth.json lan file. (#6515)
+[33m295bdfee[m fix merge conflict
+[33m7e3c5bc2[m Merge branch '11.x'
+[33m657070ea[m Update CHANGELOG
+[33meb8085cf[m[33m ([m[1;33mtag: [m[1;33mv11.5.0[m[33m)[m [11.x] Update `config/mail.php` with supported configuration (#6506)
+[33ma39cb7cf[m Update CHANGELOG
+[33m0993d09d[m[33m ([m[1;33mtag: [m[1;33mv11.4.0[m[33m)[m Upgrade to Vite 6 (#6498)
+[33m8b67958f[m Narrow down array types (#6497)
+[33m980ef58f[m Update CHANGELOG
+[33m2eacb3d0[m[33m ([m[1;33mtag: [m[1;33mv11.3.3[m[33m)[m wip
+[33m3b146114[m match `HidesAttributes` docblocks (#6495)
+[33m3622d746[m Update composer.json (#6490)
+[33mbc03c8d7[m Update .gitignore (#6486)
+[33m70f437b6[m Add $schema property to composer.json (#6484)
+[33m2e6ac2c9[m Inconsistency in Github action names (#6478)
+[33m61fec7b8[m Update CHANGELOG
+[33m82a83a69[m[33m ([m[1;33mtag: [m[1;33mv11.3.2[m[33m)[m Fixes pail timing out after an hour (#6473)
+[33m1c880c36[m Update CHANGELOG
+[33mf9f5e3c3[m[33m ([m[1;33mtag: [m[1;33mv11.3.1[m[33m)[m wip
+[33mea60b55f[m Update CHANGELOG
+[33m6c3d2fb4[m[33m ([m[1;33mtag: [m[1;33mv11.3.0[m[33m)[m adjust colors
+[33m2f17c976[m remove retries
+[33m0973f0a3[m add restart tries
+[33mb378ce94[m Add Tailwind, "composer run dev" (#6463)
+[33ma61a6361[m Update CHANGELOG
+[33m49bceac4[m[33m ([m[1;33mtag: [m[1;33mv11.2.1[m[33m)[m Update welcome.blade.php to add missing alt tag (#6462)
+[33mc9c8fb9e[m Refactor User model to use HasFactory trait and add type hint for UserFactory (#6453)
+[33m6e71b994[m Update composer.json (#6454)
+[33me0421a4e[m Update CHANGELOG
+[33mbab16982[m[33m ([m[1;33mtag: [m[1;33mv11.2.0[m[33m)[m private files (#6450)
+[33m168e6859[m Update .gitignore with Zed Editor (#6449)
+[33mf0a12c66[m Update CHANGELOG
+[33mc12fd185[m[33m ([m[1;33mtag: [m[1;33mv11.1.5[m[33m)[m Update package.json (#6440)
+[33m6ebd9fed[m Update CHANGELOG
+[33m2897a49c[m[33m ([m[1;33mtag: [m[1;33mv11.1.4[m[33m)[m add sqlite options
+[33m4ef5e2f8[m Update CHANGELOG
+[33m69917ece[m[33m ([m[1;33mtag: [m[1;33mv11.1.3[m[33m)[m [11.x] Comment maintenance store (#6429)
+[33m3b239422[m Update CHANGELOG
+[33m47fb90a8[m[33m ([m[1;33mtag: [m[1;33mv11.1.2[m[33m)[m Apply fixes from StyleCI
+[33m3fd8dd85[m Expose lock table name (#6423)
+[33m3b3f9f13[m Update CHANGELOG
+[33mad38e564[m[33m ([m[1;33mtag: [m[1;33mv11.1.1[m[33m)[m Format the first letter of `drivers` to lowercase (#6413)
+[33mb6d55576[m Update CHANGELOG
+[33m5d86ab4b[m[33m ([m[1;33mtag: [m[1;33mv11.1.0[m[33m)[m Removes `spatie/laravel
