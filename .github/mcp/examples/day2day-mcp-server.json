@@ -1,0 +1,343 @@
+{
+  "mcpServers": {
+    "day2day-manager": {
+      "command": "node",
+      "args": ["/path/to/day2day-mcp-server/build/index.js"],
+      "env": {
+        "DAY2DAY_API_URL": "http://localhost:8000",
+        "DAY2DAY_API_TOKEN": "${DAY2DAY_API_TOKEN}"
+      },
+      "description": "MCP server for Day2Day-Manager capacity planning and KPI analysis",
+      "tools": [
+        {
+          "name": "get_available_capacity",
+          "description": "Zeigt verfügbare Kapazität aller Mitarbeiter für einen Zeitraum. Berücksichtigt Wochenarbeitszeit, Abwesenheiten und bestehende Projektbuchungen.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "start_date": {
+                "type": "string",
+                "format": "date",
+                "description": "Startdatum (YYYY-MM-DD), z.B. '2025-10-23'"
+              },
+              "end_date": {
+                "type": "string",
+                "format": "date",
+                "description": "Enddatum (YYYY-MM-DD), optional"
+              },
+              "min_hours": {
+                "type": "number",
+                "description": "Minimale freie Stunden pro Woche, optional",
+                "minimum": 0,
+                "default": 0
+              },
+              "employee_id": {
+                "type": "number",
+                "description": "Filter für spezifischen Mitarbeiter (ID), optional"
+              }
+            },
+            "required": ["start_date"]
+          },
+          "examples": [
+            {
+              "query": "Wer hat nächste Woche noch 10+ Stunden frei?",
+              "params": {
+                "start_date": "2025-10-28",
+                "end_date": "2025-11-03",
+                "min_hours": 10
+              }
+            },
+            {
+              "query": "Wie viel Kapazität hat Max Mustermann im November?",
+              "params": {
+                "start_date": "2025-11-01",
+                "end_date": "2025-11-30",
+                "employee_id": 42
+              }
+            }
+          ]
+        },
+        {
+          "name": "get_overbooked_employees",
+          "description": "Findet Mitarbeiter, die überbucht sind (Summe der Projektbuchungen > 100% der Wochenarbeitszeit). Wichtig für Kapazitätsplanung und Ressourcen-Engpässe.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "start_date": {
+                "type": "string",
+                "format": "date",
+                "description": "Startdatum für Prüfung (YYYY-MM-DD)"
+              },
+              "end_date": {
+                "type": "string",
+                "format": "date",
+                "description": "Enddatum für Prüfung (YYYY-MM-DD)"
+              },
+              "threshold": {
+                "type": "number",
+                "description": "Schwellwert für Überbuchung (z.B. 1.0 = 100%, 1.1 = 110%)",
+                "minimum": 1.0,
+                "default": 1.0
+              }
+            },
+            "required": ["start_date", "end_date"]
+          },
+          "examples": [
+            {
+              "query": "Gibt es überbuchte Mitarbeiter?",
+              "params": {
+                "start_date": "2025-10-23",
+                "end_date": "2025-12-31"
+              }
+            },
+            {
+              "query": "Wer ist mehr als 110% ausgelastet?",
+              "params": {
+                "start_date": "2025-11-01",
+                "end_date": "2025-11-30",
+                "threshold": 1.1
+              }
+            }
+          ]
+        },
+        {
+          "name": "get_project_health",
+          "description": "Zeigt Projekt-KPIs: Fortschritt, Ist-Soll-Vergleich, Team-Auslastung, Burnrate. Wichtig für Projektcontrolling und frühzeitige Problemerkennung.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "number",
+                "description": "Projekt-ID"
+              },
+              "project_name": {
+                "type": "string",
+                "description": "Projektname (als Alternative zu ID)"
+              },
+              "include_burndown": {
+                "type": "boolean",
+                "description": "Burndown-Chart-Daten inkludieren",
+                "default": false
+              }
+            },
+            "oneOf": [
+              {"required": ["project_id"]},
+              {"required": ["project_name"]}
+            ]
+          },
+          "examples": [
+            {
+              "query": "Wie steht Projekt Webshop Relaunch?",
+              "params": {
+                "project_name": "Webshop Relaunch",
+                "include_burndown": true
+              }
+            },
+            {
+              "query": "Zeige KPIs für Projekt ID 42",
+              "params": {
+                "project_id": 42
+              }
+            }
+          ]
+        },
+        {
+          "name": "get_team_utilization",
+          "description": "Berechnet Team-Auslastung (Durchschnitt) für einen Zeitraum. Zeigt wie viel Prozent der verfügbaren Kapazität gebucht ist.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "team": {
+                "type": "string",
+                "description": "Team-Name oder Department (z.B. 'Backend', 'Frontend', 'Design')",
+                "enum": ["Backend", "Frontend", "Design", "QA", "DevOps", "Management"]
+              },
+              "start_date": {
+                "type": "string",
+                "format": "date",
+                "description": "Startdatum (YYYY-MM-DD)"
+              },
+              "end_date": {
+                "type": "string",
+                "format": "date",
+                "description": "Enddatum (YYYY-MM-DD)"
+              },
+              "group_by": {
+                "type": "string",
+                "description": "Gruppierung (week, month, quarter)",
+                "enum": ["week", "month", "quarter"],
+                "default": "month"
+              }
+            },
+            "required": ["team", "start_date", "end_date"]
+          },
+          "examples": [
+            {
+              "query": "Wie ist die Backend-Team-Auslastung im Q4?",
+              "params": {
+                "team": "Backend",
+                "start_date": "2025-10-01",
+                "end_date": "2025-12-31",
+                "group_by": "month"
+              }
+            }
+          ]
+        },
+        {
+          "name": "get_time_entries",
+          "description": "Holt Zeiteinträge (aus MOCO synchronisiert, READ-ONLY!). Für Ist-Soll-Vergleich und Überstunden-Analyse.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "employee_id": {
+                "type": "number",
+                "description": "Filter nach Mitarbeiter-ID, optional"
+              },
+              "project_id": {
+                "type": "number",
+                "description": "Filter nach Projekt-ID, optional"
+              },
+              "date_from": {
+                "type": "string",
+                "format": "date",
+                "description": "Startdatum (YYYY-MM-DD)"
+              },
+              "date_to": {
+                "type": "string",
+                "format": "date",
+                "description": "Enddatum (YYYY-MM-DD)"
+              },
+              "limit": {
+                "type": "number",
+                "description": "Max. Anzahl Einträge",
+                "default": 100,
+                "maximum": 1000
+              }
+            },
+            "required": ["date_from", "date_to"]
+          },
+          "examples": [
+            {
+              "query": "Zeige Zeiteinträge von Max Mustermann im September",
+              "params": {
+                "employee_id": 42,
+                "date_from": "2025-09-01",
+                "date_to": "2025-09-30"
+              }
+            }
+          ]
+        },
+        {
+          "name": "compare_planned_vs_actual",
+          "description": "Vergleicht geplante mit tatsächlichen Stunden für ein Projekt oder Mitarbeiter. Zeigt Abweichung in Stunden und Prozent.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "project_id": {
+                "type": "number",
+                "description": "Projekt-ID für Projekt-Vergleich"
+              },
+              "employee_id": {
+                "type": "number",
+                "description": "Mitarbeiter-ID für Mitarbeiter-Vergleich"
+              },
+              "date_from": {
+                "type": "string",
+                "format": "date",
+                "description": "Startdatum (YYYY-MM-DD)"
+              },
+              "date_to": {
+                "type": "string",
+                "format": "date",
+                "description": "Enddatum (YYYY-MM-DD)"
+              }
+            },
+            "required": ["date_from", "date_to"],
+            "oneOf": [
+              {"required": ["project_id"]},
+              {"required": ["employee_id"]}
+            ]
+          },
+          "examples": [
+            {
+              "query": "Ist Projekt Webshop im Budget?",
+              "params": {
+                "project_id": 15,
+                "date_from": "2025-09-01",
+                "date_to": "2025-09-30"
+              }
+            },
+            {
+              "query": "Hat Max Überstunden im September?",
+              "params": {
+                "employee_id": 42,
+                "date_from": "2025-09-01",
+                "date_to": "2025-09-30"
+              }
+            }
+          ]
+        },
+        {
+          "name": "moco_import_status",
+          "description": "Zeigt Status der MOCO-Synchronisation: Letzter Sync, Anzahl importierter Einträge, nächster geplanter Sync. WICHTIG: Day2Day-Manager synchronisiert nur VON MOCO (READ-ONLY), niemals zurück!",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "detailed": {
+                "type": "boolean",
+                "description": "Detaillierte Sync-Historie zeigen",
+                "default": false
+              }
+            }
+          },
+          "examples": [
+            {
+              "query": "Wann lief der letzte MOCO-Sync?",
+              "params": {}
+            },
+            {
+              "query": "Zeige MOCO-Sync-Historie",
+              "params": {
+                "detailed": true
+              }
+            }
+          ],
+          "security_note": "🚫 ACHTUNG: MOCO ist READ-ONLY! Day2Day-Manager schreibt NIEMALS zu MOCO zurück. Dieser Tool zeigt nur Import-Status, keine Sync-To-MOCO-Option!"
+        }
+      ],
+      "metadata": {
+        "version": "0.1.0",
+        "author": "Day2Day-Manager Team",
+        "repository": "https://github.com/felix2174/Day2Day-Manager",
+        "documentation": "https://github.com/felix2174/Day2Day-Manager/tree/main/.github/mcp",
+        "security": {
+          "read_only": true,
+          "moco_write_protection": "ENFORCED",
+          "description": "Alle Tools sind read-only. MOCO-Schreiboperationen sind auf Architektur-Ebene verhindert."
+        },
+        "requirements": {
+          "day2day_manager_version": ">=1.0.0",
+          "laravel_version": ">=12.0",
+          "node_version": ">=18.0.0"
+        }
+      },
+      "errorHandling": {
+        "rateLimiting": {
+          "enabled": true,
+          "maxRequestsPerMinute": 60,
+          "errorMessage": "Rate limit exceeded. Please wait before making more requests."
+        },
+        "authentication": {
+          "required": true,
+          "errorMessage": "Authentication failed. Check DAY2DAY_API_TOKEN environment variable."
+        },
+        "common_errors": {
+          "404": "Resource not found (Employee/Project ID doesn't exist)",
+          "422": "Validation error (Invalid date format or parameters)",
+          "500": "Internal server error (Check Day2Day-Manager logs)",
+          "503": "Service unavailable (Day2Day-Manager not running)"
+        }
+      }
+    }
+  }
+}
