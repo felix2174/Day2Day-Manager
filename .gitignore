@@ -1,6 +1,8 @@
 *.log
 .DS_Store
 .env
+.env.*
+!.env.example
 .env.backup
 .env.production
 .phpactor.json
@@ -22,3 +24,23 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# SQLite Datenbanken
+/database/*.sqlite
+/database/*.sqlite-journal
+/database/*.sqlite-shm
+/database/*.sqlite-wal
+
+# IDE und Editor Dateien
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Backup Dateien
+*.bak
+*.backup
+
+# OS spezifische Dateien
+ehthumbs.db

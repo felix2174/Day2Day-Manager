@@ -1,6 +1,85 @@
-# Release Notes
+# Changelog
 
-## [Unreleased](https://github.com/laravel/laravel/compare/v12.3.0...12.x)
+Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+
+Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
+und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
+
+## [Unreleased]
+
+### Geplant
+- Mobile App für Zeiterfassung
+- Export zu Excel mit erweiterten Formatierungen
+- Automatische E-Mail-Benachrichtigungen bei Projektänderungen
+- Erweiterte Reporting-Funktionen
+
+## [1.0.0] - 2024-10-27
+
+### Added
+- 🎉 Initiales Release
+- 📊 Dashboard mit Projektstatus und Aktivitäten-Übersicht
+- 📁 Vollständiges Projektmanagement-System
+- ✅ Aufgabenverwaltung mit Prioritäten und Zuweisungen
+- ⏱️ Zeiterfassung (manuell und automatisch)
+- 👥 Mitarbeiterverwaltung mit Kapazitätsübersicht
+- 🔗 MOCO-API-Integration für Sync
+- 📅 Abwesenheitsverwaltung (Urlaub, Krankheit, Fortbildung)
+- 🚦 Ampelsystem für Ressourcenauslastung
+- 📈 CSV-Export für Daten-Analyse
+- 🔐 Benutzerauthentifizierung mit Laravel Breeze
+- ⚡ Echtzeit-Auslastungsberechnung
+- 🎨 Responsive Design mit Tailwind CSS
+
+### Features
+- SQLite-Datenbank Support für einfache Entwicklung
+- MySQL/PostgreSQL Support für Produktionsumgebungen
+- RESTful API-Struktur
+- Blade-Templates für Server-Side-Rendering
+- Alpine.js für interaktive UI-Komponenten
+- Vite für schnelles Asset-Building
+
+### Security
+- CSRF-Protection für alle Formulare
+- XSS-Protection durch Blade Escaping
+- Sichere Passwort-Speicherung mit bcrypt
+- API-Key-Verwaltung über Umgebungsvariablen
+
+### Performance
+- Optimierte Datenbankabfragen mit Eager Loading
+- Caching für häufig abgerufene Daten
+- Lazy Loading für große Datenmengen
+
+### Developer Experience
+- Umfassende Dokumentation
+- Seed-Daten für lokale Entwicklung
+- Code-Style-Checks mit Laravel Pint
+- Automated Testing Setup
+
+## [0.9.0] - 2024-10-15 (Beta)
+
+### Added
+- Beta-Version für internes Testing
+- Grundlegende CRUD-Operationen für alle Entitäten
+- Erste Version der MOCO-Integration
+
+### Fixed
+- Diverse Bug-Fixes aus Alpha-Testing
+- Performance-Verbesserungen bei großen Datenmengen
+
+## [0.5.0] - 2024-09-28 (Alpha)
+
+### Added
+- Alpha-Version mit Kern-Funktionalität
+- Basis-Projektstruktur
+- Erste UI-Implementierung
+
+---
+
+[Unreleased]: https://github.com/felix2174/Day2Day-Manager/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/felix2174/Day2Day-Manager/releases/tag/v1.0.0
+[0.9.0]: https://github.com/felix2174/Day2Day-Manager/releases/tag/v0.9.0
+[0.5.0]: https://github.com/felix2174/Day2Day-Manager/releases/tag/v0.5.0
+
 
 ## [v12.3.0](https://github.com/laravel/laravel/compare/v12.2.0...v12.3.0) - 2025-08-03
 
