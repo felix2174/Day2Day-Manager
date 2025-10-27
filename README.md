@@ -1,10 +1,10 @@
 # 🏢 Projektmanagement - enodia IT-Systemhaus
 
-## 📋 IHK-Abschlussprojekt
-**Projektant:** Entwicklung einer individualisierten Webapplikation zur Ressourcen- und Kapazitätsverwaltung  
-**Durchführungszeitraum:** 01.09.2025 - 07.11.2025  
-**Auszubildender:** Jörg Michno  
-**Status:** ✅ **FERTIGGESTELLT** - Bereit für IHK-Präsentation
+## 📋 Firmenprojekt: Ressourcen- und Kapazitätsverwaltung
+**Projekttyp:** Individualisierte Webapplikation für internes Projektmanagement  
+**Entwicklungszeitraum:** September 2025 - laufend  
+**Entwickler:** Jörg Michno  
+**Status:** ✅ **PRODUKTIV** - In aktiver Nutzung
 
 ## 🚀 Features
 - 👥 **Mitarbeiterverwaltung** mit Kapazitätsübersicht und Auslastungsampel
