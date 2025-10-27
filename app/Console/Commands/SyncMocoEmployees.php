@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Employee;
 use App\Services\MocoService;
+use App\Services\MocoSyncLogger;
 use Illuminate\Console\Command;
 
 class SyncMocoEmployees extends Command
@@ -25,7 +26,7 @@ class SyncMocoEmployees extends Command
     /**
      * Execute the console command.
      */
-    public function handle(MocoService $mocoService): int
+    public function handle(MocoService $mocoService, MocoSyncLogger $logger): int
     {
         $this->info('Starting MOCO employee synchronization...');
 
@@ -41,10 +42,14 @@ class SyncMocoEmployees extends Command
                 $params['active'] = true;
             }
 
+            // Start logging
+            $logger->start('employees', $params);
+
             try {
                 $mocoUsers = $mocoService->getUsers($params);
             } catch (\Throwable $e) {
                 $this->error('Failed to fetch users from MOCO: ' . $e->getMessage());
+                $logger->fail($e->getMessage());
                 return Command::FAILURE;
             }
             $this->info('Found ' . count($mocoUsers) . ' employees in MOCO');
@@ -52,10 +57,14 @@ class SyncMocoEmployees extends Command
             $synced = 0;
             $created = 0;
             $updated = 0;
+            $skipped = 0;
 
             foreach ($mocoUsers as $mocoUser) {
                 // Find or create employee
-                if (!isset($mocoUser['id'])) { continue; }
+                if (!isset($mocoUser['id'])) { 
+                    $skipped++;
+                    continue; 
+                }
                 $employee = Employee::where('moco_id', $mocoUser['id'])->first();
 
                 $employeeData = [
@@ -88,13 +97,18 @@ class SyncMocoEmployees extends Command
                     ['Total synced', $synced],
                     ['Created', $created],
                     ['Updated', $updated],
+                    ['Skipped', $skipped],
                 ]
             );
+
+            // Complete logging
+            $logger->complete($synced, $created, $updated, $skipped);
 
             return Command::SUCCESS;
 
         } catch (\Exception $e) {
             $this->error('Error during synchronization: ' . $e->getMessage());
+            $logger->fail($e->getMessage());
             return Command::FAILURE;
         }
     }

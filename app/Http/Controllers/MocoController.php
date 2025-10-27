@@ -10,6 +10,7 @@ use App\Services\MocoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class MocoController extends Controller
@@ -59,11 +60,37 @@ class MocoController extends Controller
             'all' => MocoSyncLog::ofType('all')->successful()->latest('completed_at')->first(),
         ];
 
+        $syncWarnings = [];
+        $typeLabels = [
+            'employees' => 'Mitarbeiter',
+            'projects' => 'Projekte',
+            'activities' => 'Zeiterfassungen',
+            'all' => 'Vollständige Synchronisation',
+        ];
+        $warningThreshold = now()->subHours(24);
+
+        foreach ($lastSyncs as $type => $log) {
+            if (!$log) {
+                $syncWarnings[] = "Noch keine erfolgreiche Synchronisation für {$typeLabels[$type]} durchgeführt.";
+                continue;
+            }
+
+            if ($log->completed_at && $log->completed_at->lt($warningThreshold)) {
+                $syncWarnings[] = "Letzter erfolgreicher {$typeLabels[$type]}-Sync vor " . $log->completed_at->diffForHumans();
+            }
+        }
+
+        $lastFailedSync = MocoSyncLog::failed()->latest('started_at')->first();
+        $lastConnectionCheck = Cache::get('moco:last_connection_check');
+
         return view('moco.index', [
             'connectionStatus' => $connectionStatus,
             'stats' => $stats,
             'recentLogs' => $recentLogs,
             'lastSyncs' => $lastSyncs,
+            'syncWarnings' => $syncWarnings,
+            'lastFailedSync' => $lastFailedSync,
+            'lastConnectionCheck' => $lastConnectionCheck,
         ]);
     }
 
@@ -286,6 +313,101 @@ class MocoController extends Controller
             'overallStats' => $overallStats,
             'coverage' => $coverage,
         ]);
+    }
+
+    /**
+     * Debug: Get MOCO Users as JSON
+     */
+    public function debugUsers()
+    {
+        try {
+            $users = $this->mocoService->getUsers();
+            return response()->json($users, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Debug: Get MOCO Projects as JSON
+     */
+    public function debugProjects()
+    {
+        try {
+            $projects = $this->mocoService->getProjects();
+            return response()->json($projects, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Debug: Get MOCO Activities as JSON
+     */
+    public function debugActivities()
+    {
+        try {
+            $activities = $this->mocoService->getActivities();
+            return response()->json($activities, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Debug: Get MOCO Absences as JSON
+     */
+    public function debugAbsences()
+    {
+        try {
+            $absences = $this->mocoService->getAbsences();
+            return response()->json($absences, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Debug: Get specific user data from MOCO as JSON
+     */
+    public function debugUser($userId)
+    {
+        try {
+            $userData = $this->mocoService->getUser($userId);
+            $userActivities = $this->mocoService->getUserActivities($userId);
+            $userProjects = $this->mocoService->getUserProjects($userId);
+            $userAbsences = $this->mocoService->getUserAbsences($userId);
+            
+            $data = [
+                'user' => $userData,
+                'activities' => $userActivities,
+                'projects' => $userProjects,
+                'absences' => $userAbsences
+            ];
+            
+            return response()->json($data, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Debug: Get specific project data from MOCO as JSON
+     */
+    public function debugProject($projectId)
+    {
+        try {
+            $projectData = $this->mocoService->getProject($projectId);
+            
+            $data = [
+                'project' => $projectData,
+                'note' => 'Für detaillierte Projekt-Daten (Tasks, Contracts, Customer) verwenden Sie die Projekt-Detail-Ansicht in der Anwendung.'
+            ];
+            
+            return response()->json($data, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }
 

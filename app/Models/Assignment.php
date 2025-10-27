@@ -2,17 +2,23 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Assignment extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'employee_id',
         'project_id',
+        'task_name',
+        'task_description',
         'weekly_hours',
         'start_date',
         'end_date',
-        'priority_level'
+        'priority_level',
+        'display_order'
     ];
 
     // Eine Zuweisung gehört zu einem Mitarbeiter

@@ -4,11 +4,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\AssignmentController;
-use App\Http\Controllers\AbsenceController;
-use App\Http\Controllers\TeamController;
 use App\Http\Controllers\GanttController;
 use App\Http\Controllers\MocoController;
+use App\Http\Controllers\ProjectAssignmentOverrideController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -54,9 +52,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/employees/import', [EmployeeController::class, 'import'])->name('employees.import.process');
     Route::post('/employees', [EmployeeController::class, 'store'])->name('employees.store');
     Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
+    Route::get('/employees/{employee}/pie-chart-data', [EmployeeController::class, 'getPieChartData'])->name('employees.pie-chart-data');
+    Route::get('/employees/{employee}/activities-data', [EmployeeController::class, 'getActivitiesData'])->name('employees.activities-data');
     Route::get('/employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
     Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
     Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+    Route::post('/employees/reorder', [EmployeeController::class, 'reorder'])->name('employees.reorder');
+    Route::post('/employees/assignments/update', [EmployeeController::class, 'updateAssignments'])->name('employees.assignments.update');
 
     // Projects
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
@@ -65,55 +67,47 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/export', [ProjectController::class, 'export'])->name('projects.export');
     Route::get('/projects/import', [ProjectController::class, 'importForm'])->name('projects.import');
     Route::post('/projects/import', [ProjectController::class, 'import'])->name('projects.import.process');
+    Route::post('/projects/sync-statuses', [ProjectController::class, 'syncProjectStatuses'])->name('projects.sync-statuses');
+
+    // Project Gantt DnD
+    Route::post('/gantt/assignments/reorder', [ProjectController::class, 'reorderAssignments'])->name('gantt.assignments.reorder');
+    Route::post('/gantt/assignments/resize', [ProjectController::class, 'resizeAssignment'])->name('gantt.assignments.resize');
+Route::post('/gantt/assignments/reposition', [ProjectController::class, 'repositionAssignment'])->name('gantt.assignments.reposition');
     Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
     Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
     Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
 
-    // Assignments
-    Route::get('/assignments', [AssignmentController::class, 'index'])->name('assignments.index');
-    Route::get('/assignments/create', [AssignmentController::class, 'create'])->name('assignments.create');
-    Route::post('/assignments', [AssignmentController::class, 'store'])->name('assignments.store');
-    Route::get('/assignments/export', [AssignmentController::class, 'export'])->name('assignments.export');
-    Route::get('/assignments/import', [AssignmentController::class, 'importForm'])->name('assignments.import');
-    Route::post('/assignments/import', [AssignmentController::class, 'import'])->name('assignments.import.process');
-    Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('assignments.show');
-    Route::get('/assignments/{assignment}/edit', [AssignmentController::class, 'edit'])->name('assignments.edit');
-    Route::put('/assignments/{assignment}', [AssignmentController::class, 'update'])->name('assignments.update');
-    Route::delete('/assignments/{assignment}', [AssignmentController::class, 'destroy'])->name('assignments.destroy');
-
-    // Absences
-    Route::get('/absences', [AbsenceController::class, 'index'])->name('absences.index');
-    Route::get('/absences/create', [AbsenceController::class, 'create'])->name('absences.create');
-    Route::post('/absences', [AbsenceController::class, 'store'])->name('absences.store');
-    Route::get('/absences/export', [AbsenceController::class, 'export'])->name('absences.export');
-    Route::get('/absences/import', [AbsenceController::class, 'importForm'])->name('absences.import');
-    Route::post('/absences/import', [AbsenceController::class, 'import'])->name('absences.import.process');
-    Route::get('/absences/{absence}', [AbsenceController::class, 'show'])->name('absences.show');
-    Route::get('/absences/{absence}/edit', [AbsenceController::class, 'edit'])->name('absences.edit');
-    Route::put('/absences/{absence}', [AbsenceController::class, 'update'])->name('absences.update');
-    Route::delete('/absences/{absence}', [AbsenceController::class, 'destroy'])->name('absences.destroy');
-
-    // Teams
-    Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
-    Route::get('/teams/create', [TeamController::class, 'create'])->name('teams.create');
-    Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
-    Route::get('/teams/export', [TeamController::class, 'export'])->name('teams.export');
-    Route::get('/teams/import', [TeamController::class, 'importForm'])->name('teams.import');
-    Route::post('/teams/import', [TeamController::class, 'import'])->name('teams.import.process');
-    Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teams.show');
-    Route::get('/teams/{team}/edit', [TeamController::class, 'edit'])->name('teams.edit');
-    Route::put('/teams/{team}', [TeamController::class, 'update'])->name('teams.update');
-    Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');
-
     // Gantt Chart
     Route::get('/gantt', [GanttController::class, 'index'])->name('gantt.index');
+    Route::post('/gantt/filter/reset', [GanttController::class, 'resetFilters'])->name('gantt.filter.reset');
     Route::get('/gantt/export', [GanttController::class, 'export'])->name('gantt.export');
+    Route::post('/gantt/projects/{project}/employees', [GanttController::class, 'addEmployeeToProject'])->name('gantt.projects.add-employee');
+    Route::post('/gantt/projects/{project}/employees/{employee}/tasks', [GanttController::class, 'addTaskToEmployee'])->name('gantt.employees.add-task');
+    Route::delete('/gantt/projects/{project}/employees/{employee}/remove', [GanttController::class, 'removeEmployeeFromProject'])->name('gantt.employees.remove');
+    Route::get('/gantt/projects/{project}/employees/{employee}/tasks', [GanttController::class, 'getEmployeeTasks'])->name('gantt.employees.tasks');
+    Route::get('/gantt/tasks/{assignment}', [GanttController::class, 'getTask'])->name('gantt.tasks.show');
+    Route::delete('/gantt/tasks/{assignment}', [GanttController::class, 'deleteTask'])->name('gantt.tasks.delete');
+    Route::put('/gantt/tasks/{assignment}', [GanttController::class, 'updateTask'])->name('gantt.tasks.update');
+    Route::get('/gantt/employees/{employee}/utilization', [GanttController::class, 'getEmployeeUtilization'])->name('gantt.employees.utilization');
+
+    // Overrides (manuelle Zuweisungen)
+    Route::post('/overrides', [ProjectAssignmentOverrideController::class, 'store'])->name('overrides.store');
 
     // MOCO Integration
     Route::prefix('moco')->name('moco.')->group(function () {
         Route::get('/', [MocoController::class, 'index'])->name('index');
         Route::get('/logs', [MocoController::class, 'logs'])->name('logs');
+        
+        // Debug Routes
+        Route::prefix('debug')->name('debug.')->group(function () {
+            Route::get('/users', [MocoController::class, 'debugUsers'])->name('users');
+            Route::get('/projects', [MocoController::class, 'debugProjects'])->name('projects');
+            Route::get('/activities', [MocoController::class, 'debugActivities'])->name('activities');
+            Route::get('/absences', [MocoController::class, 'debugAbsences'])->name('absences');
+            Route::get('/user/{userId}', [MocoController::class, 'debugUser'])->name('user');
+            Route::get('/project/{projectId}', [MocoController::class, 'debugProject'])->name('project');
+        });
         Route::get('/statistics', [MocoController::class, 'statistics'])->name('statistics');
         Route::get('/mappings', [MocoController::class, 'mappings'])->name('mappings');
         Route::post('/test', [MocoController::class, 'testConnection'])->name('test');
@@ -131,4 +125,12 @@ Route::middleware('auth')->group(function () {
     // Logout
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
+});
+
+Route::post('/gantt/assignment/{type}/{id}/move/up', [ProjectController::class, 'moveAssignmentUp'])->name('gantt.assignment.move.up');
+Route::post('/gantt/assignment/{type}/{id}/move/down', [ProjectController::class, 'moveAssignmentDown'])->name('gantt.assignment.move.down');
+
+// Fallback-Route für nicht gefundene URLs, um 404-Fehler zu vermeiden
+Route::fallback(function () {
+    return redirect('/');
 });

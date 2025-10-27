@@ -22,20 +22,49 @@
             </div>
 
             <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px;">Abteilung *</label>
-                <input type="text" name="department" required maxlength="100"
+                <label style="display: block; margin-bottom: 5px;">E-Mail *</label>
+                <input type="email" name="email" required maxlength="255"
+                       style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px;">Abteilung</label>
+                <input type="text" name="department" maxlength="100"
                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
             </div>
 
 
 
             <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px;">Wochenkapazität (Stunden) *</label>
-                <input type="number" name="weekly_capacity" required min="1" max="40" value="40"
+                <label style="display: block; margin-bottom: 5px;">Wochenkapazität (Stunden)</label>
+                <input type="number" name="weekly_capacity" min="0" max="80" value="40"
                        style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                 <small style="display: block; color: #6c757d; margin-top: 5px;">
                     Vollzeit: 40h | Teilzeit: 20-35h | Minijob: &lt;20h
                 </small>
+            </div>
+
+            <div style="margin-bottom: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px;">Telefon</label>
+                    <input type="text" name="phone" maxlength="255"
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px;">Rolle</label>
+                    <input type="text" name="role" maxlength="255"
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px;">Position</label>
+                    <input type="text" name="position" maxlength="255"
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px;">Stundensatz (€)</label>
+                    <input type="number" name="hourly_rate" min="0" step="0.01"
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
             </div>
 
             <div style="margin-top: 20px;">

@@ -8,16 +8,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Standardmäßig nur Benutzer anlegen. Alle weiteren Daten kommen über MOCO-Sync.
         $this->call([
             UserSeeder::class,
-            EmployeeSeeder::class,
-            TeamSeeder::class,
-            ProjectSeeder::class,
-            AssignmentSeeder::class,
-            AbsenceSeeder::class,
-            TeamAssignmentSeeder::class,
-            TimeEntrySeeder::class,
-            AssignProjectResponsiblesSeeder::class,
         ]);
+
+        if (app()->environment('local', 'testing')) {
+            $this->call(GanttTestSeeder::class);
+        }
     }
 }

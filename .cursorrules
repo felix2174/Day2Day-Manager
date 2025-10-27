@@ -1,0 +1,62 @@
+# Cursor AI Rules für MOCO Projektverwaltungstool
+
+## MOCO-Datenpriorität (WICHTIGSTE REGEL)
+**ALLE Daten aus MOCO haben grundsätzlich Vorrang vor lokalen Datenbank-Daten.**
+
+MOCO ist die Single Source of Truth. Lokale Datenbank dient nur als Performance-Cache.
+
+### Daten-Priorität
+1. MOCO API-Daten (höchste Priorität)
+2. Lokale Datenbank (nur Fallback)
+3. Standardwerte (nur wenn nichts anderes verfügbar)
+
+### Wichtige Felder
+- Status: Aus MOCO `finish_date` berechnen
+- Erstellungsdatum: MOCO `created_at`, nicht lokales `created_at`
+- Zeiträume: MOCO `start_date` und `finish_date`
+- Team: MOCO `contracts`, nicht lokale `assignments`
+
+## Design-System
+- Nur Inline-Styles, keine externen CSS-Frameworks
+- Konsistente Farbpalette: #111827, #6b7280, #374151
+- Einheitliche Container-Struktur mit weißen Karten
+- Abstände: 8px, 12px, 16px, 20px, 24px
+- Border-Radius: 4px, 8px, 12px
+- Standardisierte Button-Styles
+- KEINE Emojis/Icons in Überschriften oder Texten
+- Alle Zahlen in Statistiken: color: #111827 (einheitlich)
+
+## Code-Konventionen
+- Antworte auf Deutsch, schreibe Code in Englisch
+- Wenn neue Dateien vorgeschlagen werden, immer Pfad und Dateiname nennen
+- MOCO-Daten immer über die MOCO-API ziehen
+
+## Status-Berechnung
+Der Status orientiert sich ausschließlich am `finish_date` aus MOCO:
+- `finish_date` vorhanden und überschritten (Vergangenheit) = "Abgeschlossen"
+- `finish_date` null oder in der Zukunft = "In Bearbeitung"
+- KEINE Eigeninterpretationen oder andere Kriterien verwenden
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

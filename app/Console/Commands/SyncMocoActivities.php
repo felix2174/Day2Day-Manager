@@ -6,6 +6,7 @@ use App\Models\TimeEntry;
 use App\Models\Employee;
 use App\Models\Project;
 use App\Services\MocoService;
+use App\Services\MocoSyncLogger;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
 
@@ -31,7 +32,7 @@ class SyncMocoActivities extends Command
     /**
      * Execute the console command.
      */
-    public function handle(MocoService $mocoService): int
+    public function handle(MocoService $mocoService, MocoSyncLogger $logger): int
     {
         $this->info('Starting MOCO activities synchronization...');
 
@@ -58,7 +59,17 @@ class SyncMocoActivities extends Command
 
             $this->info("Syncing activities from {$params['from']} to {$params['to']}");
 
-            $mocoActivities = $mocoService->getActivities($params);
+            // Start logging
+            $logger->start('activities', $params);
+
+            try {
+                $mocoActivities = $mocoService->getActivities($params);
+            } catch (\Throwable $e) {
+                $this->error('Failed to fetch activities from MOCO: ' . $e->getMessage());
+                $logger->fail($e->getMessage());
+                return Command::FAILURE;
+            }
+
             $this->info('Found ' . count($mocoActivities) . ' activities in MOCO');
 
             $synced = 0;
@@ -67,7 +78,19 @@ class SyncMocoActivities extends Command
             $skipped = 0;
 
             foreach ($mocoActivities as $mocoActivity) {
+                // Skip if no ID
+                if (!isset($mocoActivity['id'])) {
+                    $skipped++;
+                    continue;
+                }
+
                 // Find employee
+                if (!isset($mocoActivity['user']['id'])) {
+                    $this->warn("Activity {$mocoActivity['id']} has no user ID");
+                    $skipped++;
+                    continue;
+                }
+
                 $employee = Employee::where('moco_id', $mocoActivity['user']['id'])->first();
                 if (!$employee) {
                     $this->warn("Employee not found for MOCO user ID: {$mocoActivity['user']['id']}");
@@ -122,10 +145,14 @@ class SyncMocoActivities extends Command
                 ]
             );
 
+            // Complete logging
+            $logger->complete($synced, $created, $updated, $skipped);
+
             return Command::SUCCESS;
 
         } catch (\Exception $e) {
             $this->error('Error during synchronization: ' . $e->getMessage());
+            $logger->fail($e->getMessage());
             return Command::FAILURE;
         }
     }
