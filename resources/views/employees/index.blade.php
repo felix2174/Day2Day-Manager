@@ -74,17 +74,6 @@
         </div>
     </div>
 
-    @if(!empty($kpiWarnings))
-        <div style="background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
-            <strong>Hinweis:</strong>
-            <ul style="margin: 8px 0 0 20px;">
-                @foreach($kpiWarnings as $warning)
-                    <li>{{ $warning }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     @if(session('success'))
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
             {{ session('success') }}
