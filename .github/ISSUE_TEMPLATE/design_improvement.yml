@@ -1,0 +1,275 @@
+name: 🎨 Design Improvement
+description: UI/UX Verbesserungen und Design-Änderungen
+title: "[DESIGN]: "
+labels: ["design", "ui/ux", "needs-triage"]
+assignees:
+  - felix2174
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🎨 Design Improvement für Day2Day-Manager
+        Template für UI/UX-Verbesserungen und Design-Änderungen.
+        
+        **Design-Richtlinien:** [DESIGN_RULES.md](../DESIGN_RULES.md)
+
+  - type: input
+    id: title
+    attributes:
+      label: Titel
+      description: Kurze Beschreibung der Design-Änderung
+      placeholder: z.B. "Verbesserte Darstellung der Auslastungsampel"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component-type
+    attributes:
+      label: UI-Komponente / Seite
+      description: Welcher Bereich ist betroffen?
+      multiple: true
+      options:
+        - Dashboard
+        - Mitarbeiterübersicht
+        - Projektliste
+        - Projektdetails
+        - Aufgabenverwaltung
+        - Zeiterfassung
+        - KPI-Dashboard
+        - Kalenderansicht
+        - Formulare
+        - Navigation / Menü
+        - Tabellen
+        - Buttons / CTAs
+        - Modals / Dialoge
+        - Notifications / Alerts
+        - Charts / Visualisierungen
+        - Icons
+        - Typografie
+        - Farbschema
+        - Layout / Grid
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Art des Design-Problems
+      description: Was für ein Problem besteht?
+      options:
+        - Usability-Problem
+        - Visuelle Inkonsistenz
+        - Accessibility-Problem
+        - Performance (Rendering)
+        - Responsive Design-Problem
+        - Neue Feature-UI benötigt
+        - Verbesserung bestehender UI
+        - Icon/Grafik fehlt oder falsch
+        - Farbkontrast-Problem
+        - Typografie-Problem
+        - Spacing/Layout-Problem
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-design
+    attributes:
+      label: Aktuelles Design / Problem
+      description: Beschreibe das aktuelle Design und das Problem
+      placeholder: |
+        Beschreibe:
+        - Was ist aktuell wie dargestellt?
+        - Was ist das Problem damit?
+        - Wie beeinflusst es die Nutzererfahrung?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Vorgeschlagene Lösung
+      description: Wie sollte es stattdessen aussehen/funktionieren?
+      placeholder: |
+        Beschreibe:
+        - Wie soll das neue Design aussehen?
+        - Welche Verbesserungen bringt es?
+        - Warum ist diese Lösung besser?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: design-rules
+    attributes:
+      label: Design-Richtlinien Referenz
+      description: Welche Design-Rules sind relevant?
+      options:
+        - label: Farbpalette (DESIGN_RULES.md beachtet)
+        - label: Typografie-System
+        - label: Spacing & Grid
+        - label: Button-Styles
+        - label: Form-Elemente
+        - label: Icons & Symbole
+        - label: Animationen & Transitions
+        - label: Schatten & Effekte
+        - label: Mobile-First Ansatz
+
+  - type: checkboxes
+    id: responsive-design
+    attributes:
+      label: Responsive Design Considerations
+      description: Wie verhält sich das Design auf verschiedenen Geräten?
+      options:
+        - label: Desktop (> 1024px) berücksichtigt
+        - label: Tablet (768px - 1024px) berücksichtigt
+        - label: Mobile (< 768px) berücksichtigt
+        - label: Touch-Interaktionen optimiert
+        - label: Orientierung (Portrait/Landscape) beachtet
+
+  - type: checkboxes
+    id: accessibility
+    attributes:
+      label: Accessibility-Überlegungen
+      description: Barrierefreiheit berücksichtigt?
+      options:
+        - label: Farbkontrast erfüllt WCAG 2.1 Standards
+        - label: Keyboard-Navigation möglich
+        - label: Screen-Reader kompatibel
+        - label: Focus-States sichtbar
+        - label: Alternative Texte für Bilder/Icons
+        - label: Ausreichende Touch-Target-Größe (min. 44x44px)
+        - label: Verständliche Fehlermeldungen
+
+  - type: dropdown
+    id: browser-compatibility
+    attributes:
+      label: Browser-Kompatibilität
+      description: Welche Browser müssen unterstützt werden?
+      multiple: true
+      options:
+        - Chrome (aktuell)
+        - Firefox (aktuell)
+        - Edge (aktuell)
+        - Safari (aktuell)
+        - Mobile Safari (iOS)
+        - Chrome Mobile (Android)
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / Screenshots / Wireframes
+      description: Visuelles Material zum vorgeschlagenen Design
+      placeholder: |
+        Füge hier hinzu:
+        - Vorher/Nachher Screenshots
+        - Mockups (Figma, Sketch, etc.)
+        - Wireframes
+        - Drag & Drop Bilder
+        
+        Oder Links zu:
+        - Figma: https://...
+        - Codepen: https://...
+    validations:
+      required: false
+
+  - type: textarea
+    id: design-system
+    attributes:
+      label: Design-System Komponenten
+      description: Welche Tailwind/CSS-Klassen werden verwendet?
+      placeholder: |
+        ```html
+        <!-- Beispiel -->
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+          Speichern
+        </button>
+        ```
+      render: html
+    validations:
+      required: false
+
+  - type: dropdown
+    id: implementation-effort
+    attributes:
+      label: Implementierungsaufwand
+      description: Wie aufwändig ist die Umsetzung?
+      options:
+        - 🟢 Klein - Nur CSS-Änderungen
+        - 🟡 Mittel - HTML + CSS Anpassungen
+        - 🟠 Groß - Strukturelle Änderungen erforderlich
+        - 🔴 Sehr groß - Komplettes Redesign
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes
+      description: Hat diese Änderung Auswirkungen auf bestehende Features?
+      options:
+        - label: Ja - Bestehende Layouts müssen angepasst werden
+        - label: Ja - JavaScript-Logik betroffen
+        - label: Ja - Blade-Templates müssen überarbeitet werden
+        - label: Nein - Isolierte Änderung
+
+  - type: textarea
+    id: alternative-solutions
+    attributes:
+      label: Alternative Lösungsansätze
+      description: Gibt es alternative Design-Lösungen?
+      placeholder: |
+        **Alternative 1:**
+        - Beschreibung
+        - Vor-/Nachteile
+        
+        **Alternative 2:**
+        - Beschreibung
+        - Vor-/Nachteile
+    validations:
+      required: false
+
+  - type: textarea
+    id: user-feedback
+    attributes:
+      label: User Feedback
+      description: Gibt es Feedback von Nutzern zu diesem Bereich?
+      placeholder: |
+        - Häufige Beschwerden/Wünsche
+        - Usability-Test Ergebnisse
+        - Support-Tickets
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Weitere relevante Informationen
+      placeholder: |
+        - Links zu Design-Inspiration
+        - Ähnliche Implementierungen
+        - Branchen-Standards
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🎨 Design-Ressourcen
+        
+        - [DESIGN_RULES.md](../DESIGN_RULES.md) - Projekt Design-System
+        - [DESIGN_IMPROVEMENTS.md](../DESIGN_IMPROVEMENTS.md) - Geplante Verbesserungen
+        - [Tailwind CSS Docs](https://tailwindcss.com/docs)
+        - [Alpine.js Docs](https://alpinejs.dev/)
+        
+        ## 🔧 Lokale Design-Preview
+        
+        ```bash
+        cd C:\xampp\htdocs\Day2Day-Manager
+        npm run dev  # Vite Dev-Server mit Hot-Reload
+        ```

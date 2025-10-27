@@ -1,0 +1,185 @@
+name: 📝 Feature Request
+description: Schlage ein neues Feature für Day2Day-Manager vor
+title: "[FEATURE]: "
+labels: ["enhancement", "needs-triage"]
+assignees:
+  - felix2174
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📝 Feature Request für Day2Day-Manager
+        Vielen Dank für deinen Beitrag! Bitte fülle das Formular so detailliert wie möglich aus.
+
+  - type: input
+    id: feature-title
+    attributes:
+      label: Feature-Titel
+      description: Kurze, prägnante Beschreibung des Features
+      placeholder: z.B. "Erweiterte Filterfunktion für Mitarbeiterübersicht"
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      description: Beschreibe das Feature aus Nutzersicht
+      placeholder: |
+        Als [Rolle]
+        möchte ich [Aktion]
+        damit [Nutzen/Ziel]
+        
+        Beispiel:
+        Als Projektmanager
+        möchte ich Mitarbeiter nach Verfügbarkeit filtern können
+        damit ich schnell freie Kapazitäten für neue Projekte finde
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Detaillierte Beschreibung
+      description: Ausführliche Beschreibung des gewünschten Features
+      placeholder: Beschreibe das Feature so detailliert wie möglich...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Betroffene Module
+      description: Welche Bereiche der Anwendung sind betroffen?
+      multiple: true
+      options:
+        - Mitarbeiterverwaltung
+        - Projektverwaltung
+        - Aufgabenverwaltung
+        - Zeiterfassung
+        - MOCO-Sync
+        - KPI-Dashboard
+        - Abwesenheitsverwaltung
+        - Kalenderansicht
+        - Export-Funktionen
+        - Authentifizierung
+        - API
+        - Datenbank
+        - UI/Frontend
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      description: Wie wichtig ist dieses Feature?
+      options:
+        - 🔴 Hoch - Kritisch für Workflow
+        - 🟡 Mittel - Wichtige Verbesserung
+        - 🟢 Niedrig - Nice-to-have
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: design-rules
+    attributes:
+      label: Design-Richtlinien
+      description: Wurden die Design-Richtlinien berücksichtigt?
+      options:
+        - label: Ich habe [DESIGN_RULES.md](../DESIGN_RULES.md) konsultiert
+        - label: Feature folgt dem bestehenden Design-System
+        - label: Responsive Design wurde berücksichtigt
+        - label: Accessibility-Anforderungen wurden beachtet
+
+  - type: checkboxes
+    id: api-changes
+    attributes:
+      label: API-Änderungen
+      description: Sind API-Änderungen erforderlich?
+      options:
+        - label: MOCO API-Integration betroffen
+        - label: Neue API-Endpoints erforderlich
+        - label: Bestehende API-Endpoints müssen angepasst werden
+        - label: Keine API-Änderungen erforderlich
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien
+      description: Wann gilt das Feature als erfolgreich implementiert?
+      placeholder: |
+        - [ ] Kriterium 1
+        - [ ] Kriterium 2
+        - [ ] Kriterium 3
+      value: |
+        - [ ] 
+        - [ ] 
+        - [ ] 
+    validations:
+      required: true
+
+  - type: textarea
+    id: testing
+    attributes:
+      label: Testing Requirements
+      description: Wie soll das Feature getestet werden?
+      placeholder: |
+        - Unit Tests für...
+        - Integration Tests für...
+        - Manuelle Tests...
+    validations:
+      required: false
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / Screenshots
+      description: Falls vorhanden, füge Mockups oder Screenshots hinzu
+      placeholder: Drag & Drop Bilder hier hinein oder füge Links ein
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: Dokumentations-Updates
+      description: Welche Dokumentation muss aktualisiert werden?
+      placeholder: |
+        - README.md
+        - MOCO_INTEGRATION.md
+        - KPI_DASHBOARD_DOCUMENTATION.md
+        - ...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes
+      description: Enthält das Feature Breaking Changes?
+      options:
+        - label: Ja, dieses Feature enthält Breaking Changes
+        - label: Datenbank-Migration erforderlich
+        - label: Konfigurationsänderungen erforderlich
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Weitere Informationen, Links, Referenzen
+      placeholder: z.B. Links zu ähnlichen Features, externe Dokumentation, etc.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📚 Hilfreiche Links
+        - [DESIGN_RULES.md](../DESIGN_RULES.md)
+        - [MOCO_INTEGRATION.md](../MOCO_INTEGRATION.md)
+        - [KPI_DASHBOARD_DOCUMENTATION.md](../KPI_DASHBOARD_DOCUMENTATION.md)
+        - [CONTRIBUTING.md](../CONTRIBUTING.md)

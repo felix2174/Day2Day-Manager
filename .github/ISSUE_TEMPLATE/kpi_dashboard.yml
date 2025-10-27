@@ -1,0 +1,295 @@
+name: 📊 KPI Dashboard Enhancement
+description: Verbesserungen am KPI-Dashboard
+title: "[KPI]: "
+labels: ["kpi-dashboard", "enhancement", "needs-triage"]
+assignees:
+  - felix2174
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📊 KPI Dashboard Enhancement
+        Template für Verbesserungen und neue Features am KPI-Dashboard.
+        
+        **Dokumentation:** [KPI_DASHBOARD_DOCUMENTATION.md](../KPI_DASHBOARD_DOCUMENTATION.md)
+
+  - type: input
+    id: title
+    attributes:
+      label: Titel
+      description: Kurze Beschreibung der Dashboard-Änderung
+      placeholder: z.B. "Neue KPI: Projektabschlussquote"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dashboard-area
+    attributes:
+      label: Dashboard-Bereich
+      description: Welcher Bereich des Dashboards ist betroffen?
+      multiple: true
+      options:
+        - Metriken / KPI-Karten
+        - Diagramme / Charts
+        - Tabellen / Listen
+        - Filter & Sortierung
+        - Export-Funktionen
+        - Zeitraum-Selektor
+        - Echtzeit-Updates
+        - Mobile Ansicht
+        - Performance
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Detaillierte Beschreibung
+      description: Was soll am Dashboard geändert oder hinzugefügt werden?
+      placeholder: Beschreibe die gewünschte Änderung...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kpi-type
+    attributes:
+      label: Art der Änderung
+      description: Was für eine Änderung ist dies?
+      options:
+        - Neue KPI hinzufügen
+        - Bestehende KPI ändern
+        - KPI entfernen
+        - Visualisierung verbessern
+        - Performance optimieren
+        - Filter/Gruppierung erweitern
+        - Export-Format ändern
+        - Bug beheben
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: new-kpis
+    attributes:
+      label: Neue KPIs oder Änderungen an bestehenden
+      description: Beschreibe die KPIs im Detail
+      placeholder: |
+        **KPI Name:** Projektabschlussquote
+        **Berechnung:** (Abgeschlossene Projekte / Gesamtprojekte) * 100
+        **Einheit:** Prozent (%)
+        **Aktualisierung:** Täglich
+        **Zielwert:** > 80%
+        **Visualisierung:** Progress Bar + Zahl
+      value: |
+        **KPI Name:** 
+        **Berechnung:** 
+        **Einheit:** 
+        **Aktualisierung:** 
+        **Zielwert:** 
+        **Visualisierung:** 
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: data-sources
+    attributes:
+      label: Datenquellen
+      description: Woher kommen die Daten?
+      options:
+        - label: MOCO API (Sync-Daten)
+        - label: Lokale Datenbank
+        - label: Zeiterfassungs-Modul
+        - label: Projekt-Modul
+        - label: Mitarbeiter-Modul
+        - label: Abwesenheits-Modul
+        - label: Externe API
+        - label: Berechnete Werte
+
+  - type: textarea
+    id: data-calculation
+    attributes:
+      label: Berechnungslogik
+      description: Wie werden die Daten berechnet/aggregiert?
+      placeholder: |
+        ```php
+        // Service-Methode oder Abfrage
+        public function calculateKPI() {
+            $total = Project::count();
+            $completed = Project::where('status', 'completed')->count();
+            return ($completed / $total) * 100;
+        }
+        ```
+      render: php
+    validations:
+      required: false
+
+  - type: dropdown
+    id: chart-type
+    attributes:
+      label: Diagramm-Typ (falls zutreffend)
+      description: Welche Visualisierung soll verwendet werden?
+      options:
+        - Keine Visualisierung / Nur Zahl
+        - Liniendiagramm (Line Chart)
+        - Balkendiagramm (Bar Chart)
+        - Kreisdiagramm (Pie Chart)
+        - Flächendiagramm (Area Chart)
+        - Heatmap
+        - Gantt-Chart
+        - Tabelle
+        - Progress Bar
+        - Gauge / Speedometer
+        - Sonstiges
+    validations:
+      required: false
+
+  - type: textarea
+    id: chart-requirements
+    attributes:
+      label: Chart/Graph Anforderungen
+      description: Spezifische Anforderungen an die Visualisierung
+      placeholder: |
+        - Interaktive Tooltips
+        - Zoom-Funktion
+        - Datenexport als PNG/CSV
+        - Responsive Design
+        - Farbschema gemäß Design-Rules
+        - Animation beim Laden
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: filter-options
+    attributes:
+      label: Filter & Gruppierung
+      description: Welche Filter sollen verfügbar sein?
+      options:
+        - label: Zeitraum (Tag, Woche, Monat, Jahr, Custom)
+        - label: Mitarbeiter
+        - label: Team
+        - label: Projekt
+        - label: Projektstatus
+        - label: Kunde
+        - label: Abteilung
+        - label: Tags
+
+  - type: dropdown
+    id: performance-concern
+    attributes:
+      label: Performance-Überlegungen
+      description: Gibt es Performance-Aspekte zu beachten?
+      options:
+        - Nein - Kleine Datenmenge
+        - Ja - Mittlere Datenmenge (< 10.000 Datensätze)
+        - Ja - Große Datenmenge (> 10.000 Datensätze)
+        - Ja - Komplexe Berechnungen
+        - Ja - Echtzeit-Anforderungen
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: optimization
+    attributes:
+      label: Performance-Optimierung
+      description: Welche Optimierungen sind geplant?
+      options:
+        - label: Caching der Ergebnisse
+        - label: Lazy Loading
+        - label: Pagination
+        - label: Database Indexing
+        - label: Query-Optimierung
+        - label: Background-Jobs für schwere Berechnungen
+        - label: API-Rate-Limiting
+
+  - type: textarea
+    id: export-requirements
+    attributes:
+      label: Export-Anforderungen
+      description: Welche Export-Funktionen werden benötigt?
+      placeholder: |
+        - CSV-Export mit allen Datenpunkten
+        - Excel mit Formatierung
+        - PDF-Report
+        - PNG/SVG für Charts
+        - JSON für API
+    validations:
+      required: false
+
+  - type: textarea
+    id: mobile-considerations
+    attributes:
+      label: Mobile/Responsive Design
+      description: Besonderheiten für mobile Ansicht?
+      placeholder: |
+        - Vereinfachte Darstellung auf mobilen Geräten
+        - Touch-Gesten für Charts
+        - Reduzierte Datenmenge
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: documentation-updates
+    attributes:
+      label: Dokumentations-Updates
+      description: Welche Dokumentation muss aktualisiert werden?
+      options:
+        - label: KPI_DASHBOARD_DOCUMENTATION.md aktualisieren
+        - label: Neue KPI-Beschreibung hinzufügen
+        - label: Screenshots aktualisieren
+        - label: User Guide erweitern
+        - label: API-Dokumentation (falls API-Endpoint)
+
+  - type: textarea
+    id: testing-approach
+    attributes:
+      label: Testing-Ansatz
+      description: Wie soll getestet werden?
+      placeholder: |
+        **Unit Tests:**
+        - KPI-Berechnungs-Logik
+        
+        **Browser Tests:**
+        - Chart-Rendering
+        - Responsive Design
+        
+        **Performance Tests:**
+        - Load-Time < 2s
+        - Memory Usage
+    validations:
+      required: false
+
+  - type: textarea
+    id: mockup
+    attributes:
+      label: Mockup / Wireframe
+      description: Visuelles Design (optional)
+      placeholder: Drag & Drop Bilder oder Figma/Sketch Links
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Weitere Informationen, Links, Referenzen
+      placeholder: z.B. ähnliche Dashboards, Best Practices, etc.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📊 KPI Dashboard Ressourcen
+        
+        - [KPI_DASHBOARD_DOCUMENTATION.md](../KPI_DASHBOARD_DOCUMENTATION.md)
+        - [DESIGN_RULES.md](../DESIGN_RULES.md) - Für Visualisierungs-Guidelines
+        - [MOCO_UTILIZATION_IMPLEMENTATION.md](../MOCO_UTILIZATION_IMPLEMENTATION.md)
+        
+        ## 📈 Empfohlene Chart-Libraries
+        
+        - Chart.js (bereits im Projekt)
+        - Alpine.js für Interaktivität
+        - Tailwind CSS für Styling

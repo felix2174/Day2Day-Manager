@@ -1,0 +1,267 @@
+name: 📚 Documentation Update
+description: Aktualisierung oder Erweiterung der Dokumentation
+title: "[DOCS]: "
+labels: ["documentation", "needs-triage"]
+assignees:
+  - felix2174
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📚 Documentation Update für Day2Day-Manager
+        Template für alle Dokumentations-Änderungen, Updates und neue Docs.
+
+  - type: input
+    id: title
+    attributes:
+      label: Titel
+      description: Kurze Beschreibung des Dokumentations-Updates
+      placeholder: z.B. "Aktualisiere MOCO-Integration Anleitung"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: affected-files
+    attributes:
+      label: Betroffene Dokumentationsdateien
+      description: Welche Dateien müssen aktualisiert werden?
+      options:
+        - label: README.md
+        - label: CHANGELOG.md
+        - label: CONTRIBUTING.md
+        - label: LICENSE
+        - label: MOCO_INTEGRATION.md
+        - label: MOCO_QUICKSTART.md
+        - label: MOCO_DATA_PRIORITY_RULE.md
+        - label: MOCO_UTILIZATION_IMPLEMENTATION.md
+        - label: MOCO_PROJECT_DISTRIBUTION.md
+        - label: MOCO_UTILIZATION_ACTIVITIES.md
+        - label: MOCO_BEREICH_README.md
+        - label: KPI_DASHBOARD_DOCUMENTATION.md
+        - label: GANTT_MVP_IMPROVEMENTS.md
+        - label: DESIGN_RULES.md
+        - label: DESIGN_IMPROVEMENTS.md
+        - label: DUMMY_DATA_OVERVIEW.md
+        - label: STATUS_BERICHT_*.md
+        - label: Code-Kommentare / PHPDoc
+        - label: API-Dokumentation
+        - label: Neue Datei erstellen
+
+  - type: dropdown
+    id: update-type
+    attributes:
+      label: Art der Änderung
+      description: Was für eine Dokumentations-Änderung ist dies?
+      options:
+        - Korrektur (Fehler, Typos)
+        - Erweiterung (Neue Informationen hinzufügen)
+        - Umstrukturierung (Bessere Organisation)
+        - Neue Dokumentation erstellen
+        - Veraltete Inhalte entfernen
+        - Screenshots/Diagramme aktualisieren
+        - Beispiele hinzufügen
+        - API-Dokumentation
+        - Code-Kommentare verbessern
+        - Übersetzung
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Grund für Update
+      description: Warum muss die Dokumentation aktualisiert werden?
+      placeholder: |
+        z.B.:
+        - Feature wurde geändert
+        - Neue Funktionalität hinzugefügt
+        - Veraltete Informationen
+        - Unklar formuliert
+        - Fehlende Informationen
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-content
+    attributes:
+      label: Aktueller Inhalt
+      description: Was steht aktuell in der Dokumentation? (falls zutreffend)
+      placeholder: Kopiere den aktuellen Text hier rein...
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed-content
+    attributes:
+      label: Vorgeschlagener neuer Inhalt
+      description: Wie soll der neue Text lauten?
+      placeholder: |
+        Schreibe den neuen/überarbeiteten Inhalt hier...
+        
+        Nutze Markdown-Formatierung:
+        # Überschrift
+        ## Unterüberschrift
+        - Aufzählung
+        ```code block```
+      render: markdown
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: related-changes
+    attributes:
+      label: Verwandte Features/Bugs
+      description: Ist diese Doku-Änderung mit anderen Issues verbunden?
+      options:
+        - label: Ja - Bezieht sich auf Feature-Issue (bitte verlinken)
+        - label: Ja - Bezieht sich auf Bug-Issue (bitte verlinken)
+        - label: Ja - Teil eines größeren Updates
+        - label: Nein - Unabhängige Doku-Verbesserung
+
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: Verwandte Issues
+      description: Links zu verwandten Issues
+      placeholder: |
+        #123 - Feature XYZ
+        #456 - Bug ABC
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: changelog-required
+    attributes:
+      label: Changelog-Eintrag erforderlich?
+      description: Soll diese Änderung im CHANGELOG.md erscheinen?
+      options:
+        - label: Ja - Wichtige Änderung für CHANGELOG.md
+        - label: Nein - Kleine Korrektur, kein Changelog-Eintrag nötig
+
+  - type: dropdown
+    id: documentation-section
+    attributes:
+      label: Dokumentations-Sektion
+      description: Welcher Bereich der Dokumentation?
+      options:
+        - Installation & Setup
+        - Konfiguration
+        - Features & Verwendung
+        - API-Dokumentation
+        - Entwickler-Guide
+        - Deployment
+        - Troubleshooting
+        - FAQ
+        - Code-Beispiele
+        - Architektur
+        - Testing
+        - Contributing Guidelines
+        - Sonstiges
+    validations:
+      required: false
+
+  - type: textarea
+    id: code-examples
+    attributes:
+      label: Code-Beispiele
+      description: Falls zutreffend - neue oder aktualisierte Code-Beispiele
+      placeholder: |
+        ```php
+        // Beispiel-Code
+        $service = new MocoService();
+        $users = $service->fetchUsers();
+        ```
+      render: php
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Diagramme
+      description: Neue oder aktualisierte Screenshots
+      placeholder: Drag & Drop Bilder hier hinein
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: review-checklist
+    attributes:
+      label: Dokumentations-Qualität Checklist
+      description: Qualitätsprüfung vor Merge
+      options:
+        - label: Rechtschreibung und Grammatik geprüft
+        - label: Markdown-Formatierung korrekt
+        - label: Links funktionieren
+        - label: Code-Beispiele getestet
+        - label: Screenshots aktuell
+        - label: Konsistent mit restlicher Dokumentation
+        - label: Verständlich für Zielgruppe
+
+  - type: dropdown
+    id: target-audience
+    attributes:
+      label: Zielgruppe
+      description: Für wen ist diese Dokumentation?
+      multiple: true
+      options:
+        - Endnutzer (Projektmanager, etc.)
+        - Entwickler (intern)
+        - Administratoren
+        - Externe Entwickler
+        - API-Konsumenten
+    validations:
+      required: false
+
+  - type: textarea
+    id: translations
+    attributes:
+      label: Übersetzungen
+      description: Müssen andere Sprachversionen aktualisiert werden?
+      placeholder: |
+        Aktuell nur Deutsch.
+        Zukünftig evtl. Englisch.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Weitere relevante Informationen
+      placeholder: |
+        - Links zu externen Ressourcen
+        - Feedback von Nutzern
+        - Best Practices
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 📝 Dokumentations-Richtlinien
+        
+        ### Markdown Best Practices
+        - Verwende klare Überschriften-Hierarchie (# ## ###)
+        - Code-Blöcke mit Syntax-Highlighting: ```php, ```bash, ```yaml
+        - Relative Links zu anderen Docs: `[Link](../FILENAME.md)`
+        - Screenshots in `docs/` Ordner ablegen
+        
+        ### Pfade im Projekt
+        ```
+        C:\xampp\htdocs\Day2Day-Manager\
+        ├── README.md
+        ├── CHANGELOG.md
+        ├── MOCO_*.md
+        ├── DESIGN_*.md
+        └── docs/
+            └── screenshots/
+        ```
+        
+        ### Hilfreiche Tools
+        - [Markdown Guide](https://www.markdownguide.org/)
+        - [GitHub Flavored Markdown](https://github.github.com/gfm/)

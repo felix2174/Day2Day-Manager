@@ -1,0 +1,252 @@
+name: 🐛 Bug Report
+description: Melde einen Bug oder ein Problem in Day2Day-Manager
+title: "[BUG]: "
+labels: ["bug", "needs-triage"]
+assignees:
+  - felix2174
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Bug Report für Day2Day-Manager
+        Danke für das Melden dieses Bugs! Je detaillierter deine Angaben, desto schneller können wir das Problem beheben.
+
+  - type: input
+    id: bug-title
+    attributes:
+      label: Bug-Titel
+      description: Kurze, prägnante Beschreibung des Problems
+      placeholder: z.B. "MOCO-Sync schlägt bei großen Datenmengen fehl"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Umgebung
+      description: In welcher Umgebung tritt der Bug auf?
+      options:
+        - Development (XAMPP lokal)
+        - Staging
+        - Production
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Betroffenes Modul
+      description: Welcher Bereich der Anwendung ist betroffen?
+      options:
+        - Mitarbeiterverwaltung
+        - Projektverwaltung
+        - Aufgabenverwaltung
+        - Zeiterfassung
+        - MOCO-Sync
+        - KPI-Dashboard
+        - Abwesenheitsverwaltung
+        - Kalenderansicht
+        - Export-Funktionen
+        - Authentifizierung
+        - API
+        - Datenbank
+        - UI/Frontend
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Schweregrad
+      description: Wie kritisch ist dieser Bug?
+      options:
+        - 🔴 Kritisch - Anwendung nicht nutzbar
+        - 🟠 Hoch - Wichtige Funktionalität betroffen
+        - 🟡 Mittel - Funktionalität eingeschränkt
+        - 🟢 Niedrig - Kosmetisches Problem
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug-Beschreibung
+      description: Detaillierte Beschreibung des Problems
+      placeholder: Beschreibe das Problem so genau wie möglich...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Wie kann das Problem reproduziert werden?
+      placeholder: |
+        1. Gehe zu '...'
+        2. Klicke auf '...'
+        3. Scrolle zu '...'
+        4. Fehler tritt auf
+      value: |
+        1. 
+        2. 
+        3. 
+        4. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Erwartetes Verhalten
+      description: Was sollte passieren?
+      placeholder: Beschreibe das erwartete Verhalten...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Tatsächliches Verhalten
+      description: Was passiert stattdessen?
+      placeholder: Beschreibe das tatsächliche Verhalten...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: moco-sync
+    attributes:
+      label: MOCO-Sync Status
+      description: Falls relevant - MOCO-Integration betroffen?
+      options:
+        - label: MOCO-Sync aktiv während des Fehlers
+        - label: Fehler tritt nur bei MOCO-Sync auf
+        - label: Fehler tritt nach MOCO-Sync auf
+        - label: MOCO API-Timeout oder Fehler
+        - label: Nicht MOCO-bezogen
+
+  - type: textarea
+    id: error-logs
+    attributes:
+      label: Fehlermeldungen / Logs
+      description: Kopiere relevante Fehlermeldungen oder Log-Einträge
+      placeholder: |
+        Füge hier Fehlermeldungen ein...
+        
+        Laravel Logs findest du in: C:\xampp\htdocs\Day2Day-Manager\storage\logs\
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Falls vorhanden, füge Screenshots hinzu
+      placeholder: Drag & Drop Bilder hier hinein
+    validations:
+      required: false
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & Version
+      description: Welcher Browser wurde verwendet?
+      placeholder: z.B. Chrome 118, Firefox 119, Edge 118
+    validations:
+      required: false
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP Version
+      description: Welche PHP-Version läuft auf dem System?
+      placeholder: z.B. 8.2.4
+    validations:
+      required: false
+
+  - type: input
+    id: laravel-version
+    attributes:
+      label: Laravel Version
+      description: Welche Laravel-Version?
+      placeholder: z.B. 12.3.0
+    validations:
+      required: false
+
+  - type: dropdown
+    id: database
+    attributes:
+      label: Datenbank
+      description: Welche Datenbank wird verwendet?
+      options:
+        - SQLite (Development)
+        - MySQL
+        - PostgreSQL
+    validations:
+      required: false
+
+  - type: textarea
+    id: database-info
+    attributes:
+      label: Datenbank-Details
+      description: Zusätzliche Datenbank-Informationen falls relevant
+      placeholder: |
+        - Anzahl der Datensätze
+        - Datenbankgröße
+        - Besondere Konfiguration
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: attempted-fixes
+    attributes:
+      label: Bereits versucht
+      description: Was hast du bereits versucht?
+      options:
+        - label: Cache geleert (php artisan cache:clear)
+        - label: Config-Cache geleert (php artisan config:clear)
+        - label: Browser-Cache geleert
+        - label: Server neugestartet
+        - label: Datenbank-Migration erneut ausgeführt
+        - label: Composer-Packages aktualisiert
+        - label: Node-Modules neu installiert
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Gibt es einen temporären Workaround?
+      placeholder: Beschreibe einen möglichen Workaround falls bekannt...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Weitere relevante Informationen
+      placeholder: z.B. Zeitpunkt des ersten Auftretens, Häufigkeit, etc.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🔍 Debugging-Tipps
+        
+        **Laravel Logs prüfen:**
+        ```bash
+        cd C:\xampp\htdocs\Day2Day-Manager
+        type storage\logs\laravel.log | more
+        ```
+        
+        **MOCO-Sync Logs:**
+        ```bash
+        php artisan moco:logs
+        ```
+        
+        **Debugging aktivieren:**
+        Setze in `.env`: `APP_DEBUG=true` (nur Development!)

@@ -224,7 +224,29 @@ php artisan moco:reset-and-sync
 
 ## 🤝 Contributing
 
-Da dies ein internes Projekt ist, sind Contributions momentan nicht öffentlich möglich.
+Da dies ein internes Projekt ist, sind Contributions momentan nicht öffentlich möglich. Für interne Entwickler siehe [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
+### Issue-Templates
+
+Wir verwenden spezialisierte Issue-Templates für verschiedene Anliegen:
+
+- 🐛 [Bug Report](.github/ISSUE_TEMPLATE/bug_report.yml) - Fehler melden
+- 📝 [Feature Request](.github/ISSUE_TEMPLATE/feature_request.yml) - Neue Features vorschlagen
+- 🔗 [MOCO Integration](.github/ISSUE_TEMPLATE/moco_integration.yml) - MOCO API-Änderungen
+- 📊 [KPI Dashboard](.github/ISSUE_TEMPLATE/kpi_dashboard.yml) - Dashboard-Verbesserungen
+- 🎨 [Design Improvement](.github/ISSUE_TEMPLATE/design_improvement.yml) - UI/UX-Änderungen
+- 📚 [Documentation](.github/ISSUE_TEMPLATE/documentation.yml) - Dokumentations-Updates
+
+[Neues Issue erstellen →](https://github.com/felix2174/Day2Day-Manager/issues/new/choose)
+
+### Pull Request Process
+
+1. Erstelle einen Feature-Branch (`git checkout -b feature/amazing-feature`)
+2. Committe deine Änderungen (`git commit -m 'feat: Add amazing feature'`)
+3. Pushe zum Branch (`git push origin feature/amazing-feature`)
+4. Öffne einen Pull Request mit unserem [PR-Template](.github/pull_request_template.md)
+
+Siehe [CONTRIBUTING.md](.github/CONTRIBUTING.md) für detaillierte Guidelines.
 
 ## 📄 License
 

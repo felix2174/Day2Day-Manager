@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Dokumentation
+    url: https://github.com/felix2174/Day2Day-Manager
+    about: Lies die vollständige Dokumentation im Repository
+  - name: 💬 Diskussionen
+    url: https://github.com/felix2174/Day2Day-Manager/discussions
+    about: Stelle Fragen und diskutiere mit dem Team
+  - name: 🔗 MOCO API Dokumentation
+    url: https://github.com/hundertzehn/mocoapp-api-docs
+    about: Offizielle MOCO API Dokumentation

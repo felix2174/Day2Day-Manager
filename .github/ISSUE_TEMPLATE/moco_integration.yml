@@ -1,0 +1,277 @@
+name: 🔗 MOCO Integration
+description: Änderungen an der MOCO API-Integration
+title: "[MOCO]: "
+labels: ["moco-integration", "api", "needs-triage"]
+assignees:
+  - felix2174
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔗 MOCO Integration für Day2Day-Manager
+        Template für alle MOCO API-bezogenen Änderungen, Features und Bugfixes.
+        
+        **Wichtige Dokumentation:**
+        - [MOCO_INTEGRATION.md](../MOCO_INTEGRATION.md)
+        - [MOCO_QUICKSTART.md](../MOCO_QUICKSTART.md)
+        - [MOCO_DATA_PRIORITY_RULE.md](../MOCO_DATA_PRIORITY_RULE.md)
+        - [MOCO_UTILIZATION_IMPLEMENTATION.md](../MOCO_UTILIZATION_IMPLEMENTATION.md)
+
+  - type: input
+    id: title
+    attributes:
+      label: Titel
+      description: Kurze Beschreibung der MOCO-Integration-Änderung
+      placeholder: z.B. "Erweitere MOCO-Sync um Projekt-Tags"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: integration-type
+    attributes:
+      label: Art der Integration
+      description: Welche Art von MOCO-Änderung ist dies?
+      options:
+        - Neuer MOCO-Sync Endpoint
+        - Bestehender Sync erweitern
+        - API-Fehler beheben
+        - Datenvalidierung
+        - Mapping-Änderung
+        - Performance-Optimierung
+        - Fehlerbehandlung
+        - Rate-Limiting
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Detaillierte Beschreibung
+      description: Was soll an der MOCO-Integration geändert werden?
+      placeholder: Beschreibe die Änderung detailliert...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: affected-docs
+    attributes:
+      label: Betroffene MOCO-Dokumentation
+      description: Welche Dokumentation muss aktualisiert werden?
+      options:
+        - label: MOCO_INTEGRATION.md
+        - label: MOCO_QUICKSTART.md
+        - label: MOCO_DATA_PRIORITY_RULE.md
+        - label: MOCO_UTILIZATION_IMPLEMENTATION.md
+        - label: MOCO_PROJECT_DISTRIBUTION.md
+        - label: MOCO_UTILIZATION_ACTIVITIES.md
+        - label: MOCO_BEREICH_README.md
+
+  - type: dropdown
+    id: api-endpoints
+    attributes:
+      label: Betroffene MOCO API-Endpoints
+      description: Welche MOCO API-Endpoints sind betroffen?
+      multiple: true
+      options:
+        - /users
+        - /projects
+        - /activities
+        - /schedules
+        - /absences
+        - /presences
+        - /time_entries
+        - /companies
+        - /offers
+        - /invoices
+        - /contacts
+        - Sonstiges / Neuer Endpoint
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-fields
+    attributes:
+      label: Datenfelder & Mapping
+      description: Welche Datenfelder werden verwendet oder geändert?
+      placeholder: |
+        **MOCO Felder:**
+        - user.firstname
+        - user.lastname
+        - user.active
+        
+        **Lokale DB Mapping:**
+        - employees.first_name
+        - employees.last_name
+        - employees.is_active
+      value: |
+        **MOCO Felder:**
+        - 
+        
+        **Lokale DB Mapping:**
+        - 
+    validations:
+      required: false
+
+  - type: dropdown
+    id: utilization-affected
+    attributes:
+      label: Auslastungs-Berechnung betroffen?
+      description: Beeinflusst diese Änderung die Auslastungsberechnung?
+      options:
+        - Ja - Auslastungsberechnung muss angepasst werden
+        - Ja - Neue KPIs für Auslastung
+        - Nein - Keine Auswirkung auf Auslastung
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact-analysis
+    attributes:
+      label: Auswirkungsanalyse
+      description: Welche Auswirkungen hat diese Änderung?
+      placeholder: |
+        **Betroffene Bereiche:**
+        - Dashboard-Anzeige
+        - KPI-Berechnungen
+        - Export-Funktionen
+        
+        **Datenbank-Änderungen:**
+        - Migration erforderlich? (Ja/Nein)
+        - Neue Tabellen/Spalten?
+        
+        **Breaking Changes:**
+        - Bestehende Daten betroffen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: testing-strategy
+    attributes:
+      label: Testing-Strategie für API-Calls
+      description: Wie sollen die MOCO API-Calls getestet werden?
+      placeholder: |
+        **Unit Tests:**
+        - MocoService::fetchUsers()
+        - Datenvalidierung
+        
+        **Integration Tests:**
+        - Vollständiger Sync-Prozess
+        - Fehlerbehandlung
+        
+        **Manuelle Tests:**
+        - Test mit echten MOCO-Daten
+        - Edge Cases
+      value: |
+        **Unit Tests:**
+        - 
+        
+        **Integration Tests:**
+        - 
+        
+        **Manuelle Tests:**
+        - 
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: error-handling
+    attributes:
+      label: Fehlerbehandlung
+      description: Welche Fehlerszenarien wurden berücksichtigt?
+      options:
+        - label: API-Timeout
+        - label: Rate-Limit überschritten
+        - label: Ungültige/fehlende Daten
+        - label: Netzwerkfehler
+        - label: Authentifizierungsfehler
+        - label: Datenbank-Constraints
+        - label: Logging implementiert
+
+  - type: textarea
+    id: api-credentials
+    attributes:
+      label: API-Konfiguration
+      description: Welche ENV-Variablen werden benötigt?
+      placeholder: |
+        ```env
+        MOCO_API_KEY=your_api_key
+        MOCO_DOMAIN=your-company.mocoapp.com
+        MOCO_SYNC_ENABLED=true
+        MOCO_RATE_LIMIT=100
+        ```
+      render: bash
+    validations:
+      required: false
+
+  - type: dropdown
+    id: sync-frequency
+    attributes:
+      label: Sync-Frequenz
+      description: Wie oft soll der Sync ausgeführt werden?
+      options:
+        - Manuell (Artisan Command)
+        - Täglich (Cron)
+        - Stündlich
+        - Echtzeit (bei Änderung)
+        - Nicht relevant
+    validations:
+      required: false
+
+  - type: textarea
+    id: performance
+    attributes:
+      label: Performance-Überlegungen
+      description: Gibt es Performance-Aspekte zu beachten?
+      placeholder: |
+        - Große Datenmengen (> 1000 Datensätze)
+        - Pagination erforderlich
+        - Batch-Processing
+        - Caching-Strategie
+    validations:
+      required: false
+
+  - type: textarea
+    id: rollback-plan
+    attributes:
+      label: Rollback-Plan
+      description: Was passiert bei Fehlern im Live-System?
+      placeholder: |
+        - Wie können Änderungen rückgängig gemacht werden?
+        - Backup-Strategie
+        - Datenwiederherstellung
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Weitere relevante Informationen
+      placeholder: Links zu MOCO-Dokumentation, Screenshots, etc.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ## 🔗 MOCO API Ressourcen
+        
+        - [MOCO API Dokumentation](https://github.com/hundertzehn/mocoapp-api-docs)
+        - [MOCO Dashboard](https://app.mocoapp.com/)
+        - Lokale Docs: `C:\xampp\htdocs\Day2Day-Manager\MOCO_*.md`
+        
+        ## 🧪 Testing Commands
+        
+        ```bash
+        # MOCO-Sync ausführen
+        php artisan moco:sync
+        
+        # Logs prüfen
+        php artisan moco:logs
+        
+        # Reset & Neu-Sync
+        php artisan moco:reset-and-sync
+        ```
