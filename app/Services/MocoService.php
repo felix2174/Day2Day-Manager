@@ -437,6 +437,157 @@ class MocoService
     }
 
     /**
+     * Get activities for a specific user
+     *
+     * @param int $userId
+     * @param array $params Query parameters
+     * @return array
+     */
+    public function getUserActivities(int $userId, array $params = []): array
+    {
+        try {
+            $response = $this->client->get('activities', [
+                'query' => array_merge([
+                    'user_id' => $userId,
+                    'limit' => 200,
+                    'page' => 1
+                ], $params)
+            ]);
+
+            return json_decode($response->getBody()->getContents(), true);
+        } catch (GuzzleException $e) {
+            Log::error("MOCO API Error (getUserActivities {$userId}): " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get projects for a specific user (from contracts)
+     *
+     * @param int $userId
+     * @return array
+     */
+    public function getUserProjects(int $userId): array
+    {
+        try {
+            // Verwende die MOCO API Filterung direkt, falls verfügbar
+            // Ansonsten hole alle Projekte und filtere manuell nach User-ID in Contracts
+            $allProjects = $this->getProjects([
+                'limit' => 500,  // Erhöhtes Limit für mehr Projekte
+            ]);
+            
+            $userProjects = [];
+            
+            foreach ($allProjects as $project) {
+                $isAssigned = false;
+                
+                // Prüfe ob der User in den Contracts des Projekts ist
+                if (isset($project['contracts']) && is_array($project['contracts'])) {
+                    foreach ($project['contracts'] as $contract) {
+                        if (isset($contract['user_id']) && $contract['user_id'] == $userId) {
+                            $isAssigned = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Nur Projekte hinzufügen, wo der User tatsächlich zugewiesen ist
+                // und es sich um echte Projekte handelt (keine internen Einträge)
+                if ($isAssigned && !$this->isInternalProject($project)) {
+                    $userProjects[] = $project;
+                }
+            }
+            
+            Log::info("MOCO: Found " . count($userProjects) . " assigned projects for user {$userId} out of " . count($allProjects) . " total projects");
+            
+            return $userProjects;
+        } catch (GuzzleException $e) {
+            Log::error("MOCO API Error (getUserProjects {$userId}): " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get absences for a specific user
+     *
+     * @param int $userId
+     * @param array $params Query parameters
+     * @return array
+     */
+    public function getUserAbsences(int $userId, array $params = []): array
+    {
+        try {
+            $response = $this->client->get('schedules/absences', [
+                'query' => array_merge([
+                    'user_id' => $userId,
+                    'limit' => 200,
+                    'page' => 1
+                ], $params)
+            ]);
+
+            return json_decode($response->getBody()->getContents(), true);
+        } catch (GuzzleException $e) {
+            Log::error("MOCO API Error (getUserAbsences {$userId}): " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get project assignments for a specific user
+     *
+     * @param int $userId
+     * @return array
+     */
+    public function getUserProjectAssignments(int $userId): array
+    {
+        try {
+            $response = $this->client->get('project_assignments', [
+                'query' => [
+                    'user_id' => $userId,
+                    'limit' => 200,
+                    'page' => 1
+                ]
+            ]);
+
+            return json_decode($response->getBody()->getContents(), true);
+        } catch (GuzzleException $e) {
+            Log::error("MOCO API Error (getUserProjectAssignments {$userId}): " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get session information (authenticated user and company)
+     * This is a lightweight endpoint to test the API connection.
+     *
+     * @return array|null
+     * @throws GuzzleException
+     */
+    public function getSessionInfo(): ?array
+    {
+        try {
+            $response = $this->client->get('session');
+            $data = json_decode($response->getBody()->getContents(), true);
+            
+            if (is_array($data)) {
+                Log::info('MOCO session info retrieved successfully');
+                return $data;
+            }
+            
+            return null;
+        } catch (GuzzleException $e) {
+            // If session endpoint doesn't exist (404), return null instead of throwing
+            if ($e->getCode() === 404) {
+                Log::info('MOCO session endpoint not available (404)');
+                return null;
+            }
+            
+            // For other errors, re-throw to be handled by the caller
+            throw $e;
+        }
+    }
+
+    /**
      * Test the MOCO API connection
      *
      * @return bool

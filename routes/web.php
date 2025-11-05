@@ -277,3 +277,11 @@ Route::post('/gantt/assignment/{type}/{id}/move/down', [ProjectController::class
 Route::fallback(function () {
     return redirect('/');
 });
+
+Route::post('/gantt/assignment/{type}/{id}/move/up', [ProjectController::class, 'moveAssignmentUp'])->name('gantt.assignment.move.up');
+Route::post('/gantt/assignment/{type}/{id}/move/down', [ProjectController::class, 'moveAssignmentDown'])->name('gantt.assignment.move.down');
+
+// Fallback-Route für nicht gefundene URLs, um 404-Fehler zu vermeiden
+Route::fallback(function () {
+    return redirect('/');
+});

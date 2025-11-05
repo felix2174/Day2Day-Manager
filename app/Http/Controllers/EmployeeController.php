@@ -879,4 +879,236 @@ class EmployeeController extends Controller
 
         return response()->json(['status' => 'ok']);
     }
+
+    /**
+     * Check if a project is an internal project (not a real customer project)
+     * 
+     * Internal projects include:
+     * - Projects with specific tags like "Aufträge auf Zuruf"
+     * - Projects with names starting with "Internes/"
+     * - Projects with specific name patterns
+     * 
+     * @param array $project
+     * @return bool
+     */
+    private function isInternalProject(array $project): bool
+    {
+        $name = $project['name'] ?? '';
+        $tags = $project['tags'] ?? [];
+        $labels = $project['labels'] ?? [];
+        
+        // Check for specific tags (when available from full project data)
+        if (in_array('Aufträge auf Zuruf', $tags)) {
+            return true;
+        }
+        
+        // Check for specific labels (when available from full project data)
+        if (in_array('Aufträge auf Zuruf', $labels)) {
+            return true;
+        }
+        
+        // Check for internal project names (most reliable for activities)
+        $internalProjectNames = [
+            'Aufträge auf Zuruf',
+            'Internes/Wochenmeetings',
+        ];
+        
+        foreach ($internalProjectNames as $internalName) {
+            if ($name === $internalName) {
+                return true;
+            }
+        }
+        
+        // Check for internal name patterns (for variations)
+        $internalPatterns = [
+            'Internes/',
+            'Internes:',
+            'Wochenmeetings',
+            'Internal/',
+            'Internal:',
+        ];
+        
+        foreach ($internalPatterns as $pattern) {
+            if (str_contains($name, $pattern)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Get pie chart data for a specific time range
+     */
+    public function getPieChartData(Request $request, Employee $employee)
+    {
+        $mocoService = app(MocoService::class);
+        
+        // Bestimme Zeitraum
+        $days = $request->get('days', 30);
+        
+        if ($days === 'custom') {
+            $startDate = $request->get('start_date');
+            $endDate = $request->get('end_date');
+        } else {
+            $endDate = Carbon::now()->format('Y-m-d');
+            $startDate = Carbon::now()->subDays((int)$days)->format('Y-m-d');
+        }
+        
+        // Hole Activities aus MOCO
+        $activities = $mocoService->getUserActivities($employee->moco_id, [
+            'from' => $startDate,
+            'to' => $endDate
+        ]);
+        
+        // Sortiere nach Datum
+        usort($activities, function($a, $b) {
+            return strcmp($b['date'] ?? '', $a['date'] ?? '');
+        });
+        
+        // Gruppiere nach Projekten
+        $projectHours = [];
+        $totalHours = 0;
+        
+        foreach ($activities as $activity) {
+            $hours = $activity['hours'] ?? 0;
+            $totalHours += $hours;
+            
+            $projectName = 'Ohne Projekt';
+            $projectId = null;
+            
+            if (isset($activity['project']) && isset($activity['project']['name'])) {
+                $projectName = $activity['project']['name'];
+                $projectId = $activity['project']['id'] ?? null;
+            }
+            
+            if (!isset($projectHours[$projectName])) {
+                $projectHours[$projectName] = [
+                    'name' => $projectName,
+                    'id' => $projectId,
+                    'hours' => 0
+                ];
+            }
+            
+            $projectHours[$projectName]['hours'] += $hours;
+        }
+        
+        // Sortiere nach Stunden (höchste zuerst)
+        usort($projectHours, function($a, $b) {
+            return $b['hours'] <=> $a['hours'];
+        });
+        
+        // Berechne Prozentanteile
+        $projectDistribution = [];
+        foreach ($projectHours as $project) {
+            $percentage = $totalHours > 0 ? round(($project['hours'] / $totalHours) * 100, 1) : 0;
+            $projectDistribution[] = [
+                'name' => $project['name'],
+                'id' => $project['id'],
+                'hours' => round($project['hours'], 1),
+                'percentage' => $percentage
+            ];
+        }
+        
+        return response()->json([
+            'totalHours' => round($totalHours, 1),
+            'projectDistribution' => $projectDistribution,
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]);
+    }
+
+    /**
+     * Get activities data for a specific time range
+     */
+    public function getActivitiesData(Request $request, Employee $employee)
+    {
+        $mocoService = app(MocoService::class);
+        
+        // Bestimme Zeitraum
+        $days = $request->get('days', 30);
+        
+        if ($days === 'custom') {
+            $startDate = $request->get('start_date');
+            $endDate = $request->get('end_date');
+        } else {
+            $endDate = Carbon::now()->format('Y-m-d');
+            $startDate = Carbon::now()->subDays((int)$days)->format('Y-m-d');
+        }
+        
+        // Hole Activities aus MOCO
+        $activities = $mocoService->getUserActivities($employee->moco_id, [
+            'from' => $startDate,
+            'to' => $endDate
+        ]);
+        
+        // Sortiere nach Datum (neueste zuerst)
+        usort($activities, function($a, $b) {
+            return strcmp($b['date'] ?? '', $a['date'] ?? '');
+        });
+        
+        return response()->json([
+            'activities' => $activities,
+            'count' => count($activities),
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]);
+    }
+
+    public function reorder(Request $request)
+    {
+        $data = $request->validate([
+            'order' => 'required|array',
+            'order.*' => 'integer|exists:employees,id',
+        ]);
+
+        foreach ($data['order'] as $position => $employeeId) {
+            Employee::where('id', $employeeId)->update(['timeline_order' => $position]);
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    public function updateAssignments(Request $request)
+    {
+        $data = $request->validate([
+            'order' => 'required|array',
+            'order.*' => 'integer|exists:employees,id',
+            'bars' => 'required|array',
+            'bars.*.assignment_id' => 'required|integer|exists:assignments,id',
+            'bars.*.employee_id' => 'nullable|integer|exists:employees,id',
+            'bars.*.start_date' => 'nullable|date',
+            'bars.*.end_date' => 'nullable|date',
+        ]);
+
+        DB::transaction(function () use ($data) {
+            foreach ($data['order'] as $position => $employeeId) {
+                Employee::where('id', $employeeId)->update(['timeline_order' => $position]);
+            }
+
+            foreach ($data['bars'] as $bar) {
+                $assignment = Assignment::find($bar['assignment_id']);
+                if (!$assignment) {
+                    continue;
+                }
+
+                $updates = [];
+                if (!empty($bar['start_date'])) {
+                    $updates['start_date'] = $bar['start_date'];
+                }
+                if (!empty($bar['end_date'])) {
+                    $updates['end_date'] = $bar['end_date'];
+                }
+                if (!empty($bar['employee_id']) && $assignment->employee_id !== (int) $bar['employee_id']) {
+                    $updates['employee_id'] = $bar['employee_id'];
+                }
+
+                if (!empty($updates)) {
+                    $assignment->update($updates);
+                }
+            }
+        });
+
+        return response()->json(['status' => 'ok']);
+    }
 }

@@ -38,6 +38,9 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
+                <button onclick="syncProjectStatuses()" id="syncButton" style="background: #3b82f6; color: white; padding: 10px 20px; border-radius: 12px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
+                    Status synchronisieren
+                </button>
                 <a href="{{ route('projects.export') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
                     Excel Export
                 </a>
