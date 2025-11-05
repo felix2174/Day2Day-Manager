@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\Project;
 use App\Models\Assignment;
 use App\Models\Employee;
+use Illuminate\Support\Facades\DB;
 
 class CleanupTestProjectCommand extends Command
 {
@@ -14,68 +15,120 @@ class CleanupTestProjectCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'gantt:cleanup-test-project';
+    protected $signature = 'gantt:cleanup-test-project 
+                            {--dry-run : Show what would be deleted without actually deleting}
+                            {--force : Force deletion without confirmation}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Removes the Gantt test project and associated employees and assignments.';
+    protected $description = 'SAFELY removes ONLY test/import data. NEVER deletes manual or MOCO-synced data.';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        $this->info('Starting cleanup of Gantt test project...');
+        $this->info('🧹 Safe Cleanup: Test/Import Data Only');
+        $this->newLine();
 
-        // Find the project
-        $project = Project::where('name', 'Gantt-Testprojekt')->first();
+        // CRITICAL: Only delete data marked as 'import'
+        $projectsToDelete = Project::where('source', 'import')->get();
+        $employeesToDelete = Employee::where('source', 'import')->get();
 
-        if (!$project) {
-            $this->info('Gantt test project not found. Nothing to clean up.');
-            return 0;
+        // Also find specific test projects by name (backward compatibility)
+        $testProjectNames = ['Gantt-Testprojekt', 'Test Project', 'Demo Project'];
+        $namedTestProjects = Project::whereIn('name', $testProjectNames)
+                                    ->where('source', '!=', 'moco') // NEVER delete MOCO data
+                                    ->get();
+
+        $allProjectsToDelete = $projectsToDelete->merge($namedTestProjects)->unique('id');
+
+        if ($allProjectsToDelete->isEmpty() && $employeesToDelete->isEmpty()) {
+            $this->info('✅ No test/import data found. Database is clean!');
+            return Command::SUCCESS;
         }
 
-        // Get all assignments for this project
-        $assignments = Assignment::where('project_id', $project->id)->get();
-        $employeeIdsToDelete = [];
+        // Show what will be deleted
+        $this->warn('📋 Items marked for deletion:');
+        $this->newLine();
 
-        foreach ($assignments as $assignment) {
-            $employeeId = $assignment->employee_id;
-            // Check if this employee has assignments in other projects
-            $otherAssignmentsCount = Assignment::where('employee_id', $employeeId)
-                                               ->where('project_id', '!=', $project->id)
-                                               ->count();
+        if ($allProjectsToDelete->isNotEmpty()) {
+            $this->line('🗂️  Projects (' . $allProjectsToDelete->count() . '):');
+            foreach ($allProjectsToDelete as $project) {
+                $this->line("  - [{$project->source}] {$project->name}");
+            }
+            $this->newLine();
+        }
 
-            // If the employee has no other assignments, mark for deletion
-            if ($otherAssignmentsCount === 0) {
-                $employeeIdsToDelete[] = $employeeId;
+        if ($employeesToDelete->isNotEmpty()) {
+            $this->line('👥 Employees (' . $employeesToDelete->count() . '):');
+            foreach ($employeesToDelete as $employee) {
+                $this->line("  - [{$employee->source}] {$employee->first_name} {$employee->last_name}");
+            }
+            $this->newLine();
+        }
+
+        // Safety checks
+        $manualProjects = $allProjectsToDelete->where('source', 'manual')->count();
+        $mocoProjects = $allProjectsToDelete->where('source', 'moco')->count();
+        
+        if ($manualProjects > 0 || $mocoProjects > 0) {
+            $this->error('❌ SAFETY ABORT: Cannot delete manual or MOCO data!');
+            $this->error("   Manual projects: {$manualProjects}");
+            $this->error("   MOCO projects: {$mocoProjects}");
+            return Command::FAILURE;
+        }
+
+        // Dry-run mode
+        if ($this->option('dry-run')) {
+            $this->info('🔍 DRY RUN: No data was deleted (use without --dry-run to actually delete)');
+            return Command::SUCCESS;
+        }
+
+        // Confirmation prompt (unless --force)
+        if (!$this->option('force')) {
+            if (!$this->confirm('⚠️  Are you sure you want to delete this test data?')) {
+                $this->info('Cleanup cancelled.');
+                return Command::SUCCESS;
             }
         }
-        
-        // Delete assignments for the project
-        $assignmentCount = $assignments->count();
-        if ($assignmentCount > 0) {
-            Assignment::where('project_id', $project->id)->delete();
-            $this->info("Deleted {$assignmentCount} assignments.");
-        }
 
-        // Delete employees who are only in this project
-        $employeeIdsToDelete = array_unique($employeeIdsToDelete);
-        if (!empty($employeeIdsToDelete)) {
-            $employeeCount = count($employeeIdsToDelete);
-            Employee::whereIn('id', $employeeIdsToDelete)->delete();
-            $this->info("Deleted {$employeeCount} associated employees.");
-        }
+        // Perform deletion in transaction
+        DB::transaction(function() use ($allProjectsToDelete, $employeesToDelete) {
+            $deletedAssignments = 0;
+            $deletedProjects = 0;
+            $deletedEmployees = 0;
 
-        // Delete the project itself
-        $projectName = $project->name;
-        $project->delete();
-        $this->info("Deleted project: '{$projectName}'.");
+            // Delete assignments for these projects
+            foreach ($allProjectsToDelete as $project) {
+                $count = Assignment::where('project_id', $project->id)->count();
+                Assignment::where('project_id', $project->id)->delete();
+                $deletedAssignments += $count;
+            }
+
+            // Delete projects
+            foreach ($allProjectsToDelete as $project) {
+                $project->delete(); // Soft-delete
+                $deletedProjects++;
+            }
+
+            // Delete employees
+            foreach ($employeesToDelete as $employee) {
+                $employee->delete(); // Soft-delete
+                $deletedEmployees++;
+            }
+
+            $this->info("✅ Deleted {$deletedAssignments} assignments");
+            $this->info("✅ Deleted {$deletedProjects} projects");
+            $this->info("✅ Deleted {$deletedEmployees} employees");
+        });
+
+        $this->newLine();
+        $this->info('✅ Cleanup complete!');
         
-        $this->info('Cleanup complete.');
-        return 0;
+        return Command::SUCCESS;
     }
 }

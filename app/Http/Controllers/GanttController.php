@@ -65,21 +65,30 @@ class GanttController extends Controller
             'custom_date_from' => '',
             'custom_date_to' => '',
             'search' => '',
-            'zoom' => '12m',
+            'zoom' => 'month',
         ]);
+
+        // URL-Parameter überschreiben Session (wichtig für Zoom-Buttons und Filter!)
+        $filterParams = ['zoom', 'search', 'status', 'employee', 'timeframe', 'sort'];
+        foreach ($filterParams as $param) {
+            if (request()->has($param)) {
+                $filters[$param] = request()->query($param);
+            }
+        }
+        
+        // Speichere aktualisierte Filter in Session
+        Session::put('gantt_filters', $filters);
 
         $viewMode = request()->query('view', 'projects');
 
         $zoomKey = $this->normalizeZoom($filters['zoom'] ?? null);
         $zoomOptions = $this->getZoomOptions();
-        $currentZoom = isset($zoomOptions[$zoomKey]) ? $zoomKey : '12m';
+        $currentZoom = isset($zoomOptions[$zoomKey]) ? $zoomKey : 'month';
 
-        // Mitarbeiteransicht bevorzugt Wochen-Zoom
-        if ($viewMode === 'employees' && str_ends_with($currentZoom, 'm')) {
-            $currentZoom = '12w';
-        }
+        // REMOVED: Auto-Switch von Monate zu Wochen in Mitarbeiter-View
+        // User soll frei zwischen allen Zoom-Levels wechseln können
 
-        $zoomConfig = $zoomOptions[$currentZoom] ?? $zoomOptions['12m'];
+        $zoomConfig = $zoomOptions[$currentZoom] ?? $zoomOptions['month'];
         $timelineUnit = $zoomConfig['unit'];
         $columnWidth = $zoomConfig['column_width'];
         $periodCount = $zoomConfig['count'];
@@ -265,7 +274,8 @@ class GanttController extends Controller
 
         foreach ($projects as $project) {
             $projectStart = $project->start_date ? Carbon::parse($project->start_date) : ($project->moco_created_at ? Carbon::parse($project->moco_created_at) : null);
-            $projectEnd = $project->end_date ? Carbon::parse($project->end_date) : now()->addMonths(23);
+            // CHANGED: Consistent with GanttDataService - projects without end_date extend 6 months
+            $projectEnd = $project->end_date ? Carbon::parse($project->end_date) : now()->addMonths(6);
             
             if (!$projectStart) continue;
 
@@ -306,7 +316,8 @@ class GanttController extends Controller
             } elseif ($project->moco_created_at) {
                 $boundStart = Carbon::parse($project->moco_created_at)->startOfDay();
             } else {
-                $boundStart = Carbon::now()->startOfMonth();
+                // CHANGED: Konsistent mit GanttDataService - Projekte ohne start_date beginnen 6 Monate früher
+                $boundStart = Carbon::now()->subMonths(6);
             }
 
             $boundEnd = null;
@@ -315,7 +326,8 @@ class GanttController extends Controller
             } elseif ($project->end_date) {
                 $boundEnd = Carbon::parse($project->end_date)->endOfDay();
             } else {
-                $boundEnd = Carbon::now()->addMonths(12)->endOfMonth();
+                // CHANGED: Konsistent mit GanttDataService - Projekte ohne end_date laufen über Timeline hinaus
+                $boundEnd = Carbon::now()->addMonths(6);
             }
 
             if ($boundEnd->lt($boundStart)) {
@@ -341,8 +353,11 @@ class GanttController extends Controller
             if ($customRange) {
                 $startPeriod = Carbon::parse($filters['custom_date_from'])->startOfMonth();
             } else {
-                $half = (int)floor($periodCount / 2);
-                $startPeriod = Carbon::now()->startOfMonth()->subMonths($half);
+                // Professional Standard: 2 Monate Kontext + 10 Monate Zukunft
+                // "Heute"-Linie bei ~17% vom linken Rand (wie MS Project/Asana)
+                $backMonths = 2;
+                $forwardMonths = max(1, $periodCount - $backMonths);
+                $startPeriod = Carbon::now()->startOfMonth()->subMonths($backMonths);
             }
 
             for ($i = 0; $i < $periodCount; $i++) {
@@ -356,12 +371,15 @@ class GanttController extends Controller
                     'is_current' => $periodStart->isSameMonth(Carbon::now()),
                 ];
             }
-        } else {
+        } elseif ($timelineUnit === 'week') {
             if ($customRange) {
                 $startPeriod = Carbon::parse($filters['custom_date_from'])->startOfWeek(Carbon::MONDAY);
             } else {
-                $half = (int)floor($periodCount / 2);
-                $startPeriod = Carbon::now()->startOfWeek(Carbon::MONDAY)->subWeeks($half);
+                // Professional Standard: 4 Wochen Kontext + 12 Wochen Zukunft
+                // "Heute"-Linie bei ~25% vom linken Rand
+                $backWeeks = 4;
+                $forwardWeeks = max(1, $periodCount - $backWeeks);
+                $startPeriod = Carbon::now()->startOfWeek(Carbon::MONDAY)->subWeeks($backWeeks);
             }
 
             for ($i = 0; $i < $periodCount; $i++) {
@@ -373,6 +391,28 @@ class GanttController extends Controller
                     'start' => $periodStart->copy()->startOfDay(),
                     'end' => $periodEnd->copy()->endOfDay(),
                     'is_current' => $periodStart->isSameWeek(Carbon::now(), Carbon::MONDAY),
+                ];
+            }
+        } elseif ($timelineUnit === 'day') {
+            if ($customRange) {
+                $startPeriod = Carbon::parse($filters['custom_date_from'])->startOfDay();
+            } else {
+                // Professional Standard: 7 Tage Kontext + 53 Tage Zukunft
+                // "Heute"-Linie bei ~12% vom linken Rand
+                $backDays = 7;
+                $forwardDays = max(1, $periodCount - $backDays);
+                $startPeriod = Carbon::now()->startOfDay()->subDays($backDays);
+            }
+
+            for ($i = 0; $i < $periodCount; $i++) {
+                $periodStart = $startPeriod->copy()->addDays($i);
+                $periodEnd = $periodStart->copy()->endOfDay();
+                $timelineMonths[] = [
+                    'index' => $i,
+                    'label' => $periodStart->format('d.m.'),
+                    'start' => $periodStart->copy()->startOfDay(),
+                    'end' => $periodEnd->copy()->endOfDay(),
+                    'is_current' => $periodStart->isToday(),
                 ];
             }
         }
@@ -505,7 +545,8 @@ class GanttController extends Controller
                         }
 
                         if (!$projectEnd || $projectEnd->lt($projectStart)) {
-                            $projectEnd = now()->copy()->endOfDay();
+                            // CHANGED: Projekte ohne end_date laufen 6 Monate in die Zukunft (ongoing)
+                            $projectEnd = now()->copy()->addMonths(6);
                         }
 
                         $contractHours = null;
@@ -712,7 +753,8 @@ class GanttController extends Controller
             }
             
             $projectStart = $project->start_date ?: $project->moco_created_at;
-            $projectEnd = $project->end_date ?: now()->addMonths(23);
+            // CHANGED: Consistent with GanttDataService - projects without end_date extend 6 months
+            $projectEnd = $project->end_date ?: now()->addMonths(6);
             
             if (!$projectStart || !$projectEnd) {
                 continue;
@@ -1443,65 +1485,55 @@ class GanttController extends Controller
     protected function getZoomOptions(): array
     {
         return [
-            '6w' => [
-                'label' => '6 Wochen',
-                'unit' => 'week',
-                'count' => 6,
-                'column_width' => 100,
-            ],
-            '12w' => [
-                'label' => '12 Wochen',
-                'unit' => 'week',
-                'count' => 12,
-                'column_width' => 90,
-            ],
-            '24w' => [
-                'label' => '24 Wochen',
-                'unit' => 'week',
-                'count' => 24,
-                'column_width' => 80,
-            ],
-            '52w' => [
-                'label' => '52 Wochen',
-                'unit' => 'week',
-                'count' => 52,
-                'column_width' => 60,
-            ],
-            '6m' => [
-                'label' => '6 Monate',
+            'month' => [
+                'label' => 'Monate',
                 'unit' => 'month',
-                'count' => 6,
-                'column_width' => 160,
-            ],
-            '12m' => [
-                'label' => '12 Monate',
-                'unit' => 'month',
-                'count' => 12,
+                'count' => 12, // Default: 12 Monate anzeigen
                 'column_width' => 140,
+                'icon' => '📅',
             ],
-            '24m' => [
-                'label' => '24 Monate',
-                'unit' => 'month',
-                'count' => 24,
-                'column_width' => 120,
+            'week' => [
+                'label' => 'Wochen',
+                'unit' => 'week',
+                'count' => 16, // Default: 16 Wochen anzeigen (~4 Monate)
+                'column_width' => 90,
+                'icon' => '📆',
+            ],
+            'day' => [
+                'label' => 'Tage',
+                'unit' => 'day',
+                'count' => 60, // Default: 60 Tage anzeigen (~2 Monate)
+                'column_width' => 40,
+                'icon' => '🗓️',
             ],
         ];
     }
 
     protected function normalizeZoom(?string $zoom): string
     {
-        $default = '12m';
+        $default = 'month'; // Monatsansicht als Standard
         if (!$zoom) {
             return $default;
         }
         $zoom = strtolower(trim($zoom));
-        if (isset($this->getZoomOptions()[$zoom])) {
+        
+        // Neue Zoom-Keys: month, week, day
+        $validZooms = ['month', 'week', 'day'];
+        if (in_array($zoom, $validZooms)) {
             return $zoom;
         }
-        if (is_numeric($zoom)) {
-            $zoomKey = $zoom . 'm';
-            return isset($this->getZoomOptions()[$zoomKey]) ? $zoomKey : $default;
+        
+        // Legacy-Fallback: Alte Zoom-Werte (12m, 6w etc.) auf neue mappen
+        if (str_ends_with($zoom, 'm')) {
+            return 'month';
         }
+        if (str_ends_with($zoom, 'w')) {
+            return 'week';
+        }
+        if (str_ends_with($zoom, 'd')) {
+            return 'day';
+        }
+        
         return $default;
     }
 
@@ -1545,6 +1577,79 @@ class GanttController extends Controller
         
         return redirect()->route('gantt.index')
             ->with('success', 'Mitarbeiter "' . $employee->first_name . ' ' . $employee->last_name . '" wurde dem Projekt zugewiesen.');
+    }
+
+    /**
+     * Bulk assign multiple employees to a project
+     */
+    public function bulkAssignEmployees(Request $request)
+    {
+        $request->validate([
+            'project_id' => 'required|integer|exists:projects,id',
+            'employee_ids' => 'required|array|min:1',
+            'employee_ids.*' => 'required|integer|exists:employees,id',
+        ]);
+
+        $project = Project::findOrFail($request->project_id);
+        $employeeIds = $request->employee_ids;
+        
+        $assigned = 0;
+        $skipped = 0;
+        $assignedNames = [];
+
+        foreach ($employeeIds as $employeeId) {
+            $employee = Employee::find($employeeId);
+            
+            // Check if employee already has assignments in this project
+            $existingAssignments = Assignment::where('project_id', $project->id)
+                ->where('employee_id', $employeeId)
+                ->count();
+
+            if ($existingAssignments > 0) {
+                $skipped++;
+                continue;
+            }
+
+            // Create default assignment
+            Assignment::create([
+                'project_id' => $project->id,
+                'employee_id' => $employeeId,
+                'task_name' => 'Projektmitarbeit',
+                'task_description' => 'Standard-Aufgabe für ' . $employee->first_name . ' ' . $employee->last_name,
+                'start_date' => $project->start_date ?? now(),
+                'end_date' => $project->end_date ?? now()->addMonths(3),
+                'weekly_hours' => 20, // Standard: 20h/Woche (halbe Stelle)
+                'display_order' => 1,
+            ]);
+
+            $assigned++;
+            $assignedNames[] = $employee->first_name . ' ' . $employee->last_name;
+            
+            // Clear cache
+            if ($employee->moco_id) {
+                Cache::forget('moco:user_projects:' . $employee->moco_id);
+            }
+        }
+
+        if ($assigned === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Keine Mitarbeiter zugewiesen. Alle sind bereits im Projekt.'
+            ], 400);
+        }
+
+        $message = $assigned . ' Mitarbeiter zugewiesen: ' . implode(', ', $assignedNames);
+        
+        if ($skipped > 0) {
+            $message .= ' (' . $skipped . ' übersprungen - bereits zugewiesen)';
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'assigned_count' => $assigned,
+            'skipped_count' => $skipped
+        ]);
     }
 
     public function addTaskToEmployee(Request $request, Project $project, Employee $employee)
@@ -1684,6 +1789,54 @@ class GanttController extends Controller
             'success' => true,
             'message' => 'Aufgabe wurde aktualisiert.',
             'task' => $assignment,
+        ]);
+    }
+
+    /**
+     * Transfer a task (assignment) to another employee
+     * 
+     * Ermöglicht das Übertragen von Aufgaben zwischen Mitarbeitern
+     * ohne Löschen/Neuerstellen (erhält alle Metadaten)
+     * 
+     * ENTSCHEIDUNG: Einfaches Update ohne Audit-Trail (Phase 1)
+     * GRUND: User will schnelle Lösung, Audit kommt später wenn benötigt
+     * FALLBACK: Bei ungültigem Employee wird Fehler zurückgegeben
+     */
+    public function transferTask(Request $request, Assignment $assignment)
+    {
+        $validated = $request->validate([
+            'new_employee_id' => 'required|exists:employees,id|different:' . $assignment->employee_id,
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        // Alte Werte für Logging/Response speichern
+        $oldEmployee = $assignment->employee;
+        
+        // Employee-ID ändern (behält start_date, end_date, weekly_hours, etc.)
+        $assignment->employee_id = $validated['new_employee_id'];
+        $assignment->save();
+
+        // Frische Daten mit Relationships laden
+        $assignment->load('employee', 'project');
+
+        Log::info('Task transferred', [
+            'assignment_id' => $assignment->id,
+            'task_name' => $assignment->task_name,
+            'from_employee' => $oldEmployee->name,
+            'to_employee' => $assignment->employee->name,
+            'reason' => $validated['reason'] ?? 'Keine Begründung angegeben',
+            'user_id' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf(
+                'Aufgabe "%s" erfolgreich von %s an %s übertragen.',
+                $assignment->task_name,
+                $oldEmployee->name,
+                $assignment->employee->name
+            ),
+            'assignment' => $assignment,
         ]);
     }
 

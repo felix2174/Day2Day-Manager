@@ -2,6 +2,10 @@
 
 @section('title', 'Mitarbeiter')
 
+@php
+use Illuminate\Support\Facades\DB;
+@endphp
+
 @section('content')
 <div style="width: 100%; margin: 0; padding: 0;">
     <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
@@ -29,6 +33,10 @@
                         <div style="color: #059669; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $employees->where('is_active', true)->count() }}</div>
                     </div>
                     <div style="min-width: 140px;">
+                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Inaktiv</div>
+                        <div style="color: #6b7280; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $employees->where('is_active', false)->count() }}</div>
+                    </div>
+                    <div style="min-width: 140px;">
                         <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Überlastet</div>
                         <div style="color: #b91c1c; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $statusCounts['critical'] ?? 0 }}</div>
                     </div>
@@ -46,7 +54,15 @@
 
         <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
             <div style="display: flex; flex-direction: column;">
-                <label for="filter-status" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Status</label>
+                <label for="filter-active-status" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Mitarbeiter-Status</label>
+                <select id="filter-active-status" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 160px;">
+                    <option value="active">Nur Aktive</option>
+                    <option value="all">Alle</option>
+                    <option value="inactive">Nur Inaktive</option>
+                </select>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                <label for="filter-status" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Auslastungs-Status</label>
                 <select id="filter-status" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 160px;">
                     <option value="all">Alle Status</option>
                     <option value="critical">Überlastet ({{ $statusCounts['critical'] ?? 0 }})</option>
@@ -69,7 +85,7 @@
             </div>
             <div style="display: flex; flex-direction: column;">
                 <label for="filter-search" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Suche</label>
-                <input id="filter-search" type="text" placeholder="Name oder Projekt" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 200px;">
+                <input id="filter-search" type="text" placeholder="Mitarbeiter" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 200px;">
             </div>
         </div>
     </div>
@@ -80,8 +96,14 @@
         </div>
     @endif
 
+    @if(session('warning'))
+        <div style="background: #ffffff; border: 1px solid #ea580c; border-left: 4px solid #ea580c; color: #ea580c; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+            {{ session('warning') }}
+        </div>
+    @endif
+
     @if(session('error'))
-        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
+        <div style="background: #ffffff; border: 1px solid #dc2626; border-left: 4px solid #dc2626; color: #dc2626; padding: 12px; border-radius: 6px; margin-bottom: 16px;">
             {{ session('error') }}
         </div>
     @endif
@@ -103,30 +125,50 @@
                 <tbody>
                     @forelse($employees as $employee)
                         @php
-                            $statusColors = [
-                                'critical' => '#ef4444',
-                                'warning' => '#f59e0b',
-                                'balanced' => '#10b981',
-                                'underutilized' => '#6b7280',
-                                'unknown' => '#9ca3af'
-                            ];
+                            // Prüfe ob Mitarbeiter aktuell abwesend ist
+                            $isAbsentNow = DB::table('absences')
+                                ->where('employee_id', $employee->id)
+                                ->where('start_date', '<=', now())
+                                ->where('end_date', '>=', now())
+                                ->exists();
+                            
+                            // Bestimme Verfügbarkeitsstatus
+                            if ($isAbsentNow) {
+                                $availabilityStatus = 'absent';
+                                $availabilityLabel = 'Abwesend';
+                                $availabilityColor = '#dc2626'; // Rot
+                            } elseif (!$employee->is_active) {
+                                $availabilityStatus = 'inactive';
+                                $availabilityLabel = 'Inaktiv';
+                                $availabilityColor = '#737373'; // Grau
+                            } else {
+                                $availabilityStatus = 'active';
+                                $availabilityLabel = 'Aktiv';
+                                $availabilityColor = '#16a34a'; // Grün
+                            }
 
-                            $statusLabel = [
-                                'critical' => 'Überlastet',
-                                'warning' => 'Hohe Auslastung',
-                                'balanced' => 'Im Soll',
-                                'underutilized' => 'Unterlast',
-                                'unknown' => 'Unbekannt',
+                            // Alte KPI-Farben für Auslastungsspalten
+                            $statusColors = [
+                                'critical' => '#dc2626',
+                                'warning' => '#ea580c',
+                                'balanced' => '#16a34a',
+                                'underutilized' => '#737373',
+                                'unknown' => '#a3a3a3'
                             ];
                         @endphp
-                        <tr class="employee-row" data-status="{{ $employee->kpi_status_4w }}" data-bottleneck="{{ $employee->kpi_bottleneck ? '1' : '0' }}" data-department="{{ strtolower($employee->department) }}" data-search="{{ strtolower($employee->first_name . ' ' . $employee->last_name . ' ' . ($employee->kpi_top_project['name'] ?? '')) }}" style="border-bottom: 1px solid #e5e7eb; background: {{ $employee->kpi_bottleneck ? '#fef2f2' : 'transparent' }};">
+                        <tr class="employee-row" data-status="{{ $employee->kpi_status_4w }}" data-bottleneck="{{ $employee->kpi_bottleneck ? '1' : '0' }}" data-department="{{ strtolower($employee->department) }}" data-search="{{ strtolower($employee->first_name . ' ' . $employee->last_name) }}" data-is-active="{{ $employee->is_active ? '1' : '0' }}" style="border-bottom: 1px solid #e5e7eb;">
                             <td style="padding: 12px;">
                                 <div style="display: flex; align-items: center; gap: 12px;">
                                     <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #6366f1); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px;">
                                         {{ strtoupper(substr($employee->first_name, 0, 1) . substr($employee->last_name, 0, 1)) }}
                                     </div>
                                     <div>
-                                        <div style="font-weight: 600; color: #111827;">{{ $employee->first_name }} {{ $employee->last_name }}</div>
+                                        <div style="font-weight: 600; color: #111827;">
+                                            {{ $employee->first_name }} {{ $employee->last_name }}
+                                            @if(!$employee->is_active)
+                                                <span style="background: #e5e7eb; color: #6b7280; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 6px;">⚪ Inaktiv</span>
+                                            @endif
+                                        </div>
                                         <div style="font-size: 12px; color: #6b7280;">Kapazität: {{ round($employee->moco_weekly_capacity) }}h/Woche</div>
                                         @if($employee->kpi_absence_alert && $employee->kpi_absence_summary)
                                             <div style="font-size: 11px; color: #b91c1c; margin-top: 4px;">{{ $employee->kpi_absence_summary }}</div>
@@ -162,18 +204,19 @@
                                 @endif
                             </td>
                             <td style="padding: 12px;">
-                                @if($employee->kpi_available)
-                                    <span style="background: {{ ($statusColors[$employee->kpi_status_4w] ?? '#9ca3af') }}15; color: {{ $statusColors[$employee->kpi_status_4w] ?? '#374151' }}; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block;">
-                                        {{ $statusLabel[$employee->kpi_status_4w] }}
-                                    </span>
-                                @else
-                                    <span style="background: #f3f4f6; color: #6b7280; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-block;">Unbekannt</span>
-                                @endif
+                                <span style="color: {{ $availabilityColor }}; font-size: 13px; font-weight: 600;">
+                                    {{ $availabilityLabel }}
+                                </span>
                             </td>
                             <td style="padding: 12px;">
                                 <div style="display: flex; gap: 6px;">
-                                    <a href="{{ route('employees.show', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Anzeigen</a>
-                                    <a href="{{ route('employees.edit', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">Bearbeiten</a>
+                                    <a href="{{ route('employees.show', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; border: 1px solid #e5e7eb; transition: all 0.15s ease;">Anzeigen</a>
+                                    <a href="{{ route('employees.edit', $employee) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; border: 1px solid #e5e7eb; transition: all 0.15s ease;">Bearbeiten</a>
+                                    <form action="{{ route('employees.destroy', $employee) }}" method="POST" style="display: inline;" onsubmit="return confirm('🗑️ Mitarbeiter {{ $employee->first_name }} {{ $employee->last_name }} wirklich löschen?\n\n{{ $employee->source === 'moco' ? '⚠️ ACHTUNG: Dies ist ein MOCO-Mitarbeiter! Beim nächsten Sync wird er wieder synchronisiert.' : ($employee->source === 'manual' ? '✓ Dies ist ein manuell angelegter Mitarbeiter.' : 'Dies ist ein Test-Mitarbeiter.') }}')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s ease;">Löschen</button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
@@ -185,66 +228,12 @@
                 </tbody>
             </table>
         </div>
-
-        <div style="width: 360px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-            <div style="padding: 24px;">
-                <div style="margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 16px;">
-                    <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">Abwesenheiten</h3>
-                    <p style="font-size: 13px; color: #6b7280; margin: 4px 0 0 0;">Nächste 30 Tage</p>
-                </div>
-
-                <div style="background: linear-gradient(135deg, #e0f2fe, #bfdbfe); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                    <div style="font-size: 12px; font-weight: 600; color: #0c4a6e; text-transform: uppercase;">Team-Verfügbarkeit</div>
-                    <div style="margin-top: 12px; background: #e5e7eb; height: 20px; border-radius: 10px; overflow: hidden; position: relative;">
-                        <div style="background: {{ $teamAvailability >= 80 ? '#22c55e' : ($teamAvailability >= 60 ? '#fbbf24' : '#ef4444') }}; width: {{ $teamAvailability }}%; height: 100%;"></div>
-                        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #111827;">{{ $teamAvailability }}%</div>
-                    </div>
-                    <div style="font-size: 11px; color: #0c4a6e; margin-top: 8px;">{{ $absenceStats['total'] }} Abwesenheiten geplant</div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
-                    <div style="background: #dbeafe; border-radius: 8px; padding: 12px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 700; color: #1d4ed8;">{{ $absenceStats['urlaub'] }}</div>
-                        <div style="font-size: 10px; color: #1d4ed8; text-transform: uppercase;">Urlaub</div>
-                    </div>
-                    <div style="background: #fee2e2; border-radius: 8px; padding: 12px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 700; color: #dc2626;">{{ $absenceStats['krankheit'] }}</div>
-                        <div style="font-size: 10px; color: #dc2626; text-transform: uppercase;">Krankheit</div>
-                    </div>
-                    <div style="background: #fef3c7; border-radius: 8px; padding: 12px; text-align: center;">
-                        <div style="font-size: 20px; font-weight: 700; color: #d97706;">{{ $absenceStats['fortbildung'] }}</div>
-                        <div style="font-size: 10px; color: #d97706; text-transform: uppercase;">Fortbildung</div>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 style="font-size: 14px; font-weight: 700; color: #374151; margin: 0 0 12px 0;">Kommende Abwesenheiten</h4>
-                    @if($upcomingAbsences->count() > 0)
-                        <div style="display: grid; gap: 12px; max-height: 500px; overflow-y: auto;">
-                            @foreach($upcomingAbsences as $absence)
-                                @php
-                                    $start = \Carbon\Carbon::parse($absence->start_date);
-                                    $end = \Carbon\Carbon::parse($absence->end_date);
-                                @endphp
-                                <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">
-                                    <div style="font-weight: 600; color: #111827;">{{ $absence->employee_name }}</div>
-                                    <div style="font-size: 11px; color: #6b7280;">{{ $absence->department }}</div>
-                                    <div style="font-size: 12px; color: #1d4ed8; font-weight: 600; margin-top: 6px;">{{ $start->format('d.m.Y') }} - {{ $end->format('d.m.Y') }}</div>
-                                    <div style="font-size: 11px; color: #6b7280;">{{ $absence->type }} • {{ $start->diffInDays($end) + 1 }} Tage</div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <div style="text-align: center; padding: 24px; border: 1px dashed #e5e7eb; border-radius: 8px; color: #6b7280;">Keine Abwesenheiten geplant</div>
-                    @endif
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
 <script>
     (function() {
+        const activeStatusFilter = document.getElementById('filter-active-status');
         const statusFilter = document.getElementById('filter-status');
         const bottleneckFilter = document.getElementById('filter-bottleneck');
         const departmentFilter = document.getElementById('filter-department');
@@ -252,12 +241,14 @@
         const rows = Array.from(document.querySelectorAll('.employee-row'));
 
         function applyFilters() {
+            const activeStatusValue = activeStatusFilter.value;
             const statusValue = statusFilter.value;
             const bottleneckOnly = bottleneckFilter.checked;
             const departmentValue = departmentFilter.value.trim().toLowerCase();
             const searchValue = searchFilter.value.trim().toLowerCase();
 
             rows.forEach(row => {
+                const rowIsActive = row.dataset.isActive === '1';
                 const rowStatus = row.dataset.status ?? 'unknown';
                 const rowBottleneck = row.dataset.bottleneck === '1';
                 const rowDepartment = row.dataset.department ?? '';
@@ -265,7 +256,15 @@
 
                 let visible = true;
 
-                if (statusValue !== 'all' && rowStatus !== statusValue) {
+                // Filter: Aktiv/Inaktiv
+                if (activeStatusValue === 'active' && !rowIsActive) {
+                    visible = false;
+                } else if (activeStatusValue === 'inactive' && rowIsActive) {
+                    visible = false;
+                }
+                // 'all' zeigt beide
+
+                if (visible && statusValue !== 'all' && rowStatus !== statusValue) {
                     visible = false;
                 }
 
@@ -285,8 +284,26 @@
             });
         }
 
-        [statusFilter, bottleneckFilter].forEach(el => el.addEventListener('change', applyFilters));
+        [activeStatusFilter, statusFilter, bottleneckFilter].forEach(el => el.addEventListener('change', applyFilters));
         [departmentFilter, searchFilter].forEach(el => el.addEventListener('input', applyFilters));
+        
+        // Trigger initial filter (default: active only)
+        applyFilters();
     })();
 </script>
+
+<style>
+    /* Button Hover Effects - Einheitlich für alle Buttons */
+    td a[href*="employees.show"]:hover,
+    td a[href*="employees.edit"]:hover,
+    td button[type="submit"]:hover {
+        background: #f9fafb !important;
+        border-color: #d1d5db !important;
+    }
+
+    /* Smooth transitions already inline, but ensure consistency */
+    td a, td button {
+        transition: all 0.15s ease;
+    }
+</style>
 @endsection

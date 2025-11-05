@@ -218,17 +218,46 @@ class MocoService
      * @param array $params Query parameters (e.g., ['from' => '2025-01-01', 'to' => '2025-12-31'])
      * @return array
      */
+    /**
+     * Get absences from MOCO (uses /schedules endpoint with type filter)
+     *
+     * @param array $params Query parameters
+     * @return array
+     */
     public function getAbsences(array $params = []): array
     {
         try {
-            $response = $this->client->get('schedules/absences', [
+            // MOCO API: /schedules endpoint enthält ALLE Schedules
+            // Wir filtern client-seitig nach assignment.type === "Absence"
+            $response = $this->client->get('schedules', [
                 'query' => $params,
             ]);
 
-            return json_decode($response->getBody()->getContents(), true);
+            $data = json_decode($response->getBody()->getContents(), true);
+            
+            // Filter nur Absences (assignment.type === "Absence")
+            $absences = array_filter($data, function($schedule) {
+                return isset($schedule['assignment']['type']) && 
+                       $schedule['assignment']['type'] === 'Absence';
+            });
+            
+            // Re-index array
+            $absences = array_values($absences);
+            
+            Log::info("MOCO getAbsences success", [
+                'endpoint' => '/schedules',
+                'total_schedules' => count($data),
+                'filtered_absences' => count($absences),
+            ]);
+            
+            return $absences;
+            
         } catch (GuzzleException $e) {
-            Log::error('MOCO API Error (getAbsences): ' . $e->getMessage());
-            throw $e;
+            Log::error('MOCO API Error (getAbsences): ' . $e->getMessage(), [
+                'endpoint' => '/schedules',
+                'params' => $params,
+            ]);
+            return [];
         }
     }
 
@@ -313,17 +342,41 @@ class MocoService
     public function getUserAbsences(int $userId, array $params = []): array
     {
         try {
-            $response = $this->client->get('schedules/absences', [
-                'query' => array_merge([
-                    'user_id' => $userId,
-                    'limit' => 200,
-                    'page' => 1
-                ], $params)
+            // MOCO API: /schedules mit user_id Filter
+            $queryParams = array_merge([
+                'user_id' => $userId,
+            ], $params);
+            
+            $response = $this->client->get('schedules', [
+                'query' => $queryParams
             ]);
 
-            return json_decode($response->getBody()->getContents(), true);
+            $data = json_decode($response->getBody()->getContents(), true);
+            
+            // Filter nur Absences (assignment.type === "Absence")
+            $absences = array_filter($data, function($schedule) {
+                return isset($schedule['assignment']['type']) && 
+                       $schedule['assignment']['type'] === 'Absence';
+            });
+            
+            // Re-index array
+            $absences = array_values($absences);
+            
+            // Debug-Log für erfolgreiche Requests mit Absences
+            if (!empty($absences)) {
+                Log::info("MOCO getUserAbsences success", [
+                    'user_id' => $userId,
+                    'total_schedules' => count($data),
+                    'filtered_absences' => count($absences),
+                ]);
+            }
+            
+            return $absences;
+            
         } catch (GuzzleException $e) {
-            Log::error("MOCO API Error (getUserAbsences {$userId}): " . $e->getMessage());
+            Log::error("MOCO API Error (getUserAbsences {$userId}): " . $e->getMessage(), [
+                'params' => $params,
+            ]);
             return [];
         }
     }

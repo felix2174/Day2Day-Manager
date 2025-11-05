@@ -38,9 +38,6 @@
                 </div>
             </div>
             <div style="display: flex; gap: 10px;">
-                <button onclick="syncProjectStatuses()" id="syncButton" style="background: #3b82f6; color: white; padding: 10px 20px; border-radius: 12px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    Status synchronisieren
-                </button>
                 <a href="{{ route('projects.export') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
                     Excel Export
                 </a>
@@ -57,6 +54,22 @@
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
             <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                 <span style="color: #6b7280; font-size: 14px; font-weight: 500;">Filter:</span>
+                
+                <!-- Live-Suche -->
+                <div style="position: relative; display: inline-block;">
+                    <input type="text" 
+                           id="searchProject" 
+                           oninput="searchProjects()" 
+                           placeholder="🔍 Projektname suchen..."
+                           style="padding: 8px 32px 8px 12px; width: 240px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #374151; background: white; transition: all 0.2s ease;"
+                           onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
+                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                    <button id="clearSearchBtn" 
+                            onclick="clearSearch()" 
+                            style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #9ca3af; cursor: pointer; font-size: 18px; padding: 4px 8px; display: none; transition: color 0.2s;"
+                            onmouseover="this.style.color='#ef4444'" 
+                            onmouseout="this.style.color='#9ca3af'">✕</button>
+                </div>
                 
                 <!-- Status Filter -->
                 <select id="filterStatus" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #374151; cursor: pointer; background: white;">
@@ -99,12 +112,14 @@
                 </select>
 
                 <!-- Filter zurücksetzen -->
-                <button onclick="resetFilters()" style="padding: 8px 16px; background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500;">
+                <button onclick="resetFilters()" style="padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.2s ease;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
                     Filter zurücksetzen
                 </button>
 
                 <!-- Ergebnis-Anzeige -->
-                <span id="filterResult" style="color: #6b7280; font-size: 14px; margin-left: auto;"></span>
+                <div id="filterResultContainer" style="margin-left: auto; background: #f0f9ff; border: 1px solid #bae6fd; padding: 8px 16px; border-radius: 8px; display: none;">
+                    <span id="filterResult" style="color: #0369a1; font-size: 14px; font-weight: 600;"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -126,6 +141,24 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; align-items: start;">
         @forelse($projects as $project)
             @php
+                // Berechne Display-Status (für Filter benötigt)
+                $displayStatus = $project->calculated_status ?? $project->status;
+                
+                // Normalisiere Status-Namen für Filter
+                switch($displayStatus) {
+                    case 'completed':
+                    case 'abgeschlossen':
+                        $displayStatus = 'Abgeschlossen';
+                        break;
+                    case 'active':
+                    case 'in_bearbeitung':
+                        $displayStatus = 'In Bearbeitung';
+                        break;
+                    case 'planning':
+                        $displayStatus = 'Geplant';
+                        break;
+                }
+                
                 // Lade Team-Mitglieder für Tooltip
                 $teamMembers = '';
                 
@@ -141,9 +174,42 @@
                 }
                 
                 $estimatedRevenue = ($project->estimated_hours ?? 0) * ($project->hourly_rate ?? 0);
+                
+                // === NEUE DATEN FÜR KOMPAKTE KARTE ===
+                // Team-Größe zählen
+                $projectAssignments = \App\Models\Assignment::where('project_id', $project->id)->with('employee')->get();
+                $teamSize = $projectAssignments->unique('employee_id')->count();
+                
+                // Gesamtstunden berechnen (OHNE Nachkommastellen)
+                $projectStart = $project->start_date ? \Carbon\Carbon::parse($project->start_date) : now();
+                $projectEnd = $project->end_date ? \Carbon\Carbon::parse($project->end_date) : now()->addWeeks(4);
+                $projectDurationWeeks = max(1, round($projectStart->diffInWeeks($projectEnd))); // Runden
+                $totalWeeklyHours = round($projectAssignments->sum('weekly_hours')); // Runden
+                $totalPlannedHours = $totalWeeklyHours * $projectDurationWeeks;
+                $durationDays = round($projectStart->diffInDays($projectEnd)); // Runden
+                
+                // Arbeitstage berechnen (8h/Tag = Standard)
+                $totalPlannedDays = round($totalPlannedHours / 8); // Stunden → Arbeitstage
+                
+                // Verantwortlicher Name mit Badge für inaktive
+                $responsibleName = 'Nicht zugewiesen';
+                $responsibleIsInactive = false;
+                if ($project->responsible) {
+                    $responsibleName = $project->responsible->first_name . ' ' . $project->responsible->last_name;
+                    $responsibleIsInactive = !$project->responsible->is_active;
+                    if ($responsibleIsInactive) {
+                        $responsibleName .= ' (Inaktiv)';
+                    }
+                }
             @endphp
             <div class="project-card" 
+                 data-project-card
                  data-project-name="{{ $project->name }}"
+                 data-project-description="{{ Str::limit($project->description, 200) }}"
+                 data-project-status="{{ $displayStatus ?? ucfirst($project->status) }}"
+                 data-project-responsible="{{ $project->responsible_id ?? '' }}"
+                 data-project-created="{{ $project->created_at->format('Y-m-d') }}"
+                 data-project-hours="{{ $project->assignments->sum('weekly_hours') }}"
                  data-start-date="{{ $project->start_date ? \Carbon\Carbon::parse($project->start_date)->format('d.m.Y') : 'Nicht festgelegt' }}"
                  data-end-date="{{ $project->end_date ? \Carbon\Carbon::parse($project->end_date)->format('d.m.Y') : 'Nicht festgelegt' }}"
                  data-estimated-hours="{{ $project->estimated_hours ?? 0 }}"
@@ -155,111 +221,132 @@
                  data-required-hours="{{ $project->assignments->sum('weekly_hours') }}"
                  data-available-hours="{{ $project->assignments->sum(function($assignment) { return $assignment->employee ? $assignment->employee->weekly_capacity : 0; }) }}"
                  data-is-ongoing="{{ !$project->start_date && !$project->end_date && $project->moco_created_at ? '1' : '0' }}"
-                 style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: fit-content; cursor: pointer;">
-                <!-- Project Header -->
-                <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                        <div style="flex: 1;">
-                            <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">{{ $project->name }}</h3>
-                            <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin: 0;">{{ Str::limit($project->description, 100) }}</p>
-                            
-                            @if($project->responsible)
-                                <p style="color: #374151; font-size: 12px; margin: 8px 0 0 0; font-weight: 500;">
-                                    Verantwortlich: {{ $project->responsible->first_name }} {{ $project->responsible->last_name }}
-                                </p>
-                            @endif
-                        </div>
+                 style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: fit-content; transition: all 0.2s ease;"
+                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'">
+                
+                <!-- ========== KOMPAKTE PROJEKT-KARTE ========== -->
+                
+                <!-- Header: Projektname + Status-Badge -->
+                <div style="padding: 20px 20px 16px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px;">
+                        <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0; flex: 1; line-height: 1.3;">
+                            {{ $project->name }}
+                        </h3>
                         @php
-                            // Verwende den berechneten Status aus dem Controller
-                            $displayStatus = $project->calculated_status ?? $project->status;
+                            // Status-Badge Farben
                             $statusColor = '#6b7280';
                             $statusBg = '#f3f4f6';
                             
-                            // Farbschema basierend auf berechnetem Status
                             switch($displayStatus) {
-                                case 'completed':
                                 case 'Abgeschlossen':
                                     $statusColor = '#3730a3';
                                     $statusBg = '#e0e7ff';
-                                    $displayStatus = 'Abgeschlossen';
                                     break;
-                                case 'active':
-                                case 'in_bearbeitung':
                                 case 'In Bearbeitung':
                                     $statusColor = '#166534';
                                     $statusBg = '#dcfce7';
-                                    $displayStatus = 'In Bearbeitung';
                                     break;
-                                case 'planning':
                                 case 'Geplant':
                                     $statusColor = '#1e40af';
                                     $statusBg = '#dbeafe';
-                                    $displayStatus = 'Geplant';
                                     break;
                                 default:
                                     $statusColor = '#92400e';
                                     $statusBg = '#fef3c7';
                             }
                         @endphp
-                        <span style="background: {{ $statusBg }}; color: {{ $statusColor }}; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                        <span style="background: {{ $statusBg }}; color: {{ $statusColor }}; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">
                             {{ $displayStatus }}
+                        </span>
+                    </div>
+                    
+                    <!-- Beschreibung (1 Zeile) -->
+                    <p style="color: #6b7280; font-size: 13px; line-height: 1.4; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        {{ $project->description ?: 'Keine Beschreibung' }}
+                    </p>
+                </div>
+
+                <!-- Info-Grid: Verantwortlicher | Team | Zeitraum | Stunden -->
+                <div style="padding: 0 20px 16px 20px;">
+                    <!-- Zeile 1: Verantwortlicher + Team -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 6px; background: #f9fafb; padding: 8px 10px; border-radius: 6px;">
+                            <span style="font-size: 14px;">🎯</span>
+                            <span style="font-size: 12px; color: {{ $responsibleIsInactive ? '#6b7280' : '#374151' }}; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                {{ Str::limit($responsibleName, 25) }}
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px; background: #f9fafb; padding: 8px 10px; border-radius: 6px;">
+                            <span style="font-size: 14px;">👥</span>
+                            <span style="font-size: 12px; color: #374151; font-weight: 600;">
+                                {{ $teamSize }} {{ $teamSize === 1 ? 'Person' : 'Personen' }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Zeile 2: Zeitraum (volle Breite) -->
+                    <div style="display: flex; align-items: center; gap: 6px; background: #f0f9ff; padding: 8px 10px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #bae6fd;">
+                        <span style="font-size: 14px;">📅</span>
+                        <span style="font-size: 12px; color: #0369a1; font-weight: 500;">
+                            {{ $projectStart->format('d.m.y') }} - {{ $projectEnd->format('d.m.y') }} <span style="color: #0284c7; font-weight: 600;">({{ $durationDays }} Tage)</span>
+                        </span>
+                    </div>
+                    
+                    <!-- Zeile 3: Geplante Arbeitstage (volle Breite) -->
+                    <div style="display: flex; align-items: center; gap: 6px; background: #fef9e7; padding: 8px 10px; border-radius: 6px; border: 1px solid #fde68a;">
+                        <span style="font-size: 14px;">📆</span>
+                        <span style="font-size: 12px; color: #92400e; font-weight: 600;">
+                            {{ $totalPlannedDays }} Tage geplant 
+                        </span>
+                        <span style="font-size: 11px; color: #d97706; font-weight: 500;">
+                            ({{ $totalWeeklyHours }}h/W × {{ $projectDurationWeeks }} Wochen)
                         </span>
                     </div>
                 </div>
 
-                <!-- Project Content -->
-                <div style="padding: 20px;">
-                    <!-- Progress Bar -->
-                    <div style="margin-bottom: 16px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-size: 14px; font-weight: 500; color: #374151;">Fortschritt</span>
-                            <span style="font-size: 14px; font-weight: 600; color: #111827;">{{ round($project->progress) }}%</span>
-                        </div>
-                        <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
-                            <div style="background: #2563eb; height: 100%; width: {{ $project->progress }}%; transition: width 0.3s;"></div>
-                        </div>
+                <!-- Fortschrittsbalken -->
+                <div style="padding: 0 20px 20px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 12px; font-weight: 600; color: #6b7280;">Fortschritt</span>
+                        <span style="font-size: 14px; font-weight: 700; color: #111827;">{{ round($project->progress) }}%</span>
                     </div>
-
-                    <!-- Project Stats -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                        <div>
-                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Geschätzte Stunden</div>
-                            <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ $project->estimated_hours }}h</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Stundensatz</div>
-                            <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ number_format($project->hourly_rate, 2) }}€</div>
-                        </div>
+                    <div style="background: #e5e7eb; height: 10px; border-radius: 5px; overflow: hidden; position: relative;">
+                        @php
+                            $progressColor = '#10b981'; // Grün
+                            if ($project->progress >= 80) {
+                                $progressColor = '#10b981'; // Grün
+                            } elseif ($project->progress >= 50) {
+                                $progressColor = '#3b82f6'; // Blau
+                            } else {
+                                $progressColor = '#f59e0b'; // Orange
+                            }
+                        @endphp
+                        <div style="background: {{ $progressColor }}; height: 100%; width: {{ $project->progress }}%; transition: width 0.3s ease;"></div>
                     </div>
-
-                    <!-- Created Date -->
-                    <div style="margin-bottom: 16px;">
-                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Erstellt am:</div>
-                        <div style="font-size: 14px; color: #374151;">
-                            @if($project->moco_created_at)
-                                {{ \Carbon\Carbon::parse($project->moco_created_at)->format('d.m.Y') }}
-                            @else
-                                {{ \Carbon\Carbon::parse($project->created_at)->format('d.m.Y') }}
-                            @endif
-                        </div>
-                    </div>
-
                 </div>
 
-                <!-- Project Actions -->
-                <div style="padding: 16px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb;">
-                    <div style="display: flex; gap: 8px;">
-                        <a href="{{ route('projects.show', $project) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;">
-                            👁 Anzeigen
+                <!-- Actions-Footer -->
+                <div style="padding: 12px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+                    <div style="display: flex; gap: 8px; justify-content: flex-start;">
+                        <a href="{{ route('projects.show', $project) }}" style="background: #ffffff; color: #374151; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb;"
+                           onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#3b82f6'"
+                           onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
+                            <span style="font-size: 14px;">👁</span> Anzeigen
                         </a>
-                        <a href="{{ route('projects.edit', $project) }}" style="background: #ffffff; color: #374151; padding: 6px 12px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;">
-                            ✏️ Bearbeiten
+                        <a href="{{ route('projects.edit', $project) }}" style="background: #ffffff; color: #374151; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb;"
+                           onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#3b82f6'"
+                           onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
+                            <span style="font-size: 14px;">✏️</span> Bearbeiten
                         </a>
-                        <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline;">
+                        <form action="{{ route('projects.destroy', $project) }}" method="POST" style="display: inline; margin-left: auto;">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" style="background: #ffffff; color: #dc2626; padding: 6px 12px; border-radius: 8px; border: none; font-size: 12px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px;" onclick="return confirm('Sind Sie sicher, dass Sie dieses Projekt löschen möchten?')">
-                                🗑️ Löschen
+                            <button type="submit" style="background: #ffffff; color: #dc2626; padding: 8px 14px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px;" 
+                                    onclick="return confirm('Sind Sie sicher, dass Sie dieses Projekt löschen möchten?')"
+                                    onmouseover="this.style.background='#fef2f2'; this.style.borderColor='#dc2626'"
+                                    onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
+                                <span style="font-size: 14px;">🗑️</span> Löschen
                             </button>
                         </form>
                     </div>
@@ -280,48 +367,33 @@
 @endsection
 
 <script>
-function syncProjectStatuses() {
-    const button = document.getElementById('syncButton');
-    const originalText = button.innerHTML;
+// ==================== LIVE-SUCHE ====================
+function searchProjects() {
+    const searchInput = document.getElementById('searchProject');
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const clearBtn = document.getElementById('clearSearchBtn');
     
-    // Button während der Synchronisation deaktivieren
-    button.disabled = true;
-    button.innerHTML = '🔄 Synchronisiere...';
-    button.style.background = '#6b7280';
+    // Clear-Button anzeigen/verstecken
+    clearBtn.style.display = searchTerm ? 'block' : 'none';
     
-    // AJAX-Request an den Server
-    fetch('{{ route("projects.sync-statuses") }}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Erfolg - Seite neu laden um aktualisierte Daten anzuzeigen
-        if (data.updated_count > 0) {
-            alert(`Status-Synchronisation abgeschlossen!\n${data.updated_count} Projekte wurden aktualisiert.`);
-        } else {
-            alert('Status-Synchronisation abgeschlossen!\nAlle Projekte sind bereits aktuell.');
-        }
-        
-        // Seite neu laden
-        window.location.reload();
-    })
-    .catch(error => {
-        console.error('Fehler bei der Synchronisation:', error);
-        alert('Fehler bei der Status-Synchronisation. Bitte versuchen Sie es erneut.');
-        
-        // Button zurücksetzen
-        button.disabled = false;
-        button.innerHTML = originalText;
-        button.style.background = '#3b82f6';
-    });
+    // Rufe die normale Filter-Funktion auf (integriert Suche automatisch)
+    applyFilters();
 }
 
-// Filter-Funktionen
+function clearSearch() {
+    const searchInput = document.getElementById('searchProject');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    
+    searchInput.value = '';
+    clearBtn.style.display = 'none';
+    
+    // Filter neu anwenden ohne Suchbegriff
+    applyFilters();
+}
+
+// ==================== FILTER-FUNKTIONEN ====================
 function applyFilters() {
+    const searchTerm = document.getElementById('searchProject').value.toLowerCase().trim();
     const statusFilter = document.getElementById('filterStatus').value;
     const sortFilter = document.getElementById('filterSort').value;
     const responsibleFilter = document.getElementById('filterResponsible').value;
@@ -335,6 +407,28 @@ function applyFilters() {
     
     projectCards.forEach(card => {
         let isVisible = true;
+        
+        // ==================== HYBRID LIVE-SUCHE ====================
+        // Smart-Logik: Kurze Suchen (1-2 Zeichen) = Prefix, Lange Suchen (3+) = Contains
+        if (searchTerm) {
+            const projectName = (card.dataset.projectName || '').toLowerCase();
+            const projectDesc = (card.dataset.projectDescription || '').toLowerCase();
+            
+            // Kurze Eingaben (1-2 Zeichen): Nur Projekte, die MIT diesem Buchstaben BEGINNEN
+            if (searchTerm.length <= 2) {
+                // Prefix-Match: "a" findet nur "Anbindung...", nicht "Marketing"
+                if (!projectName.startsWith(searchTerm) && !projectDesc.startsWith(searchTerm)) {
+                    isVisible = false;
+                }
+            }
+            // Längere Eingaben (3+ Zeichen): Contains-Match (überall im Text)
+            else {
+                // "drucker" findet "Anbindung Drucker..." (auch wenn nicht am Anfang)
+                if (!projectName.includes(searchTerm) && !projectDesc.includes(searchTerm)) {
+                    isVisible = false;
+                }
+            }
+        }
         
         // Status-Filter
         if (statusFilter && card.dataset.projectStatus !== statusFilter) {
@@ -408,184 +502,46 @@ function applyFilters() {
         }
     }
     
-    // Ergebnis anzeigen
+    // Ergebnis anzeigen mit verbesserter Visualisierung
     const resultSpan = document.getElementById('filterResult');
+    const resultContainer = document.getElementById('filterResultContainer');
+    
     if (visibleCount === projectCards.length) {
+        resultContainer.style.display = 'none';
         resultSpan.textContent = '';
     } else {
-        resultSpan.textContent = `${visibleCount} von ${projectCards.length} Projekten angezeigt`;
+        resultContainer.style.display = 'block';
+        resultSpan.textContent = `${visibleCount} von ${projectCards.length} Projekten`;
+        
+        // Färbe Container basierend auf Ergebnis-Anzahl
+        if (visibleCount === 0) {
+            resultContainer.style.background = '#fef2f2';
+            resultContainer.style.borderColor = '#fecaca';
+            resultSpan.style.color = '#dc2626';
+        } else if (visibleCount < 5) {
+            resultContainer.style.background = '#fff7ed';
+            resultContainer.style.borderColor = '#fed7aa';
+            resultSpan.style.color = '#c2410c';
+        } else {
+            resultContainer.style.background = '#f0f9ff';
+            resultContainer.style.borderColor = '#bae6fd';
+            resultSpan.style.color = '#0369a1';
+        }
     }
 }
 
 function resetFilters() {
+    // Alle Filter-Dropdowns zurücksetzen
     document.getElementById('filterStatus').value = '';
     document.getElementById('filterSort').value = '';
     document.getElementById('filterResponsible').value = '';
     document.getElementById('filterTimeframe').value = '';
+    
+    // Suchfeld leeren
+    document.getElementById('searchProject').value = '';
+    document.getElementById('clearSearchBtn').style.display = 'none';
+    
+    // Filter neu anwenden (zeigt alle Projekte)
     applyFilters();
-}
-
-// ==================== PROJECT TOOLTIP SYSTEM ====================
-document.addEventListener('DOMContentLoaded', function() {
-    initProjectTooltips();
-});
-
-function initProjectTooltips() {
-    const projectCards = document.querySelectorAll('.project-card');
-    let tooltip = null;
-
-    projectCards.forEach(card => {
-        card.addEventListener('mouseenter', function(e) {
-            if (tooltip) {
-                tooltip.remove();
-            }
-
-            // Extrahiere Daten aus data-Attributen
-            const data = {
-                name: this.dataset.projectName,
-                startDate: this.dataset.startDate,
-                endDate: this.dataset.endDate,
-                estimatedHours: this.dataset.estimatedHours,
-                progress: this.dataset.progress,
-                teamMembers: this.dataset.teamMembers || this.dataset.team,
-                revenue: this.dataset.revenue,
-                status: this.dataset.status,
-                requiredHours: parseInt(this.dataset.requiredHours) || 0,
-                availableHours: parseInt(this.dataset.availableHours) || 0,
-                isOngoing: this.dataset.isOngoing === '1',
-            };
-
-            // Erstelle Tooltip
-            tooltip = document.createElement('div');
-            tooltip.className = 'project-tooltip';
-            tooltip.style.cssText = `
-                position: absolute;
-                background: white;
-                border: 1px solid #e5e7eb;
-                border-radius: 12px;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-                padding: 16px;
-                max-width: 320px;
-                z-index: 1000;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                font-size: 13px;
-                line-height: 1.4;
-                pointer-events: none;
-                opacity: 0;
-                transform: translateY(10px);
-                transition: all 0.2s ease;
-            `;
-
-            // Berechne Auslastung
-            const utilization = data.requiredHours > 0 ? Math.round((data.requiredHours / data.availableHours) * 100) : 0;
-            const utilizationColor = utilization > 100 ? '#ef4444' : utilization > 80 ? '#f59e0b' : '#10b981';
-            const utilizationPercent = Math.min(utilization, 100);
-
-            // Tooltip-Inhalt
-            tooltip.innerHTML = `
-                <!-- Header -->
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: 700; color: #111827; font-size: 15px; margin-bottom: 8px;">${data.name}</div>
-                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                        <div style="display: inline-block; padding: 3px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-size: 11px; font-weight: 600;">
-                            ${data.status}
-                        </div>
-                        ${data.isOngoing ? '<div style="display: inline-block; padding: 3px 8px; background: #f3e8ff; color: #6b21a8; border-radius: 4px; font-size: 11px; font-weight: 600;">∞ Laufend</div>' : ''}
-                    </div>
-                </div>
-                
-                <!-- Wichtige Metriken -->
-                <div style="display: grid; gap: 8px; margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #6b7280; font-size: 12px;">Zeitraum:</span>
-                        <span style="color: #111827; font-weight: 600; font-size: 12px;">${data.startDate} - ${data.endDate}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #6b7280; font-size: 12px;">Fortschritt:</span>
-                        <span style="color: #111827; font-weight: 600; font-size: 12px;">${data.progress}%</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #6b7280; font-size: 12px;">Geschätzte Stunden:</span>
-                        <span style="color: #111827; font-weight: 600; font-size: 12px;">${data.estimatedHours || '0'}h</span>
-                    </div>
-                    ${data.revenue ? `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #6b7280; font-size: 12px;">Geschätzter Umsatz:</span>
-                        <span style="color: #111827; font-weight: 600; font-size: 12px;">€${data.revenue}</span>
-                    </div>
-                    ` : ''}
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #6b7280; font-size: 12px;">Zugewiesene Personen ${data.teamMembers && data.teamMembers !== 'Keine Personen zugewiesen' ? `(${data.teamMembers.split(',').length})` : ''}:</span>
-                        <span style="color: #111827; font-weight: 600; font-size: 12px;">${data.teamMembers || 'Keine Personen zugewiesen'}</span>
-                    </div>
-                </div>
-                
-                <!-- Wöchentliche Ressourcen -->
-                <div style="border-top: 1px solid #e5e7eb; padding-top: 10px;">
-                    <div style="display: grid; gap: 6px; font-size: 12px;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280;">Benötigt/Woche:</span>
-                            <span style="color: #111827; font-weight: 600;">${data.requiredHours}h</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280;">Verfügbar/Woche:</span>
-                            <span style="color: #111827; font-weight: 600;">${data.availableHours}h</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="color: #6b7280;">Auslastung:</span>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <div style="background: #e5e7eb; width: 40px; height: 4px; border-radius: 2px; overflow: hidden;">
-                                    <div style="background: ${utilizationColor}; height: 100%; width: ${utilizationPercent}%; transition: width 0.3s;"></div>
-                                </div>
-                                <span style="color: ${utilizationColor}; font-weight: 600; font-size: 11px;">${utilizationPercent}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Positioniere Tooltip
-            tooltip.style.display = 'block';
-            document.body.appendChild(tooltip);
-            
-            // Position berechnen
-            const rect = this.getBoundingClientRect();
-            const tooltipRect = tooltip.getBoundingClientRect();
-            
-            let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-            let top = rect.bottom + 10;
-            
-            // Anpassung für Bildschirmrand
-            if (left < 10) left = 10;
-            if (left + tooltipRect.width > window.innerWidth - 10) {
-                left = window.innerWidth - tooltipRect.width - 10;
-            }
-            if (top + tooltipRect.height > window.innerHeight - 10) {
-                top = rect.top - tooltipRect.height - 10;
-            }
-            
-            tooltip.style.left = left + 'px';
-            tooltip.style.top = top + 'px';
-            
-            // Animation
-            setTimeout(() => {
-                tooltip.style.opacity = '1';
-                tooltip.style.transform = 'translateY(0)';
-            }, 10);
-        });
-
-        card.addEventListener('mouseleave', function() {
-            if (tooltip) {
-                tooltip.style.opacity = '0';
-                tooltip.style.transform = 'translateY(10px)';
-                setTimeout(() => {
-                    if (tooltip) {
-                        tooltip.remove();
-                        tooltip = null;
-                    }
-                }, 200);
-            }
-        });
-    });
 }
 </script>

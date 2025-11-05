@@ -98,7 +98,7 @@
                         @endphp
                         @foreach($projectDistribution as $index => $project)
                             @php
-                                $percentage = $project['percentage'];
+                                $percentage = $project['percentage'] ?? 0;
                                 $angle = ($percentage / 100) * 360;
                                 $radius = 80;
                                 $circumference = 2 * pi() * $radius;
@@ -136,11 +136,11 @@
                         <div style="display: flex; align-items: center; gap: 12px; background: #f9fafb; padding: 12px; border-radius: 8px;">
                             <div style="width: 16px; height: 16px; border-radius: 4px; background: {{ $colors[$index % count($colors)] }}; flex-shrink: 0;"></div>
                             <div style="flex: 1; min-width: 0;">
-                                <div style="font-weight: 600; color: #111827; font-size: 14px; margin-bottom: 2px;">{{ $project['name'] }}</div>
-                                <div style="font-size: 12px; color: #6b7280;">{{ $project['hours'] }}h</div>
+                                <div style="font-weight: 600; color: #111827; font-size: 14px; margin-bottom: 2px;">{{ $project['name'] ?? 'Unbenannt' }}</div>
+                                <div style="font-size: 12px; color: #6b7280;">{{ $project['hours'] ?? 0 }}h</div>
                             </div>
                             <div style="flex-shrink: 0; text-align: right;">
-                                <div style="font-size: 18px; font-weight: 700; color: #111827;">{{ $project['percentage'] }}%</div>
+                                <div style="font-size: 18px; font-weight: 700; color: #111827;">{{ $project['percentage'] ?? 0 }}%</div>
                             </div>
                         </div>
                     @endforeach
@@ -238,18 +238,18 @@
             @foreach($combinedProjects as $project)
                 <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                        <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0; flex: 1;">{{ $project['name'] }}</h3>
+                        <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0; flex: 1;">{{ $project['name'] ?? 'Unbenanntes Projekt' }}</h3>
                         <div style="display: flex; gap: 8px; margin-left: 16px;">
-                                @if($project['active'])
+                                @if(isset($project['active']) && $project['active'])
                                 <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
                                     Aktiv
                                 </span>
-                                @else
+                                @elseif(isset($project['active']))
                                 <span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
                                     Abgeschlossen
                                 </span>
                                 @endif
-                                @if($project['billable'])
+                                @if(isset($project['billable']) && $project['billable'])
                                 <span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">
                                     Abrechenbar
                                 </span>
@@ -315,7 +315,7 @@
                     <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">
                         {{ $startDate->diffInDays($endDate) + 1 }} Tage
                     </div>
-                    @if($absence['note'])
+                    @if(isset($absence['note']) && $absence['note'])
                     <div style="color: #6b7280; font-size: 14px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
                         {{ $absence['note'] }}
                     </div>

@@ -126,6 +126,7 @@ class SyncMocoProjects extends Command
                         'responsible_id' => $responsibleId,
                         'moco_id' => $projectId,
                         'moco_created_at' => $mocoProject['created_at'] ?? null,
+                        'source' => 'moco', // CRITICAL: Mark as MOCO data
                     ];
 
                     if ($project) {

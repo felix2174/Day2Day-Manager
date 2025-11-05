@@ -358,8 +358,12 @@ class ProjectController extends Controller
 
     public function edit(Project $project)
     {
-        $employees = Employee::where('is_active', true)->get();
-        return view('projects.edit', compact('project', 'employees'));
+        $employees = Employee::where('is_active', true)->orderBy('last_name')->orderBy('first_name')->get();
+        
+        // Lade aktuell zugewiesene Mitarbeiter
+        $assignedEmployeeIds = $project->assignments()->pluck('employee_id')->toArray();
+        
+        return view('projects.edit', compact('project', 'employees', 'assignedEmployeeIds'));
     }
 
     public function importForm()
@@ -476,11 +480,34 @@ class ProjectController extends Controller
             'estimated_hours' => 'nullable|integer|min:0',
             'hourly_rate' => 'nullable|numeric|min:0',
             'progress' => 'nullable|integer|min:0|max:100',
-            'responsible_id' => 'nullable|exists:employees,id'
+            'responsible_id' => 'nullable|exists:employees,id',
+            'employee_ids' => 'nullable|array',
+            'employee_ids.*' => 'exists:employees,id'
         ]);
 
-        $project->update($validated);
-        return redirect('/projects')->with('success', 'Projekt erfolgreich aktualisiert');
+        // Update Projekt-Daten
+        $project->update(collect($validated)->except('employee_ids')->toArray());
+        
+        // Synchronisiere Mitarbeiter-Zuweisungen
+        if ($request->has('employee_ids')) {
+            $employeeIds = $request->input('employee_ids', []);
+            
+            // Lösche alte Assignments
+            $project->assignments()->delete();
+            
+            // Erstelle neue Assignments
+            foreach ($employeeIds as $employeeId) {
+                \App\Models\Assignment::create([
+                    'project_id' => $project->id,
+                    'employee_id' => $employeeId,
+                    'weekly_hours' => 0, // Default, kann später erweitert werden
+                    'start_date' => $project->start_date,
+                    'end_date' => $project->end_date,
+                ]);
+            }
+        }
+
+        return redirect()->route('projects.show', $project)->with('success', 'Projekt erfolgreich aktualisiert');
     }
 
     public function destroy(Project $project)

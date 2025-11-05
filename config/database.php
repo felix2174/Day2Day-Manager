@@ -56,9 +56,13 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
-            'engine' => null,
+            'engine' => 'InnoDB', // InnoDB für bessere Performance & Foreign Keys
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::ATTR_PERSISTENT => true, // Connection Pooling (weniger Overhead)
+                PDO::ATTR_EMULATE_PREPARES => false, // Native Prepared Statements
+                PDO::ATTR_STRINGIFY_FETCHES => false, // Typen beibehalten
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'",
             ]) : [],
         ],
 

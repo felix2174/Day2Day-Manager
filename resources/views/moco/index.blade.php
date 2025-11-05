@@ -1,6 +1,248 @@
 @extends('moco.layout')
 
 @section('content')
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+// JavaScript-Funktionen MÜSSEN VOR den Forms definiert sein!
+
+// Progress-Indicator für vollständige Synchronisation
+function handleFullSync(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const progress = document.getElementById('full-sync-progress');
+    const status = document.getElementById('full-sync-status');
+    const button = document.getElementById('sync-all-btn');
+    
+    // Zeige Progress
+    progress.style.display = 'block';
+    button.disabled = true;
+    button.style.opacity = '0.6';
+    status.textContent = 'Starte vollständige Synchronisation...';
+    
+    // Submit Form via AJAX
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': formData.get('_token'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            status.textContent = '✅ ' + data.message;
+            status.style.color = '#059669';
+            
+            // Zeige Statistiken wenn vorhanden
+            if (data.stats) {
+                status.textContent += ` (${data.stats.success} erfolgreich, ${data.stats.failed} fehlgeschlagen)`;
+            }
+        } else {
+            status.textContent = '❌ ' + (data.message || 'Fehler aufgetreten');
+            status.style.color = '#dc2626';
+        }
+        
+        // Reload nach 3 Sekunden
+        setTimeout(() => {
+            window.location.reload();
+        }, 3000);
+    })
+    .catch(error => {
+        status.textContent = '❌ Fehler: ' + error.message;
+        status.style.color = '#dc2626';
+        button.disabled = false;
+        button.style.opacity = '1';
+    });
+    
+    return false;
+}
+
+// Progress-Indicator für Zeiterfassungen
+function handleTimeEntriesSync(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const progress = document.getElementById('time-entries-sync-progress');
+    const status = document.getElementById('time-entries-sync-status');
+    const button = document.getElementById('sync-time-entries-btn');
+    
+    // Zeige Progress
+    progress.style.display = 'block';
+    button.disabled = true;
+    button.style.opacity = '0.6';
+    status.textContent = 'Synchronisiere Zeiterfassungen...';
+    
+    // Submit Form via AJAX
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': formData.get('_token'),
+            'Accept': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        status.textContent = '✅ ' + (data.message || 'Erfolgreich synchronisiert!');
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    })
+    .catch(error => {
+        status.textContent = '❌ Fehler: ' + (error.message || 'Synchronisation fehlgeschlagen');
+        button.disabled = false;
+        button.style.opacity = '1';
+    });
+    
+    return false;
+}
+
+// Progress-Indicator für Abwesenheiten
+function handleAbsencesSync(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const progress = document.getElementById('absences-sync-progress');
+    const status = document.getElementById('absences-sync-status');
+    const button = document.getElementById('sync-absences-btn');
+    
+    // Zeige Progress
+    progress.style.display = 'block';
+    button.disabled = true;
+    button.style.opacity = '0.6';
+    status.textContent = 'Synchronisiere Abwesenheiten...';
+    
+    // Submit Form via AJAX
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            status.textContent = '✅ ' + data.message;
+            status.style.color = '#059669';
+        } else {
+            status.textContent = '❌ ' + (data.message || 'Fehler aufgetreten');
+            status.style.color = '#dc2626';
+        }
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    })
+    .catch(error => {
+        status.textContent = '❌ Fehler: ' + error.message;
+        status.style.color = '#dc2626';
+        button.disabled = false;
+        button.style.opacity = '1';
+    });
+    
+    return false;
+}
+
+function handleContractsSync(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const progress = document.getElementById('contracts-sync-progress');
+    const status = document.getElementById('contracts-sync-status');
+    const button = document.getElementById('sync-contracts-btn');
+    
+    // Zeige Progress
+    progress.style.display = 'block';
+    button.disabled = true;
+    button.style.opacity = '0.6';
+    status.textContent = 'Synchronisiere Zuweisungen...';
+    
+    // Submit Form via AJAX
+    const formData = new FormData(form);
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            status.textContent = '✅ ' + data.message;
+            status.style.color = '#059669';
+        } else {
+            status.textContent = '❌ ' + (data.message || 'Fehler aufgetreten');
+            status.style.color = '#dc2626';
+        }
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    })
+    .catch(error => {
+        status.textContent = '❌ Fehler: ' + error.message;
+        status.style.color = '#dc2626';
+        button.disabled = false;
+        button.style.opacity = '1';
+    });
+    
+    return false;
+}
+
+function debugUser() {
+    const userId = document.getElementById('userId').value;
+    if (!userId) {
+        alert('Bitte geben Sie eine User ID ein.');
+        return;
+    }
+    window.open(`/moco/debug/user/${userId}`, '_blank');
+}
+
+function debugProject() {
+    const projectId = document.getElementById('projectId').value;
+    if (!projectId) {
+        alert('Bitte geben Sie eine Projekt ID ein.');
+        return;
+    }
+    window.open(`/moco/debug/project/${projectId}`, '_blank');
+}
+</script>
+
             <!-- Global Warnings -->
             @if(!$connectionStatus)
                 <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #b91c1c;">
@@ -15,9 +257,9 @@
             @endif
 
             @if(!empty($syncWarnings))
-                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #047857;">
-                    <strong>Sync-Empfehlungen:</strong>
-                    <ul style="margin: 12px 0 0 20px; color: #065f46;">
+                <div style="background: #dbeafe; border: 1px solid #93c5fd; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #1e40af;">
+                    <strong>💡 Sync-Empfehlungen:</strong>
+                    <ul style="margin: 12px 0 0 20px; color: #1e3a8a;">
                         @foreach($syncWarnings as $warning)
                             <li>{{ $warning }}</li>
                         @endforeach
@@ -138,9 +380,19 @@
             <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 20px;">
                 <div style="padding: 20px; color:#111827;">
                     <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 8px 0;">Vollständige Synchronisation</h3>
-                    <p style="color:#6b7280; margin: 0 0 12px 0;">Synchronisiert alle Mitarbeiter, Projekte und Zeiterfassungen von MOCO.</p>
+                    <p style="color:#6b7280; margin: 0 0 12px 0;">
+                        Synchronisiert <strong>alle Daten</strong> mit einem Klick: Mitarbeiter, Projekte, Zeiterfassungen, Abwesenheiten und Zuweisungen.
+                    </p>
                     
-                    <form action="{{ route('moco.sync-all') }}" method="POST">
+                    <!-- Progress Indicator -->
+                    <div id="full-sync-progress" style="display: none; margin-bottom: 12px; padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px; color: #1e40af;">
+                            <div class="spinner" style="width: 16px; height: 16px; border: 2px solid #bfdbfe; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                            <span id="full-sync-status">Synchronisiere alle Daten...</span>
+                        </div>
+                    </div>
+                    
+                    <form action="{{ route('moco.sync-all') }}" method="POST" onsubmit="return handleFullSync(event)">
                         @csrf
                         <div style="display:flex; align-items:center; gap: 16px; margin-bottom: 12px;">
                             <label style="display:flex; align-items:center; gap:8px; color:#374151; font-size:14px;">
@@ -148,13 +400,19 @@
                                 <span>Nur aktive Einträge</span>
                             </label>
                             <label style="display:flex; align-items:center; gap:8px; color:#6b7280; font-size:14px;">
-                                <span>Zeiterfassungen der letzten</span>
+                                <span>Zeiterfassungen/Abwesenheiten der letzten</span>
                                 <input type="number" name="days" value="30" min="1" max="365" style="width: 60px; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
                                 <span>Tage</span>
                             </label>
                         </div>
-                        <button type="submit" class="btn btn-success">Alles synchronisieren</button>
+                        <button type="submit" class="btn btn-success" style="width: 100%;" id="sync-all-btn">
+                            🚀 Alles synchronisieren (5 Schritte)
+                        </button>
                     </form>
+                    
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+                        <strong>ℹ️ Umfang:</strong> Mitarbeiter → Projekte → Zeiterfassungen → Abwesenheiten → Zuweisungen (in dieser Reihenfolge)
+                    </div>
                 </div>
             </div>
 
@@ -166,7 +424,7 @@
                     <div style="padding: 20px; color:#111827;">
                         <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 6px 0;">Mitarbeiter</h3>
                         <p style="color:#6b7280; font-size:14px; margin: 0 0 12px 0;">Synchronisiert Mitarbeiter von MOCO.</p>
-                        <form action="{{ route('moco.sync-employees') }}" method="POST">
+                        <form action="{{ route('moco.sync-employees') }}" method="POST" onsubmit="handleSyncSubmit(event, this, 'Mitarbeiter werden synchronisiert...')">
                             @csrf
                             <label style="display:flex; align-items:center; gap:8px; margin-bottom: 12px; color:#374151; font-size:14px;">
                                 <input type="checkbox" name="active_only" value="1">
@@ -182,7 +440,7 @@
                     <div style="padding: 20px; color:#111827;">
                         <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 6px 0;">Projekte</h3>
                         <p style="color:#6b7280; font-size:14px; margin: 0 0 12px 0;">Synchronisiert Projekte von MOCO.</p>
-                        <form action="{{ route('moco.sync-projects') }}" method="POST">
+                        <form action="{{ route('moco.sync-projects') }}" method="POST" onsubmit="handleSyncSubmit(event, this, 'Projekte werden synchronisiert...')">
                             @csrf
                             <label style="display:flex; align-items:center; gap:8px; margin-bottom: 12px; color:#374151; font-size:14px;">
                                 <input type="checkbox" name="active_only" value="1">
@@ -196,16 +454,86 @@
                 <!-- Activities -->
                 <div style="grid-column: span 12 / span 12; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
                     <div style="padding: 20px; color:#111827;">
-                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 6px 0;">Zeiterfassungen</h3>
-                        <p style="color:#6b7280; font-size:14px; margin: 0 0 12px 0;">Synchronisiert Zeiterfassungen von MOCO.</p>
-                        <form action="{{ route('moco.sync-activities') }}" method="POST">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Zeiterfassungen</h3>
+                            @php
+                                $lastTimeSync = \Illuminate\Support\Facades\Cache::get('moco:time_entries:last_sync');
+                            @endphp
+                            @if($lastTimeSync)
+                                <span style="color:#6b7280; font-size:12px;">
+                                    🕐 Vor {{ $lastTimeSync->diffForHumans(null, true) }}
+                                </span>
+                            @endif
+                        </div>
+                        <p style="color:#6b7280; font-size:14px; margin: 0 0 12px 0;">Synchronisiert Zeiterfassungen von MOCO (Performance-optimiert: nur neueste Daten).</p>
+                        <div id="time-entries-sync-progress" style="display: none; margin-bottom: 12px; padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: #1e40af;">
+                                <div class="spinner" style="width: 16px; height: 16px; border: 2px solid #bfdbfe; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <span id="time-entries-sync-status">Synchronisiere...</span>
+                            </div>
+                        </div>
+                        <form action="{{ route('moco.sync-activities') }}" method="POST" onsubmit="handleSyncSubmit(event, this, 'Zeiterfassungen werden synchronisiert...')">
+                            @csrf
+                            <label style="display:flex; align-items:center; gap:8px; margin-bottom: 12px; color:#6b7280; font-size:14px;">
+                                <span>Letzte</span>
+                                <input type="number" name="days" value="7" min="1" max="365" style="width: 60px; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
+                                <span>Tage (empfohlen: 7 für schnellen Sync)</span>
+                            </label>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;" id="sync-time-entries-btn">⏱️ Zeiterfassungen synchronisieren</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Absences (NEU!) -->
+                <div style="grid-column: span 12 / span 12; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <div style="padding: 20px; color:#111827;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <h3 style="font-size: 16px; font-weight: 600; margin: 0;">Abwesenheiten</h3>
+                            @php
+                                $lastAbsenceSync = \Illuminate\Support\Facades\Cache::get('moco:absences:last_sync');
+                            @endphp
+                            @if($lastAbsenceSync)
+                                <span style="color:#6b7280; font-size:12px;">
+                                    🕐 Vor {{ $lastAbsenceSync->diffForHumans(null, true) }}
+                                </span>
+                            @endif
+                        </div>
+                        <p style="color:#6b7280; font-size:14px; margin: 0 0 12px 0;">Synchronisiert Urlaub, Krankheit, Fortbildungen etc. von MOCO.</p>
+                        <div id="absences-sync-progress" style="display: none; margin-bottom: 12px; padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; gap: 8px; color: #1e40af;">
+                                <div class="spinner" style="width: 16px; height: 16px; border: 2px solid #bfdbfe; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <span id="absences-sync-status">Synchronisiere...</span>
+                            </div>
+                        </div>
+                        <form action="{{ route('moco.sync-absences') }}" method="POST" onsubmit="handleSyncSubmit(event, this, 'Abwesenheiten werden synchronisiert...')">
                             @csrf
                             <label style="display:flex; align-items:center; gap:8px; margin-bottom: 12px; color:#6b7280; font-size:14px;">
                                 <span>Letzte</span>
                                 <input type="number" name="days" value="30" min="1" max="365" style="width: 60px; padding: 6px 8px; border: 1px solid #e5e7eb; border-radius: 6px;">
-                                <span>Tage</span>
+                                <span>Tage + 6 Monate voraus</span>
                             </label>
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Zeiterfassungen synchronisieren</button>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;" id="sync-absences-btn">🏖️ Abwesenheiten synchronisieren</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Contracts (bestehend) -->
+                <div style="grid-column: span 12 / span 12; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <div style="padding: 20px; color:#111827;">
+                        <h3 style="font-size: 16px; font-weight: 600; margin: 0 0 6px 0;">Mitarbeiter-Zuweisungen</h3>
+                        <p style="color:#6b7280; font-size:14px; margin: 0 0 12px 0;">Synchronisiert Projektzuweisungen aus MOCO Contracts.</p>
+                        
+                        <!-- Progress Indicator -->
+                        <div id="contracts-sync-progress" style="display: none; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="spinner" style="width: 20px; height: 20px;"></div>
+                                <span id="contracts-sync-status" style="color: #1e40af; font-size: 14px; font-weight: 500;">Synchronisiere...</span>
+                            </div>
+                        </div>
+                        
+                        <form action="{{ route('moco.sync-contracts') }}" method="POST" onsubmit="return handleContractsSync(event)">
+                            @csrf
+                            <button type="submit" class="btn btn-primary" style="width: 100%;" id="sync-contracts-btn">👥 Zuweisungen synchronisieren</button>
                         </form>
                     </div>
                 </div>
@@ -344,25 +672,22 @@
 
 @endsection
 
-@section('scripts')
 <script>
-function debugUser() {
-    const userId = document.getElementById('userId').value;
-    if (!userId) {
-        alert('Bitte geben Sie eine User ID ein.');
-        return;
+/**
+ * Handle MOCO Sync form submissions with loading state
+ */
+function handleSyncSubmit(event, form, loadingText = 'Synchronisierung läuft...') {
+    const submitButton = form.querySelector('button[type="submit"]');
+    
+    if (submitButton) {
+        // Show loading state on button
+        buttonLoading(submitButton, true, 'Synchronisiert...');
     }
-    window.open(`/moco/debug/user/${userId}`, '_blank');
-}
-
-function debugProject() {
-    const projectId = document.getElementById('projectId').value;
-    if (!projectId) {
-        alert('Bitte geben Sie eine Projekt ID ein.');
-        return;
-    }
-    window.open(`/moco/debug/project/${projectId}`, '_blank');
+    
+    // Show global loading overlay
+    showLoading(loadingText);
+    
+    // Let form submit normally (will reload page with results)
+    // Loading will hide on page reload
 }
 </script>
-@endsection
-

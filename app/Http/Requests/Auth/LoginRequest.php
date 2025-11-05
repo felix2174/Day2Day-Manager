@@ -48,6 +48,16 @@ class LoginRequest extends FormRequest
                 'email' => trans('auth.failed'),
             ]);
         }
+        
+        // Check if user is active
+        $user = Auth::user();
+        if (!$user->is_active) {
+            Auth::logout();
+            
+            throw ValidationException::withMessages([
+                'email' => 'Dein Account wurde deaktiviert. Bitte kontaktiere einen Administrator.',
+            ]);
+        }
 
         RateLimiter::clear($this->throttleKey());
     }

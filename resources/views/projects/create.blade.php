@@ -24,8 +24,7 @@
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px;">Status *</label>
                 <select name="status" required style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="planning">Planung</option>
-                    <option value="active" selected>Aktiv</option>
+                    <option value="active" selected>In Bearbeitung</option>
                     <option value="completed">Abgeschlossen</option>
                 </select>
             </div>

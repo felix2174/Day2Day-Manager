@@ -14,21 +14,21 @@ class SyncMocoEmployees extends Command
      *
      * @var string
      */
-    protected $signature = 'moco:sync-employees {--active : Only sync active employees}';
+    protected $signature = 'moco:sync-employees';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Synchronize employees (users) from MOCO API';
+    protected $description = 'Synchronize ALL employees (active + inactive) from MOCO API';
 
     /**
      * Execute the console command.
      */
     public function handle(MocoService $mocoService, MocoSyncLogger $logger): int
     {
-        $this->info('Starting MOCO employee synchronization...');
+            $this->info('Starting MOCO employee synchronization...');
 
         try {
             // Test connection first
@@ -37,15 +37,11 @@ class SyncMocoEmployees extends Command
                 return Command::FAILURE;
             }
 
+            // Sync ALL employees (active + inactive) - no filters
             $params = [];
-            if ($this->option('active')) {
-                $params['active'] = true;
-            }
 
             // Start logging
-            $logger->start('employees', $params);
-
-            try {
+            $logger->start('employees', $params);            try {
                 $mocoUsers = $mocoService->getUsers($params);
             } catch (\Throwable $e) {
                 $this->error('Failed to fetch users from MOCO: ' . $e->getMessage());
@@ -74,6 +70,7 @@ class SyncMocoEmployees extends Command
                     'weekly_capacity' => $this->calculateWeeklyCapacity($mocoUser),
                     'is_active' => (bool)($mocoUser['active'] ?? true),
                     'moco_id' => $mocoUser['id'],
+                    'source' => 'moco', // CRITICAL: Mark as MOCO data
                 ];
 
                 if ($employee) {

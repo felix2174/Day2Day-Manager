@@ -10,11 +10,62 @@ use Exception;
 
 class AbsenceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $absences = Absence::with('employee')->orderBy('start_date', 'desc')->get();
+        // Basis-Query
+        $query = Absence::with('employee');
 
-        return view('absences.index', compact('absences'));
+        // Filter: Mitarbeiter
+        if ($request->filled('employee_id')) {
+            $query->where('employee_id', $request->employee_id);
+        }
+
+        // Filter: Typ (urlaub, krankheit, fortbildung)
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Filter: Datums-Range
+        if ($request->filled('from')) {
+            $query->where('start_date', '>=', $request->from);
+        }
+        if ($request->filled('to')) {
+            $query->where('end_date', '<=', $request->to);
+        }
+
+        // Gruppierung nach Mitarbeiter für Accordion-View
+        $absencesByEmployee = $query->orderBy('start_date', 'desc')
+            ->get()
+            ->groupBy('employee_id')
+            ->map(function ($employeeAbsences) {
+                return [
+                    'employee' => $employeeAbsences->first()->employee,
+                    'absences' => $employeeAbsences->sortByDesc('start_date')->values(),
+                    'total_count' => $employeeAbsences->count(),
+                    'total_days' => $employeeAbsences->sum(function ($absence) {
+                        return \Carbon\Carbon::parse($absence->start_date)
+                            ->diffInDays(\Carbon\Carbon::parse($absence->end_date)) + 1;
+                    }),
+                    'by_type' => [
+                        'urlaub' => $employeeAbsences->where('type', 'urlaub')->count(),
+                        'krankheit' => $employeeAbsences->where('type', 'krankheit')->count(),
+                        'fortbildung' => $employeeAbsences->where('type', 'fortbildung')->count(),
+                    ]
+                ];
+            });
+
+        // Globale Statistiken
+        $stats = [
+            'total' => Absence::count(),
+            'urlaub' => Absence::where('type', 'urlaub')->count(),
+            'krankheit' => Absence::where('type', 'krankheit')->count(),
+            'fortbildung' => Absence::where('type', 'fortbildung')->count(),
+        ];
+
+        // Mitarbeiter-Liste für Filter-Dropdown
+        $employees = Employee::orderBy('last_name')->orderBy('first_name')->get();
+
+        return view('absences.index', compact('absencesByEmployee', 'stats', 'employees'));
     }
 
     public function importForm()

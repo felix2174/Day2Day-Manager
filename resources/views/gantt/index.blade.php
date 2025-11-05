@@ -3,7 +3,7 @@
 @section('title', 'Projektübersicht')
 
 @section('content')
-<div style="width: 100%; margin: 0; padding: 20px;">
+<div style="width: 100%; margin: 0; padding: 0;">
     <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 12px;">
@@ -58,24 +58,22 @@
 
                 {{-- Zoom Controls --}}
                 <div style="display: flex; gap: 6px; align-items: center; background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px;">
-                    <span style="font-size: 12px; color: #6b7280; font-weight: 500; padding: 0 8px;">🔍 Zoom:</span>
+                    <span style="font-size: 12px; color: #6b7280; font-weight: 500; padding: 0 8px;">🔍 Ansicht:</span>
                     @php
                         $zoomOptions = [
-                            '12m' => ['label' => '12M', 'title' => '12 Monate'],
-                            '6m' => ['label' => '6M', 'title' => '6 Monate'],
-                            '3m' => ['label' => '3M', 'title' => '3 Monate'],
-                            '12w' => ['label' => '12W', 'title' => '12 Wochen'],
-                            '6w' => ['label' => '6W', 'title' => '6 Wochen'],
-                            '3w' => ['label' => '3W', 'title' => '3 Wochen'],
+                            'month' => ['label' => 'Monate', 'title' => 'Monatsansicht', 'icon' => '📅'],
+                            'week' => ['label' => 'Wochen', 'title' => 'Wochenansicht', 'icon' => '📆'],
+                            'day' => ['label' => 'Tage', 'title' => 'Tagesansicht', 'icon' => '🗓️'],
                         ];
                     @endphp
                     @foreach($zoomOptions as $zoomKey => $zoomData)
                         <a href="{{ route('gantt.index', array_merge(request()->query(), ['zoom' => $zoomKey])) }}"
                            title="{{ $zoomData['title'] }}"
-                           style="padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: {{ $currentZoom === $zoomKey ? '#ffffff' : '#374151' }}; background: {{ $currentZoom === $zoomKey ? '#3b82f6' : 'transparent' }}; transition: all 0.15s ease;"
+                           style="padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: {{ $currentZoom === $zoomKey ? '#ffffff' : '#374151' }}; background: {{ $currentZoom === $zoomKey ? '#3b82f6' : 'transparent' }}; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px;"
                            onmouseover="this.style.background = '{{ $currentZoom === $zoomKey ? '#2563eb' : '#f3f4f6' }}'"
                            onmouseout="this.style.background = '{{ $currentZoom === $zoomKey ? '#3b82f6' : 'transparent' }}'">
-                            {{ $zoomData['label'] }}
+                            <span>{{ $zoomData['icon'] }}</span>
+                            <span>{{ $zoomData['label'] }}</span>
                         </a>
                     @endforeach
                 </div>
@@ -91,10 +89,12 @@
                 @endif
 
                 {{-- Excel Export --}}
-                <a href="{{ route('gantt.export') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border: 1px solid #e5e7eb; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;"
+                <a href="{{ route('gantt.export') }}" 
+                   onclick="handleExportClick(event, this)"
+                   style="background: #ffffff; color: #374151; padding: 10px 20px; border: 1px solid #e5e7eb; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;"
                    onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
                    onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
-                    📤 Excel Export
+                    <span class="export-text">📤 Excel Export</span>
                 </a>
             </div>
         </div>
@@ -102,7 +102,16 @@
 
     {{-- Collapsible Filter Panel (Projects Only) --}}
     @if($viewMode === 'projects')
-        <div id="filterPanel" style="display: none; background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        @php
+            // Prüfe ob Filter aktiv sind (nicht-leere Werte)
+            $ganttFilters = Session::get('gantt_filters', []);
+            $hasActiveFilters = !empty($ganttFilters['search']) || 
+                               !empty($ganttFilters['status']) || 
+                               !empty($ganttFilters['employee']) || 
+                               !empty($ganttFilters['timeframe']) || 
+                               !empty($ganttFilters['sort']);
+        @endphp
+        <div id="filterPanel" style="display: {{ $hasActiveFilters ? 'block' : 'none' }}; background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
                 <button onclick="clearAllFilters()" style="background: #fef2f2; color: #dc2626; padding: 6px 12px; border: 1px solid #fecaca; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;"
@@ -111,19 +120,26 @@
                     🗑️ Filter zurücksetzen
                 </button>
             </div>
-            <form method="GET" action="{{ route('gantt.index') }}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <form method="GET" action="{{ route('gantt.index') }}" id="ganttFilterForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                 <input type="hidden" name="view" value="projects">
                 
                 {{-- Search --}}
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Suche</label>
-                    <input type="text" name="search" value="{{ Session::get('gantt_filters.search', '') }}" placeholder="Projektname..." style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ Session::get('gantt_filters.search', '') }}" 
+                           placeholder="Projektname..." 
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;"
+                           oninput="autoSubmitFilter()">
                 </div>
 
                 {{-- Status --}}
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Status</label>
-                    <select name="status" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                    <select name="status" 
+                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;"
+                            onchange="document.getElementById('ganttFilterForm').submit()">
                         <option value="">Alle Status</option>
                         <option value="in_bearbeitung" {{ Session::get('gantt_filters.status') === 'in_bearbeitung' ? 'selected' : '' }}>In Bearbeitung</option>
                         <option value="abgeschlossen" {{ Session::get('gantt_filters.status') === 'abgeschlossen' ? 'selected' : '' }}>Abgeschlossen</option>
@@ -133,7 +149,9 @@
                 {{-- Employee --}}
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Mitarbeiter</label>
-                    <select name="employee" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                    <select name="employee" 
+                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;"
+                            onchange="document.getElementById('ganttFilterForm').submit()">
                         <option value="">Alle Mitarbeiter</option>
                         @foreach($availableEmployees ?? [] as $emp)
                             <option value="{{ $emp->id }}" {{ Session::get('gantt_filters.employee') == $emp->id ? 'selected' : '' }}>
@@ -146,7 +164,9 @@
                 {{-- Timeframe --}}
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Zeitraum</label>
-                    <select name="timeframe" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                    <select name="timeframe" 
+                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;"
+                            onchange="document.getElementById('ganttFilterForm').submit()">
                         <option value="">Alle Zeiträume</option>
                         <option value="current" {{ Session::get('gantt_filters.timeframe') === 'current' ? 'selected' : '' }}>Aktuelle Projekte</option>
                         <option value="future" {{ Session::get('gantt_filters.timeframe') === 'future' ? 'selected' : '' }}>Zukünftig</option>
@@ -159,22 +179,15 @@
                 {{-- Sort --}}
                 <div>
                     <label style="display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px;">Sortierung</label>
-                    <select name="sort" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+                    <select name="sort" 
+                            style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;"
+                            onchange="document.getElementById('ganttFilterForm').submit()">
                         <option value="">Standard</option>
                         <option value="name-asc" {{ Session::get('gantt_filters.sort') === 'name-asc' ? 'selected' : '' }}>Name (A-Z)</option>
                         <option value="name-desc" {{ Session::get('gantt_filters.sort') === 'name-desc' ? 'selected' : '' }}>Name (Z-A)</option>
                         <option value="date-start-asc" {{ Session::get('gantt_filters.sort') === 'date-start-asc' ? 'selected' : '' }}>Startdatum (aufsteigend)</option>
                         <option value="date-start-desc" {{ Session::get('gantt_filters.sort') === 'date-start-desc' ? 'selected' : '' }}>Startdatum (absteigend)</option>
                     </select>
-                </div>
-
-                {{-- Submit Button --}}
-                <div style="display: flex; align-items: flex-end;">
-                    <button type="submit" style="width: 100%; background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
-                            onmouseover="this.style.background='#2563eb'"
-                            onmouseout="this.style.background='#3b82f6'">
-                        Filter anwenden
-                    </button>
                 </div>
             </form>
         </div>
@@ -196,7 +209,7 @@
 </div>
 
 <script>
-// Filter Panel Toggle
+// Filter Panel Toggle with State Persistence
 function toggleFilters() {
     const panel = document.getElementById('filterPanel');
     const btn = document.getElementById('toggleFiltersBtn');
@@ -205,12 +218,68 @@ function toggleFilters() {
         btn.style.background = '#3b82f6';
         btn.style.color = '#ffffff';
         btn.style.borderColor = '#3b82f6';
+        localStorage.setItem('gantt_filter_panel_open', '1');
+        
+        // Update Hover für geöffneten Zustand
+        btn.onmouseover = function() {
+            this.style.background = '#2563eb';
+            this.style.borderColor = '#2563eb';
+        };
+        btn.onmouseout = function() {
+            this.style.background = '#3b82f6';
+            this.style.borderColor = '#3b82f6';
+        };
     } else {
         panel.style.display = 'none';
         btn.style.background = '#ffffff';
         btn.style.color = '#374151';
         btn.style.borderColor = '#e5e7eb';
+        localStorage.setItem('gantt_filter_panel_open', '0');
+        
+        // Update Hover für geschlossenen Zustand
+        btn.onmouseover = function() {
+            this.style.background = '#f9fafb';
+            this.style.borderColor = '#d1d5db';
+        };
+        btn.onmouseout = function() {
+            this.style.background = '#ffffff';
+            this.style.borderColor = '#e5e7eb';
+        };
     }
+}
+
+// Initialize Filter Panel State on Page Load
+document.addEventListener('DOMContentLoaded', function() {
+    const panel = document.getElementById('filterPanel');
+    const btn = document.getElementById('toggleFiltersBtn');
+    
+    if (panel && btn) {
+        // Wenn Panel initial sichtbar ist (wegen aktiven Filtern)
+        if (panel.style.display === 'block') {
+            btn.style.background = '#3b82f6';
+            btn.style.color = '#ffffff';
+            btn.style.borderColor = '#3b82f6';
+            
+            // Update Hover-Events für aktiven Zustand
+            btn.onmouseover = function() {
+                this.style.background = '#2563eb';
+                this.style.borderColor = '#2563eb';
+            };
+            btn.onmouseout = function() {
+                this.style.background = '#3b82f6';
+                this.style.borderColor = '#3b82f6';
+            };
+        }
+    }
+});
+
+// Auto-Submit Filter with Debounce (für Suchfeld)
+let filterTimeout;
+function autoSubmitFilter() {
+    clearTimeout(filterTimeout);
+    filterTimeout = setTimeout(function() {
+        document.getElementById('ganttFilterForm').submit();
+    }, 500); // 500ms Verzögerung nach letzter Eingabe
 }
 
 // Clear All Filters
@@ -221,8 +290,40 @@ function clearAllFilters() {
     url.searchParams.delete('employee');
     url.searchParams.delete('timeframe');
     url.searchParams.delete('sort');
+    url.searchParams.delete('filter_open');
+    localStorage.removeItem('gantt_filter_panel_open');
     window.location.href = url.toString();
 }
+
+// Handle Excel Export with loading state
+function handleExportClick(event, link) {
+    event.preventDefault();
+    
+    // Show loading overlay
+    showLoading('Excel wird generiert...');
+    
+    // Show button loading state
+    const textSpan = link.querySelector('.export-text');
+    if (textSpan) {
+        textSpan.innerHTML = '⏳ Exportiert...';
+    }
+    link.style.opacity = '0.6';
+    link.style.pointerEvents = 'none';
+    
+    // Trigger download
+    window.location.href = link.href;
+    
+    // Hide loading after 3 seconds (download should have started)
+    setTimeout(() => {
+        hideLoading();
+        if (textSpan) {
+            textSpan.innerHTML = '📤 Excel Export';
+        }
+        link.style.opacity = '1';
+        link.style.pointerEvents = '';
+    }, 3000);
+}
+</script>
 </script>
 
 @endsection

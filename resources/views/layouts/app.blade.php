@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title') - Day2Day-Flow | Projektmanagement</title>
+    <title>@yield('title') - Day2Day-Manager | Projektmanagement</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -332,8 +332,7 @@
 <body>
 <div class="header">
     <div class="header-content">
-        <h1>Day2Day-Flow</h1>
-        <p>Projektmanagement</p>
+        <h1>Day2Day-Manager</h1>
     </div>
 
     @auth
@@ -373,6 +372,11 @@
             <li>
                 <a href="/projects" class="{{ request()->is('projects*') ? 'active' : '' }}">
                     Projekte
+                </a>
+            </li>
+            <li>
+                <a href="/absences" class="{{ request()->is('absences*') ? 'active' : '' }}">
+                    Abwesenheiten
                 </a>
             </li>
             <li>
@@ -634,6 +638,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // No-op; Filter-Sets removed.
     });
 </script>
+
+{{-- Global Loading Overlay --}}
+@include('components.loading-overlay')
+
+{{-- Loading Helper JavaScript --}}
+<script src="{{ url('js/loading.js') }}"></script>
 
 </body>
 </html>

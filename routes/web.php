@@ -41,80 +41,197 @@ Route::middleware('guest')->group(function () {
 
 // Authenticated Routes
 Route::middleware('auth')->group(function () {
-    // Dashboard
+    // Dashboard (alle eingeloggten User)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Employees
-    Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');
-    Route::get('/employees/create', [EmployeeController::class, 'create'])->name('employees.create');
-    Route::get('/employees/export', [EmployeeController::class, 'export'])->name('employees.export');
-    Route::get('/employees/import', [EmployeeController::class, 'importForm'])->name('employees.import');
-    Route::post('/employees/import', [EmployeeController::class, 'import'])->name('employees.import.process');
-    Route::post('/employees', [EmployeeController::class, 'store'])->name('employees.store');
-    Route::get('/employees/{employee}', [EmployeeController::class, 'show'])->name('employees.show');
-    Route::get('/employees/{employee}/pie-chart-data', [EmployeeController::class, 'getPieChartData'])->name('employees.pie-chart-data');
-    Route::get('/employees/{employee}/activities-data', [EmployeeController::class, 'getActivitiesData'])->name('employees.activities-data');
-    Route::get('/employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
-    Route::put('/employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
-    Route::delete('/employees/{employee}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
-    Route::post('/employees/reorder', [EmployeeController::class, 'reorder'])->name('employees.reorder');
-    Route::post('/employees/assignments/update', [EmployeeController::class, 'updateAssignments'])->name('employees.assignments.update');
+    // ========== EMPLOYEES ROUTES (mit Permissions) ==========
+    Route::prefix('employees')->name('employees.')->group(function () {
+        // View (alle können sehen)
+        Route::get('/', [EmployeeController::class, 'index'])
+            ->middleware('permission:employees.view')
+            ->name('index');
+        
+        Route::get('/{employee}', [EmployeeController::class, 'show'])
+            ->middleware('permission:employees.view')
+            ->name('show');
+        
+        Route::get('/{employee}/pie-chart-data', [EmployeeController::class, 'getPieChartData'])
+            ->middleware('permission:employees.view')
+            ->name('pie-chart-data');
+        
+        Route::get('/{employee}/activities-data', [EmployeeController::class, 'getActivitiesData'])
+            ->middleware('permission:employees.view')
+            ->name('activities-data');
+        
+        // Create (nur Management + Admin)
+        Route::get('/create', [EmployeeController::class, 'create'])
+            ->middleware('permission:employees.create')
+            ->name('create');
+        
+        Route::post('/', [EmployeeController::class, 'store'])
+            ->middleware('permission:employees.create')
+            ->name('store');
+        
+        // Edit (nur Management + Admin)
+        Route::get('/{employee}/edit', [EmployeeController::class, 'edit'])
+            ->middleware('permission:employees.edit')
+            ->name('edit');
+        
+        Route::put('/{employee}', [EmployeeController::class, 'update'])
+            ->middleware('permission:employees.edit')
+            ->name('update');
+        
+        // Delete (nur Management + Admin)
+        Route::delete('/{employee}', [EmployeeController::class, 'destroy'])
+            ->middleware('permission:employees.delete')
+            ->name('destroy');
+        
+        // Utility Routes (nur Management + Admin)
+        Route::post('/reorder', [EmployeeController::class, 'reorder'])
+            ->middleware('permission:employees.edit')
+            ->name('reorder');
+        
+        Route::post('/assignments/update', [EmployeeController::class, 'updateAssignments'])
+            ->middleware('permission:employees.edit')
+            ->name('assignments.update');
+        
+        Route::get('/export', [EmployeeController::class, 'export'])
+            ->middleware('permission:reports.export')
+            ->name('export');
+        
+        Route::get('/import', [EmployeeController::class, 'importForm'])
+            ->middleware('permission:employees.create')
+            ->name('import');
+        
+        Route::post('/import', [EmployeeController::class, 'import'])
+            ->middleware('permission:employees.create')
+            ->name('import.process');
+    });
 
-    // Projects
-    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
-    Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
-    Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
-    Route::get('/projects/export', [ProjectController::class, 'export'])->name('projects.export');
-    Route::get('/projects/import', [ProjectController::class, 'importForm'])->name('projects.import');
-    Route::post('/projects/import', [ProjectController::class, 'import'])->name('projects.import.process');
-    Route::post('/projects/sync-statuses', [ProjectController::class, 'syncProjectStatuses'])->name('projects.sync-statuses');
+    // ========== PROJECTS ROUTES (mit Permissions) ==========
+    Route::prefix('projects')->name('projects.')->group(function () {
+        // View
+        Route::get('/', [ProjectController::class, 'index'])
+            ->middleware('permission:projects.view')
+            ->name('index');
+        
+        Route::get('/{project}', [ProjectController::class, 'show'])
+            ->middleware('permission:projects.view')
+            ->name('show');
+        
+        // Create
+        Route::get('/create', [ProjectController::class, 'create'])
+            ->middleware('permission:projects.create')
+            ->name('create');
+        
+        Route::post('/', [ProjectController::class, 'store'])
+            ->middleware('permission:projects.create')
+            ->name('store');
+        
+        // Edit
+        Route::get('/{project}/edit', [ProjectController::class, 'edit'])
+            ->middleware('permission:projects.edit')
+            ->name('edit');
+        
+        Route::put('/{project}', [ProjectController::class, 'update'])
+            ->middleware('permission:projects.edit')
+            ->name('update');
+        
+        // Delete
+        Route::delete('/{project}', [ProjectController::class, 'destroy'])
+            ->middleware('permission:projects.delete')
+            ->name('destroy');
+        
+        // Utility
+        Route::get('/export', [ProjectController::class, 'export'])
+            ->middleware('permission:reports.export')
+            ->name('export');
+        
+        Route::get('/import', [ProjectController::class, 'importForm'])
+            ->middleware('permission:projects.create')
+            ->name('import');
+        
+        Route::post('/import', [ProjectController::class, 'import'])
+            ->middleware('permission:projects.create')
+            ->name('import.process');
+        
+        Route::post('/sync-statuses', [ProjectController::class, 'syncProjectStatuses'])
+            ->middleware('permission:projects.edit')
+            ->name('sync-statuses');
+    });
 
+    // ========== GANTT CHART ROUTES (mit Permissions) ==========
     // Project Gantt DnD
-    Route::post('/gantt/assignments/reorder', [ProjectController::class, 'reorderAssignments'])->name('gantt.assignments.reorder');
-    Route::post('/gantt/assignments/resize', [ProjectController::class, 'resizeAssignment'])->name('gantt.assignments.resize');
-Route::post('/gantt/assignments/reposition', [ProjectController::class, 'repositionAssignment'])->name('gantt.assignments.reposition');
-    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
-    Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
-    Route::put('/projects/{project}', [ProjectController::class, 'update'])->name('projects.update');
-    Route::delete('/projects/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    Route::middleware('permission:projects.edit')->group(function () {
+        Route::post('/gantt/assignments/reorder', [ProjectController::class, 'reorderAssignments'])->name('gantt.assignments.reorder');
+        Route::post('/gantt/assignments/resize', [ProjectController::class, 'resizeAssignment'])->name('gantt.assignments.resize');
+        Route::post('/gantt/assignments/reposition', [ProjectController::class, 'repositionAssignment'])->name('gantt.assignments.reposition');
+    });
 
     // Gantt Chart
-    Route::get('/gantt', [GanttController::class, 'index'])->name('gantt.index');
-    Route::post('/gantt/filter/reset', [GanttController::class, 'resetFilters'])->name('gantt.filter.reset');
-    Route::get('/gantt/export', [GanttController::class, 'export'])->name('gantt.export');
-    Route::post('/gantt/projects/{project}/employees', [GanttController::class, 'addEmployeeToProject'])->name('gantt.projects.add-employee');
-    Route::post('/gantt/projects/{project}/employees/{employee}/tasks', [GanttController::class, 'addTaskToEmployee'])->name('gantt.employees.add-task');
-    Route::delete('/gantt/projects/{project}/employees/{employee}/remove', [GanttController::class, 'removeEmployeeFromProject'])->name('gantt.employees.remove');
-    Route::get('/gantt/projects/{project}/employees/{employee}/tasks', [GanttController::class, 'getEmployeeTasks'])->name('gantt.employees.tasks');
-    Route::get('/gantt/tasks/{assignment}', [GanttController::class, 'getTask'])->name('gantt.tasks.show');
-    Route::delete('/gantt/tasks/{assignment}', [GanttController::class, 'deleteTask'])->name('gantt.tasks.delete');
-    Route::put('/gantt/tasks/{assignment}', [GanttController::class, 'updateTask'])->name('gantt.tasks.update');
-    Route::get('/gantt/employees/{employee}/utilization', [GanttController::class, 'getEmployeeUtilization'])->name('gantt.employees.utilization');
+    Route::prefix('gantt')->name('gantt.')->middleware('permission:projects.view')->group(function () {
+        Route::get('/', [GanttController::class, 'index'])->name('index');
+        Route::post('/filter/reset', [GanttController::class, 'resetFilters'])->name('filter.reset');
+        Route::get('/export', [GanttController::class, 'export'])->middleware('permission:reports.export')->name('export');
+        
+        // Bearbeitung nur mit projects.edit
+        Route::middleware('permission:projects.edit')->group(function () {
+            Route::post('/projects/{project}/employees', [GanttController::class, 'addEmployeeToProject'])->name('projects.add-employee');
+            Route::post('/bulk-assign-employees', [GanttController::class, 'bulkAssignEmployees'])->name('bulk-assign-employees');
+            Route::post('/projects/{project}/employees/{employee}/tasks', [GanttController::class, 'addTaskToEmployee'])->name('employees.add-task');
+            Route::delete('/projects/{project}/employees/{employee}/remove', [GanttController::class, 'removeEmployeeFromProject'])->name('employees.remove');
+        });
+        
+        // Tasks (mit tasks.edit)
+        Route::middleware('permission:tasks.edit')->group(function () {
+            Route::get('/projects/{project}/employees/{employee}/tasks', [GanttController::class, 'getEmployeeTasks'])->name('employees.tasks');
+            Route::get('/tasks/{assignment}', [GanttController::class, 'getTask'])->name('tasks.show');
+            Route::delete('/tasks/{assignment}', [GanttController::class, 'deleteTask'])->name('tasks.delete');
+            Route::put('/tasks/{assignment}', [GanttController::class, 'updateTask'])->name('tasks.update');
+            Route::post('/tasks/{assignment}/transfer', [GanttController::class, 'transferTask'])->name('tasks.transfer');
+        });
+        
+        Route::get('/employees/{employee}/utilization', [GanttController::class, 'getEmployeeUtilization'])->name('employees.utilization');
+    });
 
     // Overrides (manuelle Zuweisungen)
-    Route::post('/overrides', [ProjectAssignmentOverrideController::class, 'store'])->name('overrides.store');
+    Route::post('/overrides', [ProjectAssignmentOverrideController::class, 'store'])
+        ->middleware('permission:projects.assign')
+        ->name('overrides.store');
 
-    // MOCO Integration
-    Route::prefix('moco')->name('moco.')->group(function () {
+    // Absences (Abwesenheiten-Verwaltung) - nur eigene oder alle je nach Permission
+    Route::resource('absences', \App\Http\Controllers\AbsenceController::class)
+        ->middleware('permission:time.view.own'); // Später mit Row-Level-Security erweitern
+
+    // ========== MOCO INTEGRATION (nur Admin + Management) ==========
+    Route::prefix('moco')->name('moco.')->middleware('role:admin,management')->group(function () {
         Route::get('/', [MocoController::class, 'index'])->name('index');
         Route::get('/logs', [MocoController::class, 'logs'])->name('logs');
         
-        // Debug Routes
-        Route::prefix('debug')->name('debug.')->group(function () {
+        // Debug Routes (nur Admin)
+        Route::prefix('debug')->name('debug.')->middleware('role:admin')->group(function () {
             Route::get('/users', [MocoController::class, 'debugUsers'])->name('users');
             Route::get('/projects', [MocoController::class, 'debugProjects'])->name('projects');
             Route::get('/activities', [MocoController::class, 'debugActivities'])->name('activities');
-            Route::get('/absences', [MocoController::class, 'debugAbsences'])->name('absences');
+            Route::get('/absences-raw', [MocoController::class, 'debugAbsences'])->name('absences');
             Route::get('/user/{userId}', [MocoController::class, 'debugUser'])->name('user');
             Route::get('/project/{projectId}', [MocoController::class, 'debugProject'])->name('project');
         });
+        
         Route::get('/statistics', [MocoController::class, 'statistics'])->name('statistics');
         Route::get('/mappings', [MocoController::class, 'mappings'])->name('mappings');
         Route::post('/test', [MocoController::class, 'testConnection'])->name('test');
         Route::post('/sync-employees', [MocoController::class, 'syncEmployees'])->name('sync-employees');
         Route::post('/sync-projects', [MocoController::class, 'syncProjects'])->name('sync-projects');
         Route::post('/sync-activities', [MocoController::class, 'syncActivities'])->name('sync-activities');
+        Route::post('/sync-absences', [MocoController::class, 'syncAbsences'])->name('sync-absences');
+        Route::post('/sync-contracts', [MocoController::class, 'syncContracts'])->name('sync-contracts');
         Route::post('/sync-all', [MocoController::class, 'syncAll'])->name('sync-all');
+    });
+    
+    // ========== ADMIN PANEL (nur Admin + Management mit permissions.view) ==========
+    Route::prefix('admin')->name('admin.')->middleware('permission:permissions.view')->group(function () {
+        // Permission Management UI kommt später in TODO #6
     });
 
     // Profile
@@ -124,6 +241,32 @@ Route::post('/gantt/assignments/reposition', [ProjectController::class, 'reposit
 
     // Logout
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+
+    // 🐛 DEBUG-ROUTE (temporär - nach Test entfernen!)
+    Route::get('/debug/project/{id}', function($id) {
+        $project = \App\Models\Project::with(['assignments.employee', 'responsible'])->findOrFail($id);
+        
+        return response()->json([
+            'id' => $project->id,
+            'name' => $project->name,
+            'responsible_id' => $project->responsible_id,
+            'responsible_name' => $project->responsible ? 
+                $project->responsible->first_name . ' ' . $project->responsible->last_name : 
+                null,
+            'assignments_count' => $project->assignments->count(),
+            'assignments' => $project->assignments->map(function($a) {
+                return [
+                    'employee' => $a->employee ? 
+                        $a->employee->first_name . ' ' . $a->employee->last_name : 
+                        null,
+                    'weekly_hours' => $a->weekly_hours,
+                ];
+            }),
+            'getAssignedPersonsList' => $project->getAssignedPersonsList(),
+            'getAssignedPersonsString' => $project->getAssignedPersonsString(),
+            'hasAssignedPersons' => $project->hasAssignedPersons(),
+        ]);
+    })->name('debug.project');
 
 });
 

@@ -623,12 +623,29 @@ class EmployeeController extends Controller
 
     /**
      * Remove the specified employee from storage.
+     * 
+     * SAFETY: Uses soft-delete by default (data recoverable).
+     * MOCO employees will be re-synced automatically.
      */
     public function destroy(Employee $employee)
     {
+        $employeeName = $employee->first_name . ' ' . $employee->last_name;
+        $source = $employee->source;
+        
+        // Soft-delete (Employee model has SoftDeletes trait)
         $employee->delete();
 
-        return redirect()->route('employees.index')->with('success', 'Mitarbeiter erfolgreich gelöscht!');
+        // Success message depends on source
+        if ($source === 'moco') {
+            return redirect()->route('employees.index')
+                ->with('warning', "⚠️ MOCO-Mitarbeiter '{$employeeName}' gelöscht. Er wird beim nächsten Sync wieder synchronisiert!");
+        } elseif ($source === 'manual') {
+            return redirect()->route('employees.index')
+                ->with('success', "✓ Manueller Mitarbeiter '{$employeeName}' erfolgreich gelöscht!");
+        } else {
+            return redirect()->route('employees.index')
+                ->with('success', "✓ Test-Mitarbeiter '{$employeeName}' erfolgreich gelöscht!");
+        }
     }
 
     /**

@@ -23,6 +23,25 @@ class MocoController extends Controller
     }
 
     /**
+     * Helper: Return JSON or Redirect based on request type
+     */
+    protected function handleSyncResponse(Request $request, bool $success, string $message, string $output = '')
+    {
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => $success,
+                'message' => $message,
+                'output' => $output
+            ], $success ? 200 : 500);
+        }
+
+        return redirect()->back()->with(
+            $success ? 'success' : 'error',
+            $message
+        );
+    }
+
+    /**
      * Show MOCO integration dashboard
      */
     public function index()
@@ -57,7 +76,9 @@ class MocoController extends Controller
             'employees' => MocoSyncLog::ofType('employees')->successful()->latest('completed_at')->first(),
             'projects' => MocoSyncLog::ofType('projects')->successful()->latest('completed_at')->first(),
             'activities' => MocoSyncLog::ofType('activities')->successful()->latest('completed_at')->first(),
-            'all' => MocoSyncLog::ofType('all')->successful()->latest('completed_at')->first(),
+            'absences' => MocoSyncLog::ofType('absences')->successful()->latest('completed_at')->first(),
+            'contracts' => MocoSyncLog::ofType('contracts')->successful()->latest('completed_at')->first(),
+            // 'all' entfernt - nicht mehr verwendet (alte Vollständige Sync)
         ];
 
         $syncWarnings = [];
@@ -65,7 +86,9 @@ class MocoController extends Controller
             'employees' => 'Mitarbeiter',
             'projects' => 'Projekte',
             'activities' => 'Zeiterfassungen',
-            'all' => 'Vollständige Synchronisation',
+            'absences' => 'Abwesenheiten',
+            'contracts' => 'Zuweisungen',
+            // 'all' entfernt - nicht mehr verwendet
         ];
         $warningThreshold = now()->subHours(24);
 
@@ -108,10 +131,10 @@ class MocoController extends Controller
             Artisan::call('moco:sync-employees', $options);
             $output = Artisan::output();
 
-            return redirect()->back()->with('success', 'Mitarbeiter erfolgreich synchronisiert!');
+            return $this->handleSyncResponse($request, true, 'Mitarbeiter erfolgreich synchronisiert!', $output);
         } catch (\Exception $e) {
-            Log::error('MOCO Employee Sync Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
+            Log::error('MOCO Employees Sync Error: ' . $e->getMessage());
+            return $this->handleSyncResponse($request, false, 'Fehler bei der Synchronisation: ' . $e->getMessage());
         }
     }
 
@@ -129,10 +152,10 @@ class MocoController extends Controller
             Artisan::call('moco:sync-projects', $options);
             $output = Artisan::output();
 
-            return redirect()->back()->with('success', 'Projekte erfolgreich synchronisiert!');
+            return $this->handleSyncResponse($request, true, 'Projekte erfolgreich synchronisiert!', $output);
         } catch (\Exception $e) {
             Log::error('MOCO Project Sync Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
+            return $this->handleSyncResponse($request, false, 'Fehler bei der Synchronisation: ' . $e->getMessage());
         }
     }
 
@@ -159,10 +182,20 @@ class MocoController extends Controller
             Artisan::call('moco:sync-activities', $options);
             $output = Artisan::output();
 
-            return redirect()->back()->with('success', 'Zeiterfassungen erfolgreich synchronisiert!');
+            return $this->handleSyncResponse(
+                $request,
+                true,
+                'Zeiterfassungen erfolgreich synchronisiert!',
+                $output
+            );
         } catch (\Exception $e) {
             Log::error('MOCO Activities Sync Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
+            
+            return $this->handleSyncResponse(
+                $request,
+                false,
+                'Fehler bei der Synchronisation: ' . $e->getMessage()
+            );
         }
     }
 
@@ -172,22 +205,71 @@ class MocoController extends Controller
     public function syncAll(Request $request)
     {
         try {
-            $options = [];
+            $results = [];
+            $startTime = now();
             
-            if ($request->boolean('active_only')) {
-                $options['--active'] = true;
+            // 1. Mitarbeiter synchronisieren
+            try {
+                Artisan::call('moco:sync-employees', ['--active' => $request->boolean('active_only')]);
+                $results['employees'] = '✅ Mitarbeiter synchronisiert';
+            } catch (\Exception $e) {
+                $results['employees'] = '❌ Mitarbeiter-Fehler: ' . $e->getMessage();
             }
             
-            if ($request->has('days')) {
-                $options['--days'] = $request->input('days', 30);
+            // 2. Projekte synchronisieren
+            try {
+                Artisan::call('moco:sync-projects', ['--active' => $request->boolean('active_only')]);
+                $results['projects'] = '✅ Projekte synchronisiert';
+            } catch (\Exception $e) {
+                $results['projects'] = '❌ Projekte-Fehler: ' . $e->getMessage();
+            }
+            
+            // 3. Zeiterfassungen synchronisieren
+            try {
+                $days = $request->input('days', 30);
+                Artisan::call('moco:sync-activities', ['--days' => $days]);
+                $results['activities'] = '✅ Zeiterfassungen synchronisiert';
+            } catch (\Exception $e) {
+                $results['activities'] = '❌ Zeiterfassungen-Fehler: ' . $e->getMessage();
+            }
+            
+            // 4. Abwesenheiten synchronisieren
+            try {
+                Artisan::call('moco:sync-absences');
+                $results['absences'] = '✅ Abwesenheiten synchronisiert';
+            } catch (\Exception $e) {
+                $results['absences'] = '❌ Abwesenheiten-Fehler: ' . $e->getMessage();
+            }
+            
+            $duration = now()->diffInSeconds($startTime);
+            $successCount = collect($results)->filter(fn($r) => str_starts_with($r, '✅'))->count();
+            $failCount = collect($results)->filter(fn($r) => str_starts_with($r, '❌'))->count();
+
+            // AJAX-Support für Progress-Anzeige
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => $failCount === 0,
+                    'message' => "Synchronisation abgeschlossen: {$successCount} erfolgreich, {$failCount} fehlgeschlagen ({$duration}s)",
+                    'results' => $results,
+                    'stats' => [
+                        'success' => $successCount,
+                        'failed' => $failCount,
+                        'duration' => $duration,
+                    ]
+                ]);
             }
 
-            Artisan::call('moco:sync-all', $options);
-            $output = Artisan::output();
-
-            return redirect()->back()->with('success', 'Alle Daten erfolgreich synchronisiert!');
+            return redirect()->back()->with('success', "Synchronisation abgeschlossen: {$successCount}/4 erfolgreich ({$duration}s)");
         } catch (\Exception $e) {
             Log::error('MOCO Full Sync Error: ' . $e->getMessage());
+            
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Fehler bei der Synchronisation: ' . $e->getMessage()
+                ], 500);
+            }
+            
             return redirect()->back()->with('error', 'Fehler bei der Synchronisation: ' . $e->getMessage());
         }
     }
@@ -407,6 +489,144 @@ class MocoController extends Controller
             return response()->json($data, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Synchronisiert Zeiterfassungen aus MOCO
+     * Route: POST /moco/sync-time-entries
+     */
+    public function syncTimeEntries(Request $request)
+    {
+        try {
+            $days = $request->input('days', 7);
+            
+            // Artisan Command aufrufen
+            Artisan::call('sync:moco-time-entries', [
+                '--days' => $days,
+            ]);
+            
+            $output = Artisan::output();
+            
+            // Extrahiere Statistiken aus Command-Output (falls vorhanden)
+            $message = "Zeiterfassungen der letzten {$days} Tage synchronisiert";
+            
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'output' => trim($output),
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler bei der Synchronisation: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Synchronisiert Abwesenheiten aus MOCO
+     * Route: POST /moco/sync-absences
+     */
+    public function syncAbsences(Request $request)
+    {
+        try {
+            $days = $request->input('days', 30);
+            
+            // Artisan Command aufrufen
+            Artisan::call('sync:moco-absences', [
+                '--days' => $days,
+            ]);
+            
+            $output = Artisan::output();
+            
+            // Extrahiere Statistiken aus Command-Output
+            preg_match('/(\d+)\s+Abwesenheiten/', $output, $matches);
+            $count = $matches[1] ?? 0;
+            
+            $message = "{$count} Abwesenheiten synchronisiert (letzte {$days} Tage + 6 Monate voraus)";
+            
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'output' => trim($output),
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler bei der Synchronisation: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Synchronisiert Mitarbeiter-Zuweisungen aus MOCO Contracts
+     * Route: POST /moco/sync-contracts
+     */
+    public function syncContracts(Request $request)
+    {
+        try {
+            // Artisan Command aufrufen
+            Artisan::call('sync:moco-contracts');
+            
+            $output = Artisan::output();
+            
+            // Extrahiere Statistiken aus Command-Output
+            // Format: "✅ Erstellt/Aktualisiert | 123 | Assignments aus MOCO Contracts"
+            preg_match('/Erstellt\/Aktualisiert.*?(\d+)/', $output, $createdMatches);
+            preg_match('/Übersprungen.*?(\d+)/', $output, $skippedMatches);
+            preg_match('/Keine Contracts.*?(\d+)/', $output, $noContractsMatches);
+            preg_match('/Fehler.*?(\d+)/', $output, $errorMatches);
+            
+            $created = $createdMatches[1] ?? 0;
+            $skipped = $skippedMatches[1] ?? 0;
+            $noContracts = $noContractsMatches[1] ?? 0;
+            $errors = $errorMatches[1] ?? 0;
+            
+            // Zähle Warnungen für externe Mitarbeiter
+            $warnings = substr_count($output, '⚠️');
+            
+            // User-freundliche Nachricht generieren
+            if ($created > 0) {
+                $message = "✅ {$created} Mitarbeiter-Zuweisungen erstellt/aktualisiert";
+            } elseif ($skipped > 0) {
+                $message = "✅ Alle {$skipped} Zuweisungen sind bereits aktuell";
+            } else {
+                $message = "ℹ️  Keine Änderungen vorgenommen";
+            }
+            
+            if ($warnings > 0) {
+                $message .= " | {$warnings} externe Mitarbeiter (nicht in lokaler DB)";
+            }
+            
+            if ($noContracts > 0) {
+                $message .= " | {$noContracts} Projekte ohne MOCO-Contracts";
+            }
+            
+            if ($errors > 0) {
+                $message .= " | ⚠️ {$errors} Fehler aufgetreten";
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'output' => trim($output),
+                'stats' => [
+                    'created' => (int)$created,
+                    'skipped' => (int)$skipped,
+                    'no_contracts' => (int)$noContracts,
+                    'errors' => (int)$errors,
+                    'warnings' => $warnings,
+                ],
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fehler bei der Synchronisation: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

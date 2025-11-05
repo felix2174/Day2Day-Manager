@@ -8,9 +8,7 @@
                 $timelineSpanDays = max(1, $timelineStart->diffInDays($timelineEnd) + 1);
             @endphp
 
-            <div id="ganttTooltip" style="display: none; position: fixed; background: white; border: 2px solid #3b82f6; border-radius: 8px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; max-width: 300px; pointer-events: none;">
-                <div id="tooltipContent"></div>
-            </div>
+            {{-- Altes Tooltip-System entfernt - nur noch project-bar-tooltip wird verwendet --}}
 
             <div style="overflow-x: auto; padding-bottom: 10px;">
                 <div id="ganttScrollContainer" data-timeline-start="{{ $timelineStartIso }}" data-timeline-end="{{ $timelineEndIso }}" data-timeline-days="{{ $timelineSpanDays }}" style="position: relative; width: 100%; overflow-y: hidden; cursor: grab; user-select: none; border: 1px solid #e5e7eb; border-radius: 8px;" class="gantt-scroll-container">
@@ -59,19 +57,38 @@
                                 $projectSummary = $projectData['summary'] ?? [];
                                 $projectStart = $metrics['startDate'];
                                 $projectEnd = $metrics['endDate'];
-                                $projectClampedStart = $projectStart->lt($timelineStart) ? $timelineStart->copy() : $projectStart;
-                                $projectClampedEnd = $projectEnd->gt($timelineEnd) ? $timelineEnd->copy() : $projectEnd;
-                                $projectOffsetDays = max(0, $timelineStart->diffInDays($projectClampedStart));
-                                $projectDurationDays = max(1, $projectClampedStart->diffInDays($projectClampedEnd) + 1);
-                                $projectLeftPercent = ($projectOffsetDays / $timelineSpanDays) * 100;
-                                $projectWidthPercent = ($projectDurationDays / $timelineSpanDays) * 100;
+                                
+                                // Check if project extends beyond timeline or is overdue
+                                $extendsRight = $projectEnd->gt($timelineEnd);
+                                $extendsLeft = $projectStart->lt($timelineStart);
+                                $isOverdue = $projectEnd->isPast() && $projectEnd->lt(now());
+                                $isDueSoon = !$isOverdue && $projectEnd->isFuture() && $projectEnd->diffInDays(now()) <= 7;
+                                
+                                // WICHTIG: Überfällige Projekte NICHT an timelineStart clampen!
+                                // Sie sollen an ihrem echten end_date enden (auch wenn vor timelineStart)
+                                if ($isOverdue && $projectEnd->lt($timelineStart)) {
+                                    // Projekt endete VOR Timeline-Start → zeige es NICHT
+                                    $shouldDisplayProject = false;
+                                } else {
+                                    $shouldDisplayProject = true;
+                                    $projectClampedStart = $projectStart->lt($timelineStart) ? $timelineStart->copy() : $projectStart;
+                                    $projectClampedEnd = $projectEnd->gt($timelineEnd) ? $timelineEnd->copy() : $projectEnd;
+                                    $projectOffsetDays = max(0, $timelineStart->diffInDays($projectClampedStart));
+                                    $projectDurationDays = max(1, $projectClampedStart->diffInDays($projectClampedEnd) + 1);
+                                    $projectLeftPercent = ($projectOffsetDays / $timelineSpanDays) * 100;
+                                    $projectWidthPercent = ($projectDurationDays / $timelineSpanDays) * 100;
+                                }
+                                
+                                // Color coding (MS Project style)
                                 $statusColor = match (true) {
-                                    $projectClampedEnd->isPast() => '#6b7280',
-                                    $metrics['bottleneck'] => '#dc2626',
-                                    $metrics['riskScore'] >= 60 => '#f97316',
-                                    $metrics['riskScore'] >= 40 => '#facc15',
-                                    default => '#10b981',
+                                    $isOverdue => '#dc2626', // Red for overdue
+                                    $isDueSoon => '#f97316', // Orange for due soon (<7 days)
+                                    $metrics['bottleneck'] => '#ef4444', // Lighter red for bottleneck
+                                    $metrics['riskScore'] >= 60 => '#f59e0b', // Amber for high risk
+                                    $metrics['riskScore'] >= 40 => '#facc15', // Yellow for medium risk
+                                    default => '#10b981', // Green for healthy
                                 };
+                                
                                 $progress = round($project->progress ?? 0);
                             @endphp
                             @php
@@ -109,13 +126,63 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div style="font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $project->name }}">{{ $project->name }}</div>
+                                            {{-- Projektname ohne title-Attribut (Tooltip kommt vom Balken-Hover) --}}
+                                            <div style="font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ $project->name }}</div>
                                         </div>
                                         <div style="position: relative; height: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb;">
-                                            <div class="gantt-bar" data-project-name="{{ $project->name }}" data-start-date="{{ $projectStart->format('d.m.Y') }}" data-end-date="{{ $projectEnd->format('d.m.Y') }}" data-required-hours="{{ (int)round($metrics['requiredPerWeek']) }}" data-available-hours="{{ (int)round($metrics['availablePerWeek']) }}" data-progress="{{ $progress }}" data-status="{{ ucfirst($project->status) }}" data-capacity-ratio="{{ $metrics['capacityRatio'] ?? '' }}" data-risk-score="{{ round($metrics['riskScore']) }}" style="position: absolute; top: 0; height: 100%; border-radius: 12px; background: {{ $statusColor }}; left: {{ $projectLeftPercent }}%; width: {{ $projectWidthPercent }}%; min-width: 1.5%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
-                                                <span title="{{ $project->name }}" style="padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ Str::limit($project->name, 32) }}</span>
-                                                <span style="margin-left: 8px; font-weight: 600; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 12px;">{{ $progress }}%</span>
+                                            @php
+                                                // Deadline-Status für visuelle Indikatoren
+                                                $daysUntilDeadline = now()->startOfDay()->diffInDays($projectEnd, false);
+                                                $isOverdue = $daysUntilDeadline < 0 && $project->status !== 'abgeschlossen' && $project->status !== 'completed';
+                                                $isUrgent = $daysUntilDeadline >= 0 && $daysUntilDeadline <= 7 && $project->status !== 'abgeschlossen' && $project->status !== 'completed';
+                                                
+                                                // Überschreibe Status-Farbe bei Deadline-Problemen
+                                                if ($isOverdue) {
+                                                    $statusColor = '#dc2626'; // Rot für überfällig
+                                                } elseif ($isUrgent) {
+                                                    $statusColor = '#f97316'; // Orange für dringend
+                                                }
+                                                
+                                                // VERSION 2.0: Zusätzliche Tooltip-Daten
+                                                // Verantwortlicher mit Badge für inaktive
+                                                $responsibleName = 'Nicht zugewiesen';
+                                                if ($project->responsible) {
+                                                    $responsibleName = $project->responsible->first_name . ' ' . $project->responsible->last_name;
+                                                    if (!$project->responsible->is_active) {
+                                                        $responsibleName .= ' (Inaktiv)';
+                                                    }
+                                                }
+                                                
+                                                // Team-Größe (eindeutige Mitarbeiter)
+                                                $projectAssignments = \App\Models\Assignment::where('project_id', $project->id)->with('employee')->get();
+                                                $teamSize = $projectAssignments->unique('employee_id')->count();
+                                                
+                                                // Gesamtstunden (Wochenstunden × Projektwochen)
+                                                $projectDurationWeeks = max(1, $projectStart->diffInWeeks($projectEnd));
+                                                $totalWeeklyHours = $projectAssignments->sum('weekly_hours');
+                                                $totalPlannedHours = $totalWeeklyHours * $projectDurationWeeks;
+                                            @endphp
+                                            @if($shouldDisplayProject)
+                                            <div class="gantt-bar" data-project-name="{{ $project->name }}" data-start-date="{{ $projectStart->format('d.m.Y') }}" data-end-date="{{ $projectEnd->format('d.m.Y') }}" data-deadline="{{ $projectEnd->format('d.m.Y') }}" data-days-until-deadline="{{ $daysUntilDeadline }}" data-is-overdue="{{ $isOverdue ? 'true' : 'false' }}" data-required-hours="{{ (int)round($metrics['requiredPerWeek']) }}" data-available-hours="{{ (int)round($metrics['availablePerWeek']) }}" data-progress="{{ $progress }}" data-status="{{ ucfirst($project->status) }}" data-capacity-ratio="{{ $metrics['capacityRatio'] ?? '' }}" data-risk-score="{{ round($metrics['riskScore']) }}" data-responsible="{{ $responsibleName }}" data-team-size="{{ $teamSize }}" data-total-hours="{{ $totalPlannedHours }}" data-weekly-hours="{{ $totalWeeklyHours }}" data-duration-weeks="{{ $projectDurationWeeks }}" style="position: absolute; top: 0; height: 100%; border-radius: 12px; background: {{ $statusColor }}; left: {{ $projectLeftPercent }}%; width: {{ $projectWidthPercent }}%; min-width: 1.5%; display: flex; align-items: center; justify-content: space-between; color: white; font-size: 12px; font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.15); padding: 0 8px; cursor: pointer; {{ $extendsRight ? 'border-right: 3px dashed rgba(255,255,255,0.7);' : '' }}">
+                                                <span style="padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">{{ Str::limit($project->name, 32) }}</span>
+                                                <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                                    <span style="font-weight: 600; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 12px;">{{ $progress }}%</span>
+                                                    @if($isOverdue)
+                                                        <span style="font-size: 14px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));" title="Überfällig seit {{ now()->diffInDays($projectEnd) }} Tagen">⚠️</span>
+                                                    @elseif($isDueSoon)
+                                                        <span style="font-size: 14px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));" title="Fällig in {{ $projectEnd->diffInDays(now()) }} Tagen">🕐</span>
+                                                    @elseif($extendsLeft)
+                                                        <span style="font-size: 14px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));" title="Begann vor Timeline">←</span>
+                                                    @elseif($extendsRight)
+                                                        <span style="font-size: 14px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));" title="Läuft über Timeline hinaus">→</span>
+                                                    @elseif($isUrgent)
+                                                        <span style="font-size: 14px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));">⏰</span>
+                                                    @else
+                                                        <span style="font-size: 14px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));">🎯</span>
+                                                    @endif
+                                                </div>
                                             </div>
+                                            @endif
                                         </div>
                                     </div>
 
@@ -129,8 +196,10 @@
                                             
                                             // Convert to the format expected by the view
                                             $assignmentsForView = $freshAssignments->map(function($assignment) use ($timelineStart, $timelineEnd) {
-                                                $start = $assignment->start_date ? \Carbon\Carbon::parse($assignment->start_date) : now();
-                                                $end = $assignment->end_date ? \Carbon\Carbon::parse($assignment->end_date) : now()->addWeeks(2);
+                                                // CHANGED: Start-Date Extension für ongoing tasks
+                                                $start = $assignment->start_date ? \Carbon\Carbon::parse($assignment->start_date) : now()->subMonths(6);
+                                                // CHANGED: End-Date Extension für ongoing tasks
+                                                $end = $assignment->end_date ? \Carbon\Carbon::parse($assignment->end_date) : now()->addMonths(6);
                                                 
                                                 return [
                                                     'employee_id' => $assignment->employee_id,
@@ -261,20 +330,20 @@
                         <span style="font-size: 12px; color: #374151;">Geplante Projekte</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="width: 12px; height: 12px; background: #ef4444; border-radius: 2px;"></div>
-                        <span style="font-size: 12px; color: #374151;">Engpass (Kapazität &lt; Bedarf)</span>
+                        <div style="width: 12px; height: 12px; background: #dc2626; border-radius: 2px;"></div>
+                        <span style="font-size: 12px; color: #374151;">⚠️ Überfällig / Engpass</span>
                     </div>
                     <div style="display: flex; alignItems: center; gap: 8px;">
-                        <div style="width: 12px; height: 12px; background: #f59e0b; border-radius: 2px;"></div>
-                        <span style="font-size: 12px; color: #374151;">Aktueller Fortschritt</span>
+                        <div style="width: 12px; height: 12px; background: #f97316; border-radius: 2px;"></div>
+                        <span style="font-size: 12px; color: #374151;">⏰ Dringend (≤7 Tage)</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <div style="width: 12px; height: 12px; background: #6b7280; border-radius: 2px;"></div>
                         <span style="font-size: 12px; color: #374151;">Abgeschlossene Projekte</span>
                     </div>
                     <div style="display: flex; alignItems: center; gap: 8px;">
-                        <div style="width: 2px; height: 16px; background: linear-gradient(to bottom, #3b82f6, #60a5fa);"></div>
-                        <span style="font-size: 12px; color: #374151; font-weight: 600;">Aktueller Monat</span>
+                        <span style="font-size: 14px;">🎯</span>
+                        <span style="font-size: 12px; color: #374151; font-weight: 600;">Deadline-Marker</span>
                     </div>
                 </div>
             </div>
@@ -602,8 +671,163 @@ document.addEventListener('keydown', function(e) {
         // Close all dropdown menus
         const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
         allMenus.forEach(menu => menu.style.display = 'none');
+        
+        // Close project bar tooltip
+        hideProjectBarTooltip();
     }
 });
+
+// Project Bar Tooltip System (für Deadline-Anzeige)
+let projectBarTooltip = null;
+
+function createProjectBarTooltip() {
+    if (!projectBarTooltip) {
+        projectBarTooltip = document.createElement('div');
+        projectBarTooltip.id = 'project-bar-tooltip';
+        projectBarTooltip.style.cssText = `
+            display: none;
+            position: fixed;
+            background: white;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 16px;
+            z-index: 10000;
+            max-width: 340px;
+            pointer-events: none;
+        `;
+        document.body.appendChild(projectBarTooltip);
+    }
+    return projectBarTooltip;
+}
+
+function showProjectBarTooltip(event) {
+    const bar = event.currentTarget;
+    const tooltip = createProjectBarTooltip();
+    
+    const projectName = bar.dataset.projectName || 'Unbekanntes Projekt';
+    const startDate = bar.dataset.startDate || '-';
+    const deadline = bar.dataset.deadline || bar.dataset.endDate || '-';
+    const daysUntilDeadline = parseInt(bar.dataset.daysUntilDeadline) || 0;
+    const isOverdue = bar.dataset.isOverdue === 'true';
+    const progress = bar.dataset.progress || '0';
+    const status = bar.dataset.status || 'Unbekannt';
+    
+    // VERSION 2.0: Neue Daten
+    const responsible = bar.dataset.responsible || 'Nicht zugewiesen';
+    const teamSize = parseInt(bar.dataset.teamSize) || 0;
+    const totalHours = parseInt(bar.dataset.totalHours) || 0;
+    const weeklyHours = parseInt(bar.dataset.weeklyHours) || 0;
+    const durationWeeks = parseInt(bar.dataset.durationWeeks) || 0;
+    
+    // Deadline-Status-Icon und -Farbe
+    let deadlineIcon = '🎯';
+    let deadlineText = 'Deadline';
+    let deadlineColor = '#3b82f6';
+    let statusBadge = '';
+    
+    if (isOverdue) {
+        deadlineIcon = '⚠️';
+        deadlineText = 'ÜBERFÄLLIG';
+        deadlineColor = '#dc2626';
+        statusBadge = `<div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; text-align: center; margin-top: 10px;">
+            ⚠️ ${Math.abs(daysUntilDeadline)} Tage überfällig
+        </div>`;
+    } else if (daysUntilDeadline >= 0 && daysUntilDeadline <= 7) {
+        deadlineIcon = '⏰';
+        deadlineText = 'DRINGEND';
+        deadlineColor = '#f97316';
+        statusBadge = `<div style="background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; text-align: center; margin-top: 10px;">
+            ⏰ Noch ${daysUntilDeadline} ${daysUntilDeadline === 1 ? 'Tag' : 'Tage'}
+        </div>`;
+    }
+    
+    tooltip.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            <h4 style="margin: 0 0 2px 0; font-size: 15px; font-weight: 700; color: #111827;">${projectName}</h4>
+            <p style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">${status}</p>
+        </div>
+        
+        <!-- VERSION 2.0: Verantwortlicher + Team-Größe -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px; padding: 8px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <div style="flex: 1;">
+                <div style="font-size: 10px; color: #6b7280; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">🎯 Verantwortlich</div>
+                <div style="font-size: 12px; color: #111827; font-weight: 600;">${responsible}</div>
+            </div>
+            <div style="border-right: 1px solid #e5e7eb;"></div>
+            <div style="text-align: center; min-width: 60px;">
+                <div style="font-size: 10px; color: #6b7280; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">👥 Team</div>
+                <div style="font-size: 14px; color: #111827; font-weight: 700;">${teamSize} ${teamSize === 1 ? 'Person' : 'Personen'}</div>
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div style="background: #f9fafb; padding: 8px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <div style="font-size: 10px; color: #6b7280; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">📅 Start</div>
+                <div style="font-size: 13px; color: #111827; font-weight: 600;">${startDate}</div>
+            </div>
+            <div style="background: ${isOverdue || (daysUntilDeadline >= 0 && daysUntilDeadline <= 7) ? deadlineColor + '10' : '#f9fafb'}; padding: 8px; border-radius: 6px; border: 1.5px solid ${deadlineColor};">
+                <div style="font-size: 10px; color: #6b7280; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px;">${deadlineIcon} ${deadlineText}</div>
+                <div style="font-size: 13px; color: #111827; font-weight: 700;">${deadline}</div>
+            </div>
+        </div>
+        
+        <!-- VERSION 2.0: Gesamtstunden -->
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 8px; border-radius: 8px; margin-bottom: 10px;">
+            <div style="font-size: 10px; color: #0369a1; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">⏱️ Geplant</div>
+            <div style="font-size: 14px; color: #0c4a6e; font-weight: 700;">${totalHours}h <span style="font-size: 11px; font-weight: 500; color: #0369a1;">(${weeklyHours}h/W × ${durationWeeks}W)</span></div>
+        </div>
+        
+        <div style="margin-bottom: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 11px; color: #6b7280; font-weight: 500;">Fortschritt</span>
+                <span style="font-size: 13px; color: #111827; font-weight: 700;">${progress}%</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                <div style="height: 100%; background: ${parseInt(progress) >= 80 ? '#10b981' : parseInt(progress) >= 50 ? '#3b82f6' : '#f59e0b'}; width: ${progress}%; transition: width 0.3s;"></div>
+            </div>
+        </div>
+        ${statusBadge}
+    `;
+    
+    tooltip.style.display = 'block';
+    positionTooltip(event, tooltip);
+}
+
+function hideProjectBarTooltip() {
+    if (projectBarTooltip) {
+        projectBarTooltip.style.display = 'none';
+    }
+}
+
+// Attach Project Bar Tooltip Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    attachProjectBarTooltipListeners();
+    attachTaskTooltipListeners();
+});
+
+function attachProjectBarTooltipListeners() {
+    const projectBars = document.querySelectorAll('.gantt-bar');
+    projectBars.forEach(bar => {
+        bar.addEventListener('mouseenter', showProjectBarTooltip);
+        bar.addEventListener('mouseleave', hideProjectBarTooltip);
+        bar.addEventListener('mousemove', function(e) {
+            if (projectBarTooltip && projectBarTooltip.style.display === 'block') {
+                positionTooltip(e, projectBarTooltip);
+            }
+        });
+        
+        // Hover effect
+        bar.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+        });
+        bar.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+        });
+    });
+}
 
 // Task Tooltip System
 let taskTooltip = null;
@@ -888,6 +1112,9 @@ function renderTasksList(tasks, projectId, employeeId) {
                         <p style="margin: 0; font-size: 13px; color: #6b7280;">${task.task_description || 'Keine Beschreibung'}</p>
                     </div>
                     <div style="display: flex; gap: 8px;">
+                        <button onclick="openTransferModal(${task.id}, ${projectId}, ${employeeId}, '${task.task_name}')" style="padding: 6px 12px; background: #8b5cf6; border: none; border-radius: 6px; color: white; font-size: 13px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#7c3aed'" onmouseout="this.style.background='#8b5cf6'">
+                            🔄 Übertragen
+                        </button>
                         <button onclick="editTask(${task.id}, ${projectId}, ${employeeId})" style="padding: 6px 12px; background: #3b82f6; border: none; border-radius: 6px; color: white; font-size: 13px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
                             ✏️ Bearbeiten
                         </button>
@@ -1049,6 +1276,131 @@ function deleteTask(taskId, projectId, employeeId, taskName) {
             alert('Fehler beim Löschen: ' + (data.message || 'Unbekannter Fehler'));
         }
     })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Fehler beim Löschen der Aufgabe.');
+    });
+}
+
+/**
+ * Open transfer modal to reassign task to another employee
+ * 
+ * ENTSCHEIDUNG: Separate Modal (nicht inline) für klare UX
+ * GRUND: User braucht Übersicht über alle Mitarbeiter
+ */
+function openTransferModal(taskId, projectId, employeeId, taskName) {
+    document.getElementById('transferTaskId').value = taskId;
+    document.getElementById('transferProjectId').value = projectId;
+    document.getElementById('transferOldEmployeeId').value = employeeId;
+    document.getElementById('transferTaskName').textContent = `"${taskName}"`;
+    
+    // Reset form
+    document.getElementById('transferNewEmployeeId').value = '';
+    document.getElementById('transferReason').value = '';
+    document.getElementById('reasonCharCount').textContent = '0';
+    
+    // Remove current employee from dropdown (can't transfer to same employee)
+    const dropdown = document.getElementById('transferNewEmployeeId');
+    const options = dropdown.querySelectorAll('option');
+    options.forEach(option => {
+        if (option.value == employeeId) {
+            option.disabled = true;
+            option.style.color = '#9ca3af';
+            option.textContent = option.textContent + ' (Aktuell zugewiesen)';
+        } else {
+            option.disabled = false;
+            option.style.color = '';
+            option.textContent = option.textContent.replace(' (Aktuell zugewiesen)', '');
+        }
+    });
+    
+    // Show modal
+    document.getElementById('transferTaskModal').style.display = 'block';
+}
+
+function closeTransferModal() {
+    document.getElementById('transferTaskModal').style.display = 'none';
+}
+
+/**
+ * Submit task transfer (update employee_id via API)
+ * 
+ * FALLBACK: Bei Fehler bleibt Modal offen mit Fehlermeldung
+ */
+function submitTransfer(event) {
+    event.preventDefault();
+    
+    const taskId = document.getElementById('transferTaskId').value;
+    const projectId = document.getElementById('transferProjectId').value;
+    const oldEmployeeId = document.getElementById('transferOldEmployeeId').value;
+    const newEmployeeId = document.getElementById('transferNewEmployeeId').value;
+    const reason = document.getElementById('transferReason').value;
+    
+    // Validation
+    if (!newEmployeeId) {
+        alert('Bitte wählen Sie einen Mitarbeiter aus.');
+        return;
+    }
+    
+    if (newEmployeeId == oldEmployeeId) {
+        alert('Die Aufgabe ist bereits diesem Mitarbeiter zugewiesen.');
+        return;
+    }
+    
+    // Disable submit button during request
+    const submitBtn = document.getElementById('transferSubmitBtn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-small" style="margin-right: 8px;"></span>Wird übertragen...';
+    submitBtn.style.opacity = '0.7';
+    
+    // Send transfer request
+    fetch(`/gantt/tasks/${taskId}/transfer`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            new_employee_id: newEmployeeId,
+            reason: reason
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Success: Show message and reload
+            alert(data.message);
+            closeTransferModal();
+            closeManageTasksModal();
+            window.location.reload(); // Reload to update Gantt timeline
+        } else {
+            // Error: Show message but keep modal open
+            alert('Fehler: ' + (data.message || 'Übertragung fehlgeschlagen'));
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            submitBtn.style.opacity = '1';
+        }
+    })
+    .catch(error => {
+        console.error('Transfer error:', error);
+        alert('Fehler beim Übertragen der Aufgabe. Bitte versuchen Sie es erneut.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        submitBtn.style.opacity = '1';
+    });
+}
+
+// Character counter for reason field
+document.addEventListener('DOMContentLoaded', function() {
+    const reasonField = document.getElementById('transferReason');
+    if (reasonField) {
+        reasonField.addEventListener('input', function() {
+            document.getElementById('reasonCharCount').textContent = this.value.length;
+        });
+    }
+});
+
     .catch(error => {
         console.error('Error deleting task:', error);
         alert('Fehler beim Löschen der Aufgabe.');
@@ -1260,4 +1612,250 @@ function removeEmployeeFromProject(projectId, employeeId, employeeName) {
     document.body.appendChild(form);
     form.submit();
 }
+
+// Bulk Assign Modal
+function openBulkAssignModal(projectId, projectName) {
+    const modal = document.getElementById('bulkAssignModal');
+    if (!modal) return;
+    
+    document.getElementById('bulkAssignProjectId').value = projectId;
+    document.getElementById('bulkAssignProjectName').textContent = projectName;
+    
+    // Uncheck all checkboxes
+    document.querySelectorAll('#bulkAssignForm input[type="checkbox"]').forEach(cb => cb.checked = false);
+    
+    modal.style.display = 'flex';
+}
+
+function closeBulkAssignModal() {
+    const modal = document.getElementById('bulkAssignModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function submitBulkAssign(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const employeeIds = [];
+    
+    formData.getAll('employee_ids[]').forEach(id => {
+        if (id) employeeIds.push(id);
+    });
+    
+    if (employeeIds.length === 0) {
+        alert('Bitte wählen Sie mindestens einen Mitarbeiter aus.');
+        return;
+    }
+    
+    const projectId = formData.get('project_id');
+    
+    // Show loading state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Wird zugewiesen...';
+    
+    fetch('{{ route('gantt.bulk-assign-employees') }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            project_id: projectId,
+            employee_ids: employeeIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            alert(data.message);
+            // Reload page to show new assignments
+            window.location.reload();
+        } else {
+            alert('Fehler: ' + (data.message || 'Unbekannter Fehler'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Fehler bei der Zuweisung: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    });
+}
+
+// Close modal on outside click
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('bulkAssignModal');
+    if (modal && event.target === modal) {
+        closeBulkAssignModal();
+    }
+});
 </script>
+
+{{-- Bulk Assign Modal --}}
+<div id="bulkAssignModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; max-width: 500px; width: 90%; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+        {{-- Header --}}
+        <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">
+                    Mitarbeiter zuweisen
+                </h3>
+                <button onclick="closeBulkAssignModal()" style="background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; line-height: 1; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">
+                    ×
+                </button>
+            </div>
+            <p style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">
+                Projekt: <span id="bulkAssignProjectName" style="font-weight: 600; color: #111827;"></span>
+            </p>
+        </div>
+        
+        {{-- Body --}}
+        <form id="bulkAssignForm" onsubmit="submitBulkAssign(event)">
+            <input type="hidden" name="project_id" id="bulkAssignProjectId">
+            
+            <div style="padding: 20px; max-height: 50vh; overflow-y: auto;">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px;">
+                        Verfügbare Mitarbeiter:
+                    </label>
+                    
+                    @if($availableEmployees->isEmpty())
+                        <p style="color: #9ca3af; font-size: 14px; text-align: center; padding: 20px;">
+                            Keine Mitarbeiter verfügbar
+                        </p>
+                    @else
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            @foreach($availableEmployees as $employee)
+                                <label style="display: flex; align-items: center; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.15s;" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#3b82f6'" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'">
+                                    <input 
+                                        type="checkbox" 
+                                        name="employee_ids[]" 
+                                        value="{{ $employee->id }}"
+                                        style="margin-right: 12px; width: 16px; height: 16px; cursor: pointer;">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500; color: #111827;">
+                                            {{ $employee->first_name }} {{ $employee->last_name }}
+                                        </div>
+                                        @if($employee->email)
+                                            <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                                                {{ $employee->email }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($employee->weekly_capacity)
+                                        <div style="font-size: 12px; color: #6b7280; background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">
+                                            {{ $employee->weekly_capacity }}h/Woche
+                                        </div>
+                                    @endif
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+            
+            {{-- Footer --}}
+            <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; background: #f9fafb;">
+                <button 
+                    type="button" 
+                    onclick="closeBulkAssignModal()" 
+                    style="padding: 10px 20px; background: white; border: 1px solid #d1d5db; border-radius: 8px; color: #374151; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s;"
+                    onmouseover="this.style.background='#f9fafb'"
+                    onmouseout="this.style.background='white'">
+                    Abbrechen
+                </button>
+                <button 
+                    type="submit" 
+                    style="padding: 10px 20px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s;"
+                    onmouseover="this.style.background='#2563eb'"
+                    onmouseout="this.style.background='#3b82f6'">
+                    Mitarbeiter zuweisen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Transfer Task Modal --}}
+<div id="transferTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; backdrop-filter: blur(4px);">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); width: 90%; max-width: 500px; max-height: 80vh; overflow: auto;">
+        <div style="padding: 24px 24px 20px 24px; border-bottom: 1px solid #e5e7eb;">
+            <h3 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">🔄 Aufgabe übertragen</h3>
+            <p id="transferTaskName" style="margin: 8px 0 0 0; font-size: 14px; color: #6b7280;">Aufgabe wird übertragen...</p>
+        </div>
+        
+        <form id="transferTaskForm" onsubmit="submitTransfer(event)" style="padding: 24px;">
+            <input type="hidden" id="transferTaskId" name="task_id">
+            <input type="hidden" id="transferProjectId" name="project_id">
+            <input type="hidden" id="transferOldEmployeeId" name="old_employee_id">
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; color: #374151; margin-bottom: 8px; font-weight: 600;">
+                    Neuer Mitarbeiter
+                </label>
+                <select 
+                    id="transferNewEmployeeId" 
+                    name="new_employee_id" 
+                    required 
+                    style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;"
+                    onchange="this.style.borderColor='#3b82f6'">
+                    <option value="">-- Mitarbeiter wählen --</option>
+                    @if(isset($availableEmployees))
+                        @foreach($availableEmployees->where('is_active', true)->sortBy('last_name') as $employee)
+                            <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                        @endforeach
+                    @endif
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 13px; color: #374151; margin-bottom: 8px; font-weight: 600;">
+                    Begründung (optional)
+                </label>
+                <textarea 
+                    id="transferReason" 
+                    name="reason" 
+                    rows="3" 
+                    placeholder="z.B. Urlaub, Prioritätswechsel, Skillset-Match..."
+                    style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; resize: vertical;"
+                    maxlength="500"></textarea>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                    <span id="reasonCharCount">0</span>/500 Zeichen
+                </div>
+            </div>
+            
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                <div style="font-size: 12px; color: #1e40af; font-weight: 500; margin-bottom: 4px;">ℹ️ Hinweis:</div>
+                <div style="font-size: 12px; color: #1e3a8a;">
+                    Zeitraum, Wochenstunden und Beschreibung bleiben unverändert.
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button 
+                    type="button" 
+                    onclick="closeTransferModal()" 
+                    style="padding: 10px 20px; background: white; border: 1px solid #d1d5db; border-radius: 8px; color: #374151; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s;"
+                    onmouseover="this.style.background='#f9fafb'"
+                    onmouseout="this.style.background='white'">
+                    Abbrechen
+                </button>
+                <button 
+                    type="submit" 
+                    id="transferSubmitBtn"
+                    style="padding: 10px 20px; background: #8b5cf6; border: none; border-radius: 8px; color: white; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s;"
+                    onmouseover="this.style.background='#7c3aed'"
+                    onmouseout="this.style.background='#8b5cf6'">
+                    🔄 Übertragen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

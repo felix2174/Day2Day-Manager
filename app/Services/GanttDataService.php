@@ -24,18 +24,22 @@ class GanttDataService
             $startDate = null;
             $endDate = null;
 
-            if ($project->start_date && $project->end_date) {
+            // Determine start date with fallback hierarchy
+            if ($project->start_date) {
                 $startDate = Carbon::parse($project->start_date);
-                $endDate = Carbon::parse($project->end_date);
-            } elseif ($project->end_date && $project->moco_created_at) {
-                $startDate = Carbon::parse($project->moco_created_at);
-                $endDate = Carbon::parse($project->end_date);
-            } elseif ($project->start_date) {
-                $startDate = Carbon::parse($project->start_date);
-                $endDate = now()->copy()->endOfDay();
             } elseif ($project->moco_created_at) {
                 $startDate = Carbon::parse($project->moco_created_at);
-                $endDate = now()->copy()->endOfDay();
+            } else {
+                // CHANGED: Projekte ohne Start-Datum beginnen 6 Monate VOR heute (ongoing)
+                $startDate = now()->copy()->subMonths(6);
+            }
+
+            // Determine end date with fallback hierarchy
+            if ($project->end_date) {
+                $endDate = Carbon::parse($project->end_date);
+            } else {
+                // CHANGED: Projekte ohne Enddatum laufen 6 Monate NACH heute (ongoing)
+                $endDate = now()->copy()->addMonths(6);
             }
 
             if (!$startDate || !$endDate) {

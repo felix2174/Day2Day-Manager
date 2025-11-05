@@ -22,7 +22,12 @@
                     @if($project->responsible)
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="color: #6b7280; font-size: 14px;">Verantwortlich:</span>
-                        <span style="font-weight: 600; color: #111827;">{{ $project->responsible->first_name }} {{ $project->responsible->last_name }}</span>
+                        <span style="font-weight: 600; color: {{ $project->responsible->is_active ? '#111827' : '#6b7280' }};">
+                            {{ $project->responsible->first_name }} {{ $project->responsible->last_name }}
+                            @if(!$project->responsible->is_active)
+                                <span style="background: #e5e7eb; color: #6b7280; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; margin-left: 6px;">⚪ Inaktiv</span>
+                            @endif
+                        </span>
                     </div>
                     @endif
                     @if($project->end_date)

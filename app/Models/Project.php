@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -20,7 +21,8 @@ class Project extends Model
         'progress',
         'responsible_id',
         'moco_id',
-        'moco_created_at'
+        'moco_created_at',
+        'source'
     ];
 
     protected $casts = [
@@ -47,9 +49,22 @@ class Project extends Model
         return $this->belongsTo(Employee::class, 'responsible_id');
     }
 
+    // Ein Projekt hat viele Mitarbeiter über Assignments
+    public function employees()
+    {
+        return $this->belongsToMany(Employee::class, 'assignments')
+            ->withPivot('weekly_hours', 'start_date', 'end_date', 'task_name', 'task_description')
+            ->withTimestamps();
+    }
+
     /**
      * Holt alle zugewiesenen Personen für ein Projekt
-     * MOCO-Daten haben Vorrang, Fallback auf lokale Assignments
+     * 
+     * Datenquellen-Priorität:
+     * 1. Übergebene MOCO-Daten ($mocoTeamData)
+     * 2. Lokale Assignments (assignments-Tabelle)
+     * 3. Fallback: Verantwortlicher (responsible_id)
+     * 4. Leer: Keine Zuweisung
      * 
      * @param array|null $mocoTeamData Vorgefertigte MOCO-Team-Daten
      * @return array Array mit Personennamen
@@ -72,7 +87,12 @@ class Project extends Model
         $localPersons = $this->assignments
             ->map(function($assignment) {
                 if ($assignment->employee) {
-                    return $assignment->employee->first_name . ' ' . $assignment->employee->last_name;
+                    $name = $assignment->employee->first_name . ' ' . $assignment->employee->last_name;
+                    // Füge "(Inaktiv)" Badge für inaktive Mitarbeiter hinzu
+                    if (!$assignment->employee->is_active) {
+                        $name .= ' (Inaktiv)';
+                    }
+                    return $name;
                 }
                 return null;
             })
@@ -81,7 +101,24 @@ class Project extends Model
             ->values()
             ->toArray();
 
-        return $localPersons;
+        if (!empty($localPersons)) {
+            return $localPersons;
+        }
+
+        // 3. Fallback: Verantwortlicher (wenn Assignments leer)
+        // GRUND: Sicherstellt dass jedes Projekt mindestens eine Person anzeigt
+        // ALTERNATIVE: UI-Zuweisung bleibt jederzeit möglich
+        if ($this->responsible_id && $this->responsible) {
+            $name = $this->responsible->first_name . ' ' . $this->responsible->last_name;
+            // Füge "(Inaktiv)" Badge für inaktive Verantwortliche hinzu
+            if (!$this->responsible->is_active) {
+                $name .= ' (Inaktiv)';
+            }
+            return [$name];
+        }
+
+        // 4. Leer: Keine Zuweisung
+        return [];
     }
 
     /**
@@ -117,5 +154,77 @@ class Project extends Model
     public function hasAssignedPersons($mocoTeamData = null): bool
     {
         return !empty($this->getAssignedPersonsList($mocoTeamData));
+    }
+
+    // ============================================================
+    // SOURCE-TRACKING LOGIC (Data Protection)
+    // ============================================================
+
+    /**
+     * Boot method: Auto-set source on create if not provided
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($project) {
+            // Auto-detect source if not explicitly set
+            if (empty($project->source)) {
+                $project->source = $project->moco_id ? 'moco' : 'manual';
+            }
+        });
+    }
+
+    /**
+     * Query Scopes for filtering by data source
+     */
+    public function scopeManual($query)
+    {
+        return $query->where('source', 'manual');
+    }
+
+    public function scopeMoco($query)
+    {
+        return $query->where('source', 'moco');
+    }
+
+    public function scopeImport($query)
+    {
+        return $query->where('source', 'import');
+    }
+
+    /**
+     * Accessors for easy source checking
+     */
+    public function getIsManualAttribute(): bool
+    {
+        return $this->source === 'manual';
+    }
+
+    public function getIsMocoAttribute(): bool
+    {
+        return $this->source === 'moco';
+    }
+
+    public function getIsImportAttribute(): bool
+    {
+        return $this->source === 'import';
+    }
+
+    /**
+     * Check if project is safe to delete (only import data)
+     */
+    public function isSafeToDelete(): bool
+    {
+        return $this->source === 'import';
+    }
+
+    /**
+     * Check if project can be auto-deleted by cleanup commands
+     * Manual deletion via UI is always allowed (uses soft-delete)
+     */
+    public function canBeAutoDeleted(): bool
+    {
+        return $this->source === 'import';
     }
 }

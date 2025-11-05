@@ -159,8 +159,8 @@
                                                                 background: repeating-linear-gradient(45deg, #d1d5db, #d1d5db 10px, #e5e7eb 10px, #e5e7eb 20px); 
                                                                 border: 2px solid #9ca3af; 
                                                                 border-radius: 8px; 
-                                                                z-index: 4; 
-                                                                opacity: 0.85; 
+                                                                z-index: 2; 
+                                                                opacity: 0.6; 
                                                                 cursor: pointer; 
                                                                 display: flex; 
                                                                 align-items: center; 
@@ -179,36 +179,72 @@
                                                     @php
                                                         $pStart = $project['start'];
                                                         $pEnd = $project['end'];
-                                                        $clampedStart = $pStart->lt($timelineStart) ? $timelineStart->copy() : $pStart;
-                                                        $clampedEnd = $pEnd->gt($timelineEnd) ? $timelineEnd->copy() : $pEnd;
-                                                        $offsetDays = max(0, $timelineStart->diffInDays($clampedStart));
-                                                        $durationDays = max(1, $clampedStart->diffInDays($clampedEnd) + 1);
-                                                        $leftPercent = ($offsetDays / $totalTimelineDays) * 100;
-                                                        $widthPercent = ($durationDays / $totalTimelineDays) * 100;
+                                                        
+                                                        // Check for overdue and extension indicators
+                                                        $isOverdue = $pEnd->isPast() && $pEnd->lt(now());
+                                                        $extendsRight = $pEnd->gt($timelineEnd);
+                                                        $extendsLeft = $pStart->lt($timelineStart);
+                                                        
+                                                        // WICHTIG: Überfällige Projekte NICHT an timelineStart clampen!
+                                                        // Sie sollen an ihrem echten end_date enden (auch wenn vor timelineStart)
+                                                        if ($isOverdue && $pEnd->lt($timelineStart)) {
+                                                            // Projekt endete VOR Timeline-Start → zeige es NICHT
+                                                            // (Diese Projekte sind zu alt für aktuelle Timeline)
+                                                            $shouldDisplay = false;
+                                                        } else {
+                                                            $shouldDisplay = true;
+                                                            $clampedStart = $pStart->lt($timelineStart) ? $timelineStart->copy() : $pStart;
+                                                            $clampedEnd = $pEnd->gt($timelineEnd) ? $timelineEnd->copy() : $pEnd;
+                                                            $offsetDays = max(0, $timelineStart->diffInDays($clampedStart));
+                                                            $durationDays = max(1, $clampedStart->diffInDays($clampedEnd) + 1);
+                                                            $leftPercent = ($offsetDays / $totalTimelineDays) * 100;
+                                                            $widthPercent = ($durationDays / $totalTimelineDays) * 100;
+                                                        }
+                                                        
                                                         $hours = $project['weekly_hours'];
                                                         $utilizationRatio = $project['utilization_ratio'];
                                                         $isOverCapacity = $project['is_over_capacity'];
+                                                        
+                                                        // Color coding with overdue priority
                                                         $bgColor = '#0ea5e9';
                                                         $borderStyle = 'none';
-                                                        if ($project['sources']->contains('moco')) {
-                                                            $bgColor = '#06b6d4';
-                                                        }
-                                                        if ($isOverCapacity) {
+                                                        
+                                                        if ($isOverdue) {
+                                                            $bgColor = '#ef4444'; // Red for overdue
+                                                            $borderStyle = 'none';
+                                                        } elseif ($isOverCapacity) {
                                                             $borderStyle = '2px solid #dc2626';
                                                             $bgColor = '#fb7185';
                                                         } elseif ($utilizationRatio !== null && $utilizationRatio > 0.9) {
                                                             $borderStyle = '2px dashed #f59e0b';
                                                             $bgColor = '#fcd34d';
+                                                        } elseif ($project['sources']->contains('moco')) {
+                                                            $bgColor = '#06b6d4';
+                                                        }
+                                                        
+                                                        // Dashed border for extending projects
+                                                        if ($extendsRight) {
+                                                            $borderStyle = '2px dashed rgba(255,255,255,0.7)';
                                                         }
                                                     @endphp
+                                                    
+                                                    @if($shouldDisplay)
                                                     <div class="employee-project-row" data-assignment-id="{{ $project['assignment_ids']->first() }}" data-employee-id="{{ $employee->id }}" data-start-date="{{ $project['start']->toDateString() }}" data-end-date="{{ $project['end']->toDateString() }}" style="position: absolute; left: {{ $leftPercent }}%; top: {{ $projectIndex * 32 }}px; width: {{ $widthPercent }}%; height: 24px; z-index: 3; cursor: grab;">
-                                                        <div class="employee-project-bar" style="width: 100%; height: 100%; border-radius: 12px; background: {{ $bgColor }}; border: {{ $borderStyle }}; display: flex; align-items: center; justify-content: center; color: #0f172a; font-size: 12px; font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
-                                                            <span style="padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $project['project_name'] }}">{{ Str::limit($project['project_name'], 32) }}</span>
+                                                        <div class="employee-project-bar" style="width: 100%; height: 100%; border-radius: 12px; background: {{ $bgColor }}; border: {{ $borderStyle }}; display: flex; align-items: center; justify-content: center; color: {{ $isOverdue ? '#ffffff' : '#0f172a' }}; font-size: 12px; font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                                                            <span style="padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $project['project_name'] }}{{ $isOverdue ? ' (Überfällig)' : '' }}">{{ Str::limit($project['project_name'], 32) }}</span>
                                                             @if($hours)
-                                                                <span style="margin-left: 8px; font-weight: 600; background: rgba(15,23,42,0.1); padding: 2px 6px; border-radius: 12px;">{{ $hours }}h</span>
+                                                                <span style="margin-left: 8px; font-weight: 600; background: rgba({{ $isOverdue ? '255,255,255' : '15,23,42' }},0.1); padding: 2px 6px; border-radius: 12px;">{{ $hours }}h</span>
+                                                            @endif
+                                                            @if($isOverdue)
+                                                                <span style="margin-left: 4px; font-size: 12px;" title="Überfällig">⚠️</span>
+                                                            @elseif($extendsLeft)
+                                                                <span style="margin-left: 4px; font-size: 12px;" title="Begann vor Timeline">←</span>
+                                                            @elseif($extendsRight)
+                                                                <span style="margin-left: 4px; font-size: 12px;" title="Läuft über Timeline hinaus">→</span>
                                                             @endif
                                                         </div>
                                                     </div>
+                                                    @endif
                                                 @endforeach
                                             </div>
                                         @endif
