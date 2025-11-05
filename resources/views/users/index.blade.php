@@ -12,6 +12,16 @@
             </a>
         </div>
 
+        <!-- DEBUG INFO -->
+        <div style="padding: 20px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; margin-bottom: 20px;">
+            <strong style="color: #92400e;">DEBUG:</strong><br>
+            <div style="color: #78350f; margin-top: 8px;">
+                Users Count: {{ $users->count() }}<br>
+                Roles Count: {{ $roles->count() }}<br>
+                First User: {{ $users->first()->name ?? 'NONE' }}<br>
+            </div>
+        </div>
+
         @if(session('success'))
             <div style="background: #10b981; color: white; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
                 {{ session('success') }}
