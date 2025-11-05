@@ -881,63 +881,6 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Check if a project is an internal project (not a real customer project)
-     * 
-     * Internal projects include:
-     * - Projects with specific tags like "Aufträge auf Zuruf"
-     * - Projects with names starting with "Internes/"
-     * - Projects with specific name patterns
-     * 
-     * @param array $project
-     * @return bool
-     */
-    private function isInternalProject(array $project): bool
-    {
-        $name = $project['name'] ?? '';
-        $tags = $project['tags'] ?? [];
-        $labels = $project['labels'] ?? [];
-        
-        // Check for specific tags (when available from full project data)
-        if (in_array('Aufträge auf Zuruf', $tags)) {
-            return true;
-        }
-        
-        // Check for specific labels (when available from full project data)
-        if (in_array('Aufträge auf Zuruf', $labels)) {
-            return true;
-        }
-        
-        // Check for internal project names (most reliable for activities)
-        $internalProjectNames = [
-            'Aufträge auf Zuruf',
-            'Internes/Wochenmeetings',
-        ];
-        
-        foreach ($internalProjectNames as $internalName) {
-            if ($name === $internalName) {
-                return true;
-            }
-        }
-        
-        // Check for internal name patterns (for variations)
-        $internalPatterns = [
-            'Internes/',
-            'Internes:',
-            'Wochenmeetings',
-            'Internal/',
-            'Internal:',
-        ];
-        
-        foreach ($internalPatterns as $pattern) {
-            if (str_contains($name, $pattern)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    /**
      * Get pie chart data for a specific time range
      */
     public function getPieChartData(Request $request, Employee $employee)
