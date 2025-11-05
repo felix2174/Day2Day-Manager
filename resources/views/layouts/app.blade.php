@@ -338,6 +338,11 @@
     @auth
         <div class="user-menu">
             <span>{{ Auth::user()->name }}</span>
+            @if(Auth::user()->isAdmin())
+                <a href="{{ route('users.index') }}" class="logout-btn" style="text-decoration: none;">
+                    Benutzerverwaltung
+                </a>
+            @endif
             <form method="POST" action="{{ route('logout') }}" style="display: inline;">
                 @csrf
                 <button type="submit" class="logout-btn">

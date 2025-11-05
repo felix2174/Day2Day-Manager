@@ -7,6 +7,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\GanttController;
 use App\Http\Controllers\MocoController;
 use App\Http\Controllers\ProjectAssignmentOverrideController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -229,6 +230,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/sync-all', [MocoController::class, 'syncAll'])->name('sync-all');
     });
     
+    // ========== USER MANAGEMENT (nur Admin) ==========
+    Route::prefix('users')->name('users.')->middleware('role:admin')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
+        Route::post('/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('toggle-active');
+    });
+
     // ========== ADMIN PANEL (nur Admin + Management mit permissions.view) ==========
     Route::prefix('admin')->name('admin.')->middleware('permission:permissions.view')->group(function () {
         // Permission Management UI kommt später in TODO #6
