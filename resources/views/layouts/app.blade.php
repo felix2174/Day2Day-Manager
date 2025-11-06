@@ -415,6 +415,9 @@
             @endif
             
             @yield('content')
+            
+            {{-- Slot für Component-basierte Views --}}
+            {{ $slot ?? '' }}
         </div>
     </main>
 </div>

@@ -338,6 +338,11 @@
     <?php if(auth()->guard()->check()): ?>
         <div class="user-menu">
             <span><?php echo e(Auth::user()->name); ?></span>
+            <?php if(Auth::user()->isAdmin()): ?>
+                <a href="<?php echo e(route('users.index')); ?>" class="logout-btn" style="text-decoration: none;">
+                    Benutzerverwaltung
+                </a>
+            <?php endif; ?>
             <form method="POST" action="<?php echo e(route('logout')); ?>" style="display: inline;">
                 <?php echo csrf_field(); ?>
                 <button type="submit" class="logout-btn">
@@ -410,6 +415,10 @@
             <?php endif; ?>
             
             <?php echo $__env->yieldContent('content'); ?>
+            
+            
+            <?php echo e($slot ?? ''); ?>
+
         </div>
     </main>
 </div>
