@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 
 class SyncMocoAll extends Command
 {
@@ -11,119 +12,71 @@ class SyncMocoAll extends Command
      *
      * @var string
      */
-    protected $signature = 'moco:sync-all 
-                            {--active : Only sync active items}
-                            {--days=30 : Number of days to sync for activities}';
+    protected $signature = 'sync:moco-all';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Synchronize all data from MOCO API (employees, projects, activities, absences, contracts)';
+    protected $description = 'Sync all data from MOCO (employees, projects, contracts, absences, time entries)';
 
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle()
     {
         $this->info('🚀 Starting full MOCO synchronization...');
         $this->newLine();
 
+        $commands = [
+            'sync:moco-employees' => 'Syncing Employees',
+            'sync:moco-projects' => 'Syncing Projects',
+            'sync:moco-contracts' => 'Syncing Contracts',
+            'sync:moco-absences' => 'Syncing Absences',
+            'sync:moco-time-entries' => 'Syncing Time Entries',
+            'sync:responsible-to-assignments' => 'Syncing Responsible Assignments',
+        ];
+
         $startTime = microtime(true);
-        $results = [];
+        $successCount = 0;
+        $errorCount = 0;
 
-        // Step 1: Sync employees first (needed for all other syncs)
-        $this->info('Step 1/5: 👥 Syncing employees...');
-        $employeesResult = $this->call('moco:sync-employees');
-        $results['employees'] = $employeesResult === Command::SUCCESS;
-
-        if ($employeesResult !== Command::SUCCESS) {
-            $this->error('❌ Employee synchronization failed. Continuing with other syncs...');
-        } else {
-            $this->info('✅ Employees synchronized successfully!');
+        foreach ($commands as $command => $description) {
+            $this->info("⏳ {$description}...");
+            
+            try {
+                $exitCode = Artisan::call($command);
+                
+                if ($exitCode === 0) {
+                    $this->line("   ✅ {$description} completed successfully");
+                    $successCount++;
+                } else {
+                    $this->error("   ❌ {$description} failed with exit code {$exitCode}");
+                    $errorCount++;
+                }
+            } catch (\Exception $e) {
+                $this->error("   ❌ {$description} failed: {$e->getMessage()}");
+                $errorCount++;
+            }
+            
+            $this->newLine();
         }
+
+        $endTime = microtime(true);
+        $duration = round($endTime - $startTime, 2);
 
         $this->newLine();
-
-        // Step 2: Sync projects (needed for activities and contracts)
-        $this->info('Step 2/5: 📁 Syncing projects...');
-        $projectsResult = $this->call('moco:sync-projects');
-        $results['projects'] = $projectsResult === Command::SUCCESS;
-
-        if ($projectsResult !== Command::SUCCESS) {
-            $this->error('❌ Project synchronization failed. Continuing with other syncs...');
-        } else {
-            $this->info('✅ Projects synchronized successfully!');
-        }
-
-        $this->newLine();
-
-        // Step 3: Sync activities/time entries
-        $this->info('Step 3/5: ⏱️  Syncing time entries...');
-        $activitiesResult = $this->call('moco:sync-activities', [
-            '--days' => $this->option('days'),
-        ]);
-        $results['activities'] = $activitiesResult === Command::SUCCESS;
-
-        if ($activitiesResult !== Command::SUCCESS) {
-            $this->error('❌ Time entries synchronization failed. Continuing with other syncs...');
-        } else {
-            $this->info('✅ Time entries synchronized successfully!');
-        }
-
-        $this->newLine();
-
-        // Step 4: Sync absences
-        $this->info('Step 4/5: 🏖️  Syncing absences...');
-        $absencesResult = $this->call('sync:moco-absences', [
-            '--days' => $this->option('days'),
-        ]);
-        $results['absences'] = $absencesResult === Command::SUCCESS;
-
-        if ($absencesResult !== Command::SUCCESS) {
-            $this->error('❌ Absences synchronization failed. Continuing with other syncs...');
-        } else {
-            $this->info('✅ Absences synchronized successfully!');
-        }
-
-        $this->newLine();
-
-        // Step 5: Sync contracts/assignments
-        $this->info('Step 5/5: 📋 Syncing employee assignments (contracts)...');
-        $contractsResult = $this->call('sync:moco-contracts');
-        $results['contracts'] = $contractsResult === Command::SUCCESS;
-
-        if ($contractsResult !== Command::SUCCESS) {
-            $this->error('❌ Contracts synchronization failed.');
-        } else {
-            $this->info('✅ Contracts synchronized successfully!');
-        }
-
-        $this->newLine(2);
-
-        // Summary
-        $duration = round(microtime(true) - $startTime, 2);
-        $successCount = count(array_filter($results));
-        $totalCount = count($results);
-
-        $this->line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        $this->info("📊 SYNC SUMMARY");
-        $this->line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        $this->info('═══════════════════════════════════════════════════');
+        $this->info("✨ Full MOCO synchronization completed in {$duration} seconds");
+        $this->info("   ✅ Successful: {$successCount}");
         
-        foreach ($results as $type => $success) {
-            $icon = $success ? '✅' : '❌';
-            $status = $success ? 'Success' : 'Failed';
-            $this->line("  {$icon} " . ucfirst($type) . ": {$status}");
+        if ($errorCount > 0) {
+            $this->error("   ❌ Failed: {$errorCount}");
         }
+        
+        $this->info('═══════════════════════════════════════════════════');
 
-        $this->newLine();
-        $this->line("  🎯 Success Rate: {$successCount}/{$totalCount} (" . round(($successCount/$totalCount)*100) . "%)");
-        $this->line("  ⏱️  Duration: {$duration}s");
-        $this->line('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-        // Return success if at least 80% succeeded
-        return ($successCount / $totalCount) >= 0.8 ? Command::SUCCESS : Command::FAILURE;
+        return $errorCount === 0 ? 0 : 1;
     }
 }
-
