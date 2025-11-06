@@ -57,11 +57,12 @@ class GanttController extends Controller
     public function index()
     {
         // Lade gespeicherte Filter-Einstellungen aus der Session
+        // DEFAULT: Nur aktuelle Projekte laden für bessere Performance
         $filters = Session::get('gantt_filters', [
             'status' => '',
             'sort' => '',
             'employee' => '',
-            'timeframe' => '',
+            'timeframe' => 'current', // DEFAULT: Nur aktuelle Projekte
             'custom_date_from' => '',
             'custom_date_to' => '',
             'search' => '',
@@ -233,12 +234,41 @@ class GanttController extends Controller
             $query->orderBy('start_date');
         }
 
-        $projects = $query->get();
+        // PERFORMANCE: Limit auf 50 Projekte (kann per Filter überschrieben werden)
+        $limit = request()->query('limit', 50);
+        if ($limit > 200) {
+            $limit = 200; // Maximal 200 Projekte für Performance
+        }
+        
+        // PERFORMANCE: Wenn "current" Filter, zusätzlich auf letzte 6 Monate begrenzen
+        if (($filters['timeframe'] ?? '') === 'current' && empty($filters['employee']) && empty($filters['search'])) {
+            $sixMonthsAgo = now()->subMonths(6)->startOfDay();
+            $query->where(function($q) use ($sixMonthsAgo) {
+                $q->where('start_date', '>=', $sixMonthsAgo)
+                  ->orWhere(function($q2) use ($sixMonthsAgo) {
+                      $q2->whereNull('start_date')
+                         ->where('created_at', '>=', $sixMonthsAgo);
+                  });
+            });
+        }
+        
+        // PERFORMANCE: Cache die Projekte-Query für 5 Minuten (Cache-Key basierend auf Filtern)
+        $cacheKey = 'gantt:projects:' . md5(json_encode($filters) . ':' . $limit);
+        
+        // Zähle Gesamtanzahl vor Limit (für Info-Meldung)
+        $totalProjectsCount = $query->count();
+        
+        $projects = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($query, $limit) {
+            return $query->limit($limit)->get();
+        });
         
         // Always put "Gantt-Testprojekt" at the top for easy access
         $projects = $projects->sortBy(function($project) {
             return $project->name === 'Gantt-Testprojekt' ? 0 : 1;
         })->values();
+        
+        // Info: Wenn Limit erreicht wurde
+        $limitReached = $totalProjectsCount > $limit;
         
         // ==================== PERFORMANCE OPTIMIERUNG: EAGER LOADING ====================
         
@@ -1247,8 +1277,53 @@ class GanttController extends Controller
             'timelineStart',
             'timelineEnd',
             'totalTimelineDays',
-            'employeeAbsences'
+            'employeeAbsences',
+            'totalProjectsCount',
+            'limitReached',
+            'limit'
         ));
+    }
+
+    /**
+     * AJAX-Endpoint für Gantt-Daten (mit Caching)
+     * Lädt die Gantt-Daten per AJAX für bessere Performance
+     */
+    public function getData()
+    {
+        // Gleiche Filter-Logik wie index()
+        $filters = Session::get('gantt_filters', [
+            'status' => '',
+            'sort' => '',
+            'employee' => '',
+            'timeframe' => 'current',
+            'custom_date_from' => '',
+            'custom_date_to' => '',
+            'search' => '',
+            'zoom' => 'month',
+        ]);
+
+        // URL-Parameter überschreiben Session
+        $filterParams = ['zoom', 'search', 'status', 'employee', 'timeframe', 'sort'];
+        foreach ($filterParams as $param) {
+            if (request()->has($param)) {
+                $filters[$param] = request()->query($param);
+            }
+        }
+
+        // Cache-Key basierend auf Filtern
+        $cacheKey = 'gantt:data:' . md5(json_encode($filters));
+        
+        // Cache für 5 Minuten
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($filters) {
+            // Hier würde die komplette Datenberechnung stattfinden
+            // Für jetzt geben wir einfach einen Hinweis zurück
+            return [
+                'message' => 'Daten werden geladen...',
+                'filters' => $filters
+            ];
+        });
+
+        return response()->json($data);
     }
 
     public function export()

@@ -172,6 +172,7 @@ Route::middleware('auth')->group(function () {
     // Gantt Chart
     Route::prefix('gantt')->name('gantt.')->middleware('permission:projects.view')->group(function () {
         Route::get('/', [GanttController::class, 'index'])->name('index');
+        Route::get('/data', [GanttController::class, 'getData'])->name('data'); // AJAX-Endpoint für Gantt-Daten
         Route::post('/filter/reset', [GanttController::class, 'resetFilters'])->name('filter.reset');
         Route::get('/export', [GanttController::class, 'export'])->middleware('permission:reports.export')->name('export');
         
