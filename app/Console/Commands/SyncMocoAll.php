@@ -30,12 +30,14 @@ class SyncMocoAll extends Command
         $this->newLine();
 
         $commands = [
-            'sync:moco-employees' => 'Syncing Employees',
-            'sync:moco-projects' => 'Syncing Projects',
+            'moco:sync-employees' => 'Syncing Employees',
+            'moco:sync-projects' => 'Syncing Projects',
             'sync:moco-contracts' => 'Syncing Contracts',
+            'moco:sync-assignments' => 'Syncing Assignments from Contracts',
             'sync:moco-absences' => 'Syncing Absences',
             'sync:moco-time-entries' => 'Syncing Time Entries',
-            'sync:responsible-to-assignments' => 'Syncing Responsible Assignments',
+            'moco:sync-project-leaders' => 'Syncing Project Leaders',
+            'sync:responsible-to-assignments' => 'Syncing Responsible Assignments (Fallback)',
         ];
 
         $startTime = microtime(true);
