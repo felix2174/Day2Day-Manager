@@ -1707,10 +1707,16 @@ class GanttController extends Controller
         }
 
         if ($assigned === 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Keine Mitarbeiter zugewiesen. Alle sind bereits im Projekt.'
-            ], 400);
+            // Check if AJAX request
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Keine Mitarbeiter zugewiesen. Alle sind bereits im Projekt.'
+                ], 400);
+            }
+            
+            return redirect()->route('gantt.index')
+                ->with('warning', 'Keine Mitarbeiter zugewiesen. Alle sind bereits im Projekt.');
         }
 
         $message = $assigned . ' Mitarbeiter zugewiesen: ' . implode(', ', $assignedNames);
@@ -1719,12 +1725,18 @@ class GanttController extends Controller
             $message .= ' (' . $skipped . ' übersprungen - bereits zugewiesen)';
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'assigned_count' => $assigned,
-            'skipped_count' => $skipped
-        ]);
+        // Check if AJAX request
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'assigned_count' => $assigned,
+                'skipped_count' => $skipped
+            ]);
+        }
+        
+        return redirect()->route('gantt.index')
+            ->with('success', $message);
     }
 
     public function addTaskToEmployee(Request $request, Project $project, Employee $employee)
@@ -1792,26 +1804,39 @@ class GanttController extends Controller
     /**
      * Get all tasks for an employee in a specific project
      */
-    public function getEmployeeTasks(Project $project, Employee $employee)
+    public function getEmployeeTasks($projectId, $employeeId)
     {
-        $tasks = Assignment::where('project_id', $project->id)
-            ->where('employee_id', $employee->id)
+        // Load assignments even if models don't exist (MOCO integration)
+        $tasks = Assignment::where('project_id', $projectId)
+            ->where('employee_id', $employeeId)
             ->orderBy('display_order')
             ->orderBy('start_date')
             ->get();
 
-        return response()->json([
+        // Try to load models, but don't fail if they don't exist
+        $project = Project::find($projectId);
+        $employee = Employee::find($employeeId);
+        
+        // Build response with available data
+        $response = [
             'success' => true,
             'tasks' => $tasks,
             'employee' => [
-                'id' => $employee->id,
-                'name' => $employee->first_name . ' ' . $employee->last_name,
+                'id' => $employeeId,
+                'name' => $employee ? ($employee->first_name . ' ' . $employee->last_name) : 'Mitarbeiter #' . $employeeId,
             ],
             'project' => [
-                'id' => $project->id,
-                'name' => $project->name,
+                'id' => $projectId,
+                'name' => $project ? $project->name : 'Projekt #' . $projectId,
             ],
-        ]);
+        ];
+        
+        // Add warning if models don't exist
+        if (!$project || !$employee) {
+            $response['warning'] = 'Daten aus Assignments geladen (MOCO-Synchronisation ausstehend)';
+        }
+        
+        return response()->json($response);
     }
 
     /**
@@ -1916,26 +1941,52 @@ class GanttController extends Controller
     }
 
     /**
+     * Get employees list as JSON (for transfer modal)
+     */
+    public function getEmployeesJson()
+    {
+        $employees = Employee::where('is_active', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get()
+            ->map(function($employee) {
+                return [
+                    'id' => $employee->id,
+                    'name' => $employee->first_name . ' ' . $employee->last_name,
+                    'email' => $employee->email,
+                ];
+            });
+        
+        return response()->json([
+            'success' => true,
+            'employees' => $employees
+        ]);
+    }
+
+    /**
      * Get employee utilization across all projects
      */
-    public function getEmployeeUtilization(Employee $employee)
+    public function getEmployeeUtilization($employeeId)
     {
         // Get all assignments for this employee across all projects
-        $assignments = Assignment::where('employee_id', $employee->id)
+        $assignments = Assignment::where('employee_id', $employeeId)
             ->with('project')
             ->orderBy('start_date')
             ->get();
 
+        // Try to load employee, but don't fail if doesn't exist (MOCO integration)
+        $employee = Employee::find($employeeId);
+        
         // Get absences for this employee
-        $absences = Absence::where('employee_id', $employee->id)
-            ->get();
+        $absences = Absence::where('employee_id', $employeeId)->get();
 
         // Get unique projects
         $projectIds = $assignments->pluck('project_id')->unique();
         $projectCount = $projectIds->count();
 
         // Calculate time-based utilization (now with absences)
-        $utilizationData = $this->calculateTimeBasedUtilization($assignments, $employee->weekly_capacity ?? 40, $absences);
+        $weeklyCapacity = $employee ? ($employee->weekly_capacity ?? 40) : 40;
+        $utilizationData = $this->calculateTimeBasedUtilization($assignments, $weeklyCapacity, $absences);
 
         // Format tasks with project information
         $tasks = $assignments->map(function ($assignment) {
@@ -1951,11 +2002,11 @@ class GanttController extends Controller
             ];
         });
 
-        return response()->json([
+        $response = [
             'success' => true,
             'employee' => [
-                'id' => $employee->id,
-                'name' => $employee->first_name . ' ' . $employee->last_name,
+                'id' => $employeeId,
+                'name' => $employee ? ($employee->first_name . ' ' . $employee->last_name) : 'Mitarbeiter #' . $employeeId,
             ],
             'total_weekly_hours' => $utilizationData['total_hours'],
             'peak_weekly_hours' => $utilizationData['peak_hours'],
@@ -1964,7 +2015,14 @@ class GanttController extends Controller
             'overlap_weeks' => $utilizationData['overlap_weeks'],
             'project_count' => $projectCount,
             'tasks' => $tasks,
-        ]);
+        ];
+        
+        // Add warning if employee doesn't exist in DB
+        if (!$employee) {
+            $response['warning'] = 'Daten aus Assignments geladen (MOCO-Synchronisation ausstehend)';
+        }
+        
+        return response()->json($response);
     }
 
     /**

@@ -660,6 +660,9 @@ function initProjectDnD() {
         registerRow(projectId, row);
 
         row.addEventListener('mousedown', (event) => {
+            // Don't interfere with buttons, links, inputs, or any interactive elements
+            if (event.target.closest('a, button, input, textarea, select, [onclick]')) return;
+            
             const role = event.target.dataset.role;
             if (role === 'resize-right') {
                 startResize(bar, 'right', event);
@@ -675,7 +678,6 @@ function initProjectDnD() {
             }
 
             if (event.button !== 0) return;
-            if (event.target.closest('a, button, input, textarea')) return;
 
             startDrag(row, bar, event);
             event.preventDefault();
@@ -722,7 +724,11 @@ function initEmployeeDragScroll() {
     let scrollLeft;
 
     container.addEventListener('mousedown', (e) => {
-        if (e.target.closest('a, button')) return;
+        // Don't interfere with buttons, links, inputs, or any interactive elements
+        // Also check for menu buttons specifically
+        if (e.target.closest('a, button, input, textarea, select, [onclick], .project-menu-btn, .employee-menu-btn')) {
+            return;
+        }
         isDown = true;
         container.style.cursor = 'grabbing';
         startX = e.pageX - container.offsetLeft;
@@ -922,7 +928,11 @@ function initGanttDragScroll() {
     let scrollLeft;
 
     container.addEventListener('mousedown', (e) => {
-        if (e.target.closest('a, button')) return;
+        // Don't interfere with buttons, links, inputs, or any interactive elements
+        // Also check for menu buttons specifically
+        if (e.target.closest('a, button, input, textarea, select, [onclick], .project-menu-btn, .employee-menu-btn')) {
+            return;
+        }
         isDown = true;
         container.style.cursor = 'grabbing';
         startX = e.pageX - container.offsetLeft;

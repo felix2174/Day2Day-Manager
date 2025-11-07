@@ -6,7 +6,7 @@
     <div class="card">
         <h2>Neuen Mitarbeiter anlegen</h2>
 
-        <form method="POST" action="/employees" style="margin-top: 20px;">
+        <form method="POST" action="{{ route('employees.store') }}" style="margin-top: 20px;">
             @csrf
 
             <div style="margin-bottom: 15px;">
@@ -77,7 +77,7 @@
                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0, 0, 0, 0.1)'; this.style.background='#ffffff';">
                     Mitarbeiter anlegen
                 </button>
-                <a href="/employees"
+                <a href="{{ route('employees.index') }}"
                    style="padding: 12px 24px; background: #ffffff; color: #374151;
               border: none; border-radius: 12px; text-decoration: none;
               display: inline-block; font-size: 14px;

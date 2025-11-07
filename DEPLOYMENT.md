@@ -8,9 +8,10 @@ Diese Anleitung erklärt, wie du Änderungen vom lokalen Laptop über GitLab auf
 
 1. [Lokale Entwicklung → GitLab](#1-lokale-entwicklung--gitlab)
 2. [GitLab → Plesk Server](#2-gitlab--plesk-server)
-3. [Deployment-Checkliste](#deployment-checkliste)
-4. [Troubleshooting](#troubleshooting)
-5. [Best Practices](#best-practices)
+3. [MOCO Synchronisation](#3-moco-synchronisation)
+4. [Deployment-Checkliste](#deployment-checkliste)
+5. [Troubleshooting](#troubleshooting)
+6. [Best Practices](#best-practices)
 
 ---
 
@@ -172,6 +173,97 @@ tail -f storage/logs/laravel.log
 
 ---
 
+## 3. MOCO Synchronisation
+
+### 🏗️ Architektur
+
+**WICHTIG:** MOCO ist die Single Source of Truth!
+
+- **MySQL-Datenbank** = Performance-Cache für schnellen Zugriff
+- **MOCO API** = Primäre Datenquelle (immer aktuell)
+
+### Datentypen und Sync-Häufigkeit
+
+#### Stammdaten (1x täglich um 2:00 Uhr nachts)
+```bash
+php artisan moco:sync-employees   # Mitarbeiter
+php artisan moco:sync-projects    # Projekte  
+php artisan moco:sync-contracts   # Verträge
+```
+
+#### Bewegungsdaten (mehrmals täglich)
+```bash
+php artisan moco:sync-time-entries  # Zeiterfassungen (stündlich 8-18 Uhr)
+php artisan moco:sync-absences      # Abwesenheiten (stündlich 8-18 Uhr)
+php artisan moco:sync-assignments   # Zuweisungen (alle 4 Stunden)
+```
+
+#### Manuelle Vollsynchronisation
+```bash
+php artisan moco:sync-all  # Synchronisiert alle Daten
+```
+
+### Cron-Job auf Plesk einrichten
+
+**1. Plesk Admin-Panel öffnen**
+- Gehe zu "Websites & Domains" → daytoday.enodia-software.de
+- Klicke auf "Scheduled Tasks" (Geplante Aufgaben)
+
+**2. Neuen Cron-Job erstellen**
+
+**Einstellungen:**
+- **Task Type:** Befehl ausführen
+- **Schedule:** Jede Minute (`* * * * *`)
+- **Befehl:**
+```bash
+cd /var/www/vhosts/daytoday.enodia-software.de/httpdocs && php artisan schedule:run >> /dev/null 2>&1
+```
+
+**Wichtig:** Dieser eine Cron-Job führt automatisch alle geplanten Tasks aus (siehe `routes/console.php`)
+
+### Status prüfen
+
+```bash
+# Zeige alle geplanten Tasks
+php artisan schedule:list
+
+# Zeige Datenbankinhalt
+php artisan tinker --execute="echo 'Mitarbeiter: ' . App\Models\Employee::count();"
+php artisan tinker --execute="echo 'Projekte: ' . App\Models\Project::count();"
+```
+
+### Troubleshooting
+
+**Problem:** Keine Daten in der Datenbank
+
+```bash
+# Manuell synchronisieren
+php artisan moco:sync-employees
+php artisan moco:sync-projects
+```
+
+**Problem:** MOCO API antwortet nicht
+
+```bash
+# Verbindung testen
+php artisan moco:test-connection
+
+# Cache leeren
+php artisan cache:clear
+```
+
+**Problem:** Cron-Job läuft nicht
+
+```bash
+# Prüfe ob Schedule funktioniert
+php artisan schedule:run
+
+# Prüfe Logs
+tail -f storage/logs/laravel.log
+```
+
+---
+
 ## 📝 Deployment-Checkliste
 
 ### Vor dem Deployment
@@ -188,6 +280,8 @@ tail -f storage/logs/laravel.log
 - [ ] Code aktualisiert (`git pull origin main`)
 - [ ] Composer Dependencies aktualisiert (`composer install`)
 - [ ] Datenbank-Migrationen ausgeführt (`php artisan migrate --force`)
+- [ ] **MOCO Daten synchronisiert** (`php artisan moco:sync-all` beim ersten Deployment)
+- [ ] **Cron-Job eingerichtet** (siehe MOCO Synchronisation Abschnitt)
 - [ ] Caches geleert (`php artisan optimize:clear`)
 - [ ] Frontend-Assets gebaut (`npm run build`)
 - [ ] Caches neu aufgebaut (`php artisan config:cache` etc.)
@@ -372,4 +466,5 @@ php artisan view:cache
 ---
 
 **Viel Erfolg beim Deployment! 🚀**
+
 

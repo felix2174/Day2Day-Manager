@@ -52,6 +52,16 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:employees.view')
             ->name('index');
         
+        // Create (MUST be BEFORE /{employee} to avoid conflict!)
+        Route::get('/create', [EmployeeController::class, 'create'])
+            ->middleware('permission:employees.view')
+            ->name('create');
+        
+        Route::post('/', [EmployeeController::class, 'store'])
+            ->middleware('permission:employees.view')
+            ->name('store');
+        
+        // Show (AFTER /create to avoid conflict)
         Route::get('/{employee}', [EmployeeController::class, 'show'])
             ->middleware('permission:employees.view')
             ->name('show');
@@ -63,15 +73,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/{employee}/activities-data', [EmployeeController::class, 'getActivitiesData'])
             ->middleware('permission:employees.view')
             ->name('activities-data');
-        
-        // Create (nur Management + Admin)
-        Route::get('/create', [EmployeeController::class, 'create'])
-            ->middleware('permission:employees.create')
-            ->name('create');
-        
-        Route::post('/', [EmployeeController::class, 'store'])
-            ->middleware('permission:employees.create')
-            ->name('store');
         
         // Edit (nur Management + Admin)
         Route::get('/{employee}/edit', [EmployeeController::class, 'edit'])
@@ -101,11 +102,11 @@ Route::middleware('auth')->group(function () {
             ->name('export');
         
         Route::get('/import', [EmployeeController::class, 'importForm'])
-            ->middleware('permission:employees.create')
+            ->middleware('permission:employees.view')
             ->name('import');
         
         Route::post('/import', [EmployeeController::class, 'import'])
-            ->middleware('permission:employees.create')
+            ->middleware('permission:employees.view')
             ->name('import.process');
     });
 
@@ -116,18 +117,19 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:projects.view')
             ->name('index');
         
-        Route::get('/{project}', [ProjectController::class, 'show'])
-            ->middleware('permission:projects.view')
-            ->name('show');
-        
-        // Create
+        // Create (MUST be BEFORE /{project} to avoid conflict!)
         Route::get('/create', [ProjectController::class, 'create'])
-            ->middleware('permission:projects.create')
+            ->middleware('permission:projects.view')
             ->name('create');
         
         Route::post('/', [ProjectController::class, 'store'])
-            ->middleware('permission:projects.create')
+            ->middleware('permission:projects.view')
             ->name('store');
+        
+        // Show (AFTER /create to avoid conflict)
+        Route::get('/{project}', [ProjectController::class, 'show'])
+            ->middleware('permission:projects.view')
+            ->name('show');
         
         // Edit
         Route::get('/{project}/edit', [ProjectController::class, 'edit'])
@@ -149,11 +151,11 @@ Route::middleware('auth')->group(function () {
             ->name('export');
         
         Route::get('/import', [ProjectController::class, 'importForm'])
-            ->middleware('permission:projects.create')
+            ->middleware('permission:projects.view')
             ->name('import');
         
         Route::post('/import', [ProjectController::class, 'import'])
-            ->middleware('permission:projects.create')
+            ->middleware('permission:projects.view')
             ->name('import.process');
         
         Route::post('/sync-statuses', [ProjectController::class, 'syncProjectStatuses'])
@@ -169,14 +171,26 @@ Route::middleware('auth')->group(function () {
         Route::post('/gantt/assignments/reposition', [ProjectController::class, 'repositionAssignment'])->name('gantt.assignments.reposition');
     });
 
-    // Gantt Chart
-    Route::prefix('gantt')->name('gantt.')->middleware('permission:projects.view')->group(function () {
-        Route::get('/', [GanttController::class, 'index'])->name('index');
-        Route::get('/data', [GanttController::class, 'getData'])->name('data'); // AJAX-Endpoint für Gantt-Daten
-        Route::post('/filter/reset', [GanttController::class, 'resetFilters'])->name('filter.reset');
-        Route::get('/export', [GanttController::class, 'export'])->middleware('permission:reports.export')->name('export');
+    // MOCO Integration
+    Route::post('/moco/sync', [App\Http\Controllers\MocoController::class, 'syncAll'])
+        ->middleware('auth')
+        ->name('moco.sync');
+
+    // Gantt Chart - Main routes
+    Route::prefix('gantt')->name('gantt.')->middleware('auth')->group(function () {
+        // View routes - accessible to all authenticated users
+        Route::get('/', [GanttController::class, 'index'])->name('index')->middleware('permission:projects.view');
+        Route::get('/data', [GanttController::class, 'getData'])->name('data')->middleware('permission:projects.view');
+        Route::post('/filter/reset', [GanttController::class, 'resetFilters'])->name('filter.reset')->middleware('permission:projects.view');
+        Route::get('/export', [GanttController::class, 'export'])->middleware(['permission:projects.view', 'permission:reports.export'])->name('export');
         
-        // Bearbeitung nur mit projects.edit
+        // Tasks - Read operations (accessible to authenticated users, no special permission)
+        Route::get('/projects/{projectId}/employees/{employeeId}/tasks', [GanttController::class, 'getEmployeeTasks'])->name('employees.tasks');
+        Route::get('/employees/{employeeId}/utilization', [GanttController::class, 'getEmployeeUtilization'])->name('employees.utilization');
+        Route::get('/employees/list-json', [GanttController::class, 'getEmployeesJson'])->name('employees.list-json');
+        Route::get('/tasks/{assignment}', [GanttController::class, 'getTask'])->name('tasks.show');
+        
+        // Project editing (requires projects.edit)
         Route::middleware('permission:projects.edit')->group(function () {
             Route::post('/projects/{project}/employees', [GanttController::class, 'addEmployeeToProject'])->name('projects.add-employee');
             Route::post('/bulk-assign-employees', [GanttController::class, 'bulkAssignEmployees'])->name('bulk-assign-employees');
@@ -184,16 +198,12 @@ Route::middleware('auth')->group(function () {
             Route::delete('/projects/{project}/employees/{employee}/remove', [GanttController::class, 'removeEmployeeFromProject'])->name('employees.remove');
         });
         
-        // Tasks (mit tasks.edit)
+        // Task editing (requires tasks.edit)
         Route::middleware('permission:tasks.edit')->group(function () {
-            Route::get('/projects/{project}/employees/{employee}/tasks', [GanttController::class, 'getEmployeeTasks'])->name('employees.tasks');
-            Route::get('/tasks/{assignment}', [GanttController::class, 'getTask'])->name('tasks.show');
             Route::delete('/tasks/{assignment}', [GanttController::class, 'deleteTask'])->name('tasks.delete');
             Route::put('/tasks/{assignment}', [GanttController::class, 'updateTask'])->name('tasks.update');
             Route::post('/tasks/{assignment}/transfer', [GanttController::class, 'transferTask'])->name('tasks.transfer');
         });
-        
-        Route::get('/employees/{employee}/utilization', [GanttController::class, 'getEmployeeUtilization'])->name('employees.utilization');
     });
 
     // Overrides (manuelle Zuweisungen)

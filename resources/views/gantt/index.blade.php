@@ -7,7 +7,45 @@
     <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 12px;">
-                <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">{{ $viewMode === 'employees' ? 'Gantt-Diagramm: Mitarbeiter' : 'Gantt-Diagramm: Projekte' }}</h1>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">{{ $viewMode === 'employees' ? 'Gantt-Diagramm: Mitarbeiter' : 'Gantt-Diagramm: Projekte' }}</h1>
+                    
+                    @if($viewMode !== 'employees')
+                        {{-- Quick Actions Menu --}}
+                        <div style="position: relative;">
+                            <button type="button" 
+                                    class="header-actions-btn"
+                                    onclick="event.stopPropagation(); toggleHeaderActionsMenu();"
+                                    style="background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; padding: 6px 12px; color: #6b7280; font-size: 18px; line-height: 1; transition: all 0.2s; border-radius: 8px; font-weight: 600; z-index: 1002; pointer-events: auto;" 
+                                    onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'" 
+                                    onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'">
+                                ⋮
+                            </button>
+                            <div id="headerActionsMenu" 
+                                 style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 220px; margin-top: 4px;">
+                                <a href="{{ route('projects.create') }}" 
+                                   style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                                   onmouseover="this.style.background='#f9fafb'"
+                                   onmouseout="this.style.background='white'">
+                                    ➕ Neues Projekt anlegen
+                                </a>
+                                <button type="button" 
+                                        onclick="syncMocoProjects()"
+                                        style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: none; border: none; color: #111827; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                                        onmouseover="this.style.background='#f9fafb'"
+                                        onmouseout="this.style.background='white'">
+                                    🔄 MOCO synchronisieren
+                                </button>
+                                <a href="{{ route('projects.index') }}" 
+                                   style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; transition: all 0.15s;"
+                                   onmouseover="this.style.background='#f9fafb'"
+                                   onmouseout="this.style.background='white'">
+                                    📊 Zur Projektverwaltung
+                                </a>
+                            </div>
+                        </div>
+                    @endif
+                </div>
                 <div style="display: flex; gap: 16px; margin-top: 10px; align-items: center; flex-wrap: wrap;">
                     @if($viewMode === 'employees')
                         <div style="color: #6b7280; font-size: 14px;">Mitarbeiter:</div>
@@ -200,6 +238,303 @@
             'totalTimelineDays' => $totalTimelineDays
         ])
     @else
+        {{-- Define menu functions BEFORE including timeline-projects --}}
+        <script>
+        // Toggle Header Actions Menu (Quick Actions)
+        window.toggleHeaderActionsMenu = function() {
+            const menu = document.getElementById('headerActionsMenu');
+            if (!menu) return;
+            
+            // Close all other menus
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
+            allMenus.forEach(m => m.style.display = 'none');
+            
+            // Toggle this menu
+            const currentDisplay = menu.style.display;
+            menu.style.display = currentDisplay === 'block' ? 'none' : 'block';
+        }
+
+        // Close all menus when clicking outside
+        document.addEventListener('click', function(e) {
+            const headerMenu = document.getElementById('headerActionsMenu');
+            const headerBtn = e.target.closest('.header-actions-btn');
+            
+            // Close header menu if clicking outside
+            if (headerMenu && !headerBtn && !headerMenu.contains(e.target)) {
+                headerMenu.style.display = 'none';
+            }
+        });
+
+        // MOCO Sync - Shows loading state and refreshes page
+        window.syncMocoProjects = function() {
+            if (!confirm('Möchten Sie jetzt die Projekt-Daten von MOCO synchronisieren?\n\nDies kann einige Sekunden dauern.')) {
+                return;
+            }
+            
+            // Show loading overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 99999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);';
+            overlay.innerHTML = `
+                <div style="background: white; padding: 32px; border-radius: 16px; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                    <div style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 8px;">MOCO Synchronisierung läuft...</div>
+                    <div style="font-size: 14px; color: #6b7280;">Bitte warten Sie einen Moment.</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            // Execute sync command via AJAX
+            fetch('{{ route('moco.sync') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                overlay.remove();
+                if (data.success) {
+                    alert('✅ Synchronisierung erfolgreich!\n\n' + (data.message || 'Daten wurden aktualisiert.'));
+                    location.reload();
+                } else {
+                    alert('❌ Fehler bei der Synchronisierung:\n\n' + (data.message || 'Unbekannter Fehler'));
+                }
+            })
+            .catch(error => {
+                overlay.remove();
+                console.error('Sync error:', error);
+                alert('❌ Fehler bei der Synchronisierung:\n\n' + error.message);
+            });
+        }
+
+        // Toggle Project Menu - Must be defined BEFORE the HTML that uses it
+        window.toggleProjectMenu = function(projectId) {
+            console.log('toggleProjectMenu called with:', projectId);
+            const menu = document.getElementById('projectMenu' + projectId);
+            const button = document.querySelector(`[data-project-id="${projectId}"].project-menu-btn`);
+            
+            if (!menu || !button) {
+                console.error('Menu or button not found for project:', projectId);
+                return;
+            }
+            
+            // Close all other menus
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
+            allMenus.forEach(m => {
+                if (m.id !== 'projectMenu' + projectId) {
+                    m.style.display = 'none';
+                }
+            });
+            
+            const currentDisplay = menu.style.display;
+            
+            if (currentDisplay === 'block') {
+                menu.style.display = 'none';
+            } else {
+                // Position the menu relative to the button
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+                menu.style.display = 'block';
+            }
+            
+            console.log('Menu display changed to:', menu.style.display);
+        }
+
+        // Toggle Employee Menu - Must be defined BEFORE the HTML that uses it
+        window.toggleEmployeeMenu = function(projectId, employeeId) {
+            console.log('toggleEmployeeMenu called with:', projectId, employeeId);
+            const menuId = 'employeeMenu' + projectId + '_' + employeeId;
+            const menu = document.getElementById(menuId);
+            const button = document.querySelector(`[data-project-id="${projectId}"][data-employee-id="${employeeId}"].employee-menu-btn`);
+            
+            if (!menu || !button) {
+                console.error('Menu or button not found for employee:', projectId, employeeId);
+                return;
+            }
+            
+            // Close all other menus
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
+            allMenus.forEach(m => {
+                if (m.id !== menuId) {
+                    m.style.display = 'none';
+                }
+            });
+            
+            const currentDisplay = menu.style.display;
+            
+            if (currentDisplay === 'block') {
+                menu.style.display = 'none';
+            } else {
+                // Position the menu relative to the button
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+                menu.style.display = 'block';
+            }
+            
+            console.log('Menu display changed to:', menu.style.display);
+        }
+
+        // Modal functions - Must be defined BEFORE the HTML that uses them
+        window.openAddTaskModal = function(projectId, employeeId) {
+            document.getElementById('taskModalProjectId').value = projectId;
+            document.getElementById('taskModalEmployeeId').value = employeeId;
+            const baseUrl = '{{ url('/') }}';
+            document.getElementById('addTaskForm').action = baseUrl + '/gantt/projects/' + projectId + '/employees/' + employeeId + '/tasks';
+            document.getElementById('addTaskModal').style.display = 'flex';
+            // Close the dropdown
+            const menu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
+            if (menu) menu.style.display = 'none';
+            // Set default start date to today
+            const startDateInput = document.getElementById('taskStartDate');
+            if (startDateInput) {
+                startDateInput.value = new Date().toISOString().split('T')[0];
+            }
+            if (typeof updateDurationMode === 'function') {
+                updateDurationMode();
+            }
+        }
+
+        window.openManageTasksModal = function(projectId, employeeId, employeeName) {
+            console.log('openManageTasksModal called:', { projectId, employeeId, employeeName });
+            
+            // Close employee menu
+            const employeeMenu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
+            if (employeeMenu) employeeMenu.style.display = 'none';
+            
+            // Set employee name
+            const nameElement = document.getElementById('manageTasksEmployeeName');
+            if (nameElement) nameElement.textContent = employeeName;
+            
+            // Show modal immediately
+            const modal = document.getElementById('manageTasksModal');
+            if (modal) modal.style.display = 'block';
+            
+            // Show loading state
+            const container = document.getElementById('tasksListContainer');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 48px; margin-bottom: 16px;">⏳</div><p style="color: #6b7280;">Lade Aufgaben...</p></div>';
+            }
+            
+            // Load tasks via AJAX
+            const baseUrl = '{{ url("/") }}';
+            const url = `${baseUrl}/gantt/projects/${projectId}/employees/${employeeId}/tasks`;
+            console.log('Full URL:', url);
+            console.log('Base URL:', baseUrl);
+            
+            fetch(url)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Tasks loaded:', data);
+                    if (typeof window.renderTasksList === 'function') {
+                        window.renderTasksList(data.tasks || [], projectId, employeeId);
+                    } else {
+                        console.error('renderTasksList function not found');
+                        if (container) {
+                            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler: renderTasksList Funktion nicht gefunden.</p></div>';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading tasks:', error);
+                    if (container) {
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Aufgaben.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">URL: ' + url + '<br>' + error.message + '</p></div>';
+                    }
+                });
+        }
+
+        window.openEmployeeUtilizationModal = function(employeeId, employeeName) {
+            console.log('openEmployeeUtilizationModal called:', { employeeId, employeeName });
+            
+            // Show loading state
+            const nameElement = document.getElementById('utilizationEmployeeName');
+            const contentElement = document.getElementById('utilizationContent');
+            const modal = document.getElementById('employeeUtilizationModal');
+            
+            if (nameElement) nameElement.textContent = employeeName;
+            if (contentElement) {
+                contentElement.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 48px; margin-bottom: 16px;">⏳</div><p style="color: #6b7280;">Lade Auslastungsdaten...</p></div>';
+            }
+            if (modal) modal.style.display = 'block';
+            
+            // Load utilization data
+            const baseUrl = '{{ url("/") }}';
+            const url = `${baseUrl}/gantt/employees/${employeeId}/utilization`;
+            console.log('Full URL:', url);
+            console.log('Base URL:', baseUrl);
+            
+            fetch(url)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Utilization loaded:', data);
+                    if (typeof window.renderUtilizationView === 'function') {
+                        window.renderUtilizationView(data, employeeName);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading utilization:', error);
+                    if (contentElement) {
+                        contentElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Auslastungsdaten.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">URL: ' + url + '<br>' + error.message + '</p></div>';
+                    }
+                });
+        }
+
+        window.openAddEmployeeModal = function(projectId) {
+            const modalProjectId = document.getElementById('modalProjectId');
+            const addEmployeeForm = document.getElementById('addEmployeeForm');
+            const addEmployeeModal = document.getElementById('addEmployeeModal');
+            const projectMenu = document.getElementById('projectMenu' + projectId);
+            
+            if (modalProjectId) modalProjectId.value = projectId;
+            if (addEmployeeForm) {
+                const baseUrl = '{{ url('/') }}';
+                // Use bulk-assign route for multi-select support
+                addEmployeeForm.action = baseUrl + '/gantt/bulk-assign-employees';
+            }
+            if (addEmployeeModal) addEmployeeModal.style.display = 'flex';
+            if (projectMenu) projectMenu.style.display = 'none';
+        }
+
+        // Close Modal Functions - Must be defined BEFORE the HTML that uses them
+        window.closeAddEmployeeModal = function() {
+            const modal = document.getElementById('addEmployeeModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.closeAddTaskModal = function() {
+            const modal = document.getElementById('addTaskModal');
+            const form = document.getElementById('addTaskForm');
+            if (modal) modal.style.display = 'none';
+            if (form) form.reset();
+        }
+
+        window.closeManageTasksModal = function() {
+            const modal = document.getElementById('manageTasksModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.closeEmployeeUtilizationModal = function() {
+            const modal = document.getElementById('employeeUtilizationModal');
+            if (modal) modal.style.display = 'none';
+        }
+        </script>
+        
         @include('gantt.partials.timeline-projects', [
             'timelineStart' => $timelineStart,
             'timelineEnd' => $timelineEnd,

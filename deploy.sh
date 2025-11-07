@@ -169,3 +169,4 @@ echo "  - Debug-Modus: .env → APP_DEBUG=true"
 echo "  - Logs prüfen: tail -100 storage/logs/laravel.log"
 echo ""
 
+
