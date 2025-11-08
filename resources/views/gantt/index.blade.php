@@ -4,141 +4,237 @@
 
 @section('content')
 <div style="width: 100%; margin: 0; padding: 0;">
-    <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-            <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 12px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">{{ $viewMode === 'employees' ? 'Gantt-Diagramm: Mitarbeiter' : 'Gantt-Diagramm: Projekte' }}</h1>
-                    
-                    @if($viewMode !== 'employees')
-                        {{-- Quick Actions Menu --}}
-                        <div style="position: relative;">
-                            <button type="button" 
-                                    class="header-actions-btn"
-                                    onclick="event.stopPropagation(); toggleHeaderActionsMenu();"
-                                    style="background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; padding: 6px 12px; color: #6b7280; font-size: 18px; line-height: 1; transition: all 0.2s; border-radius: 8px; font-weight: 600; z-index: 1002; pointer-events: auto;" 
-                                    onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'" 
-                                    onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'">
-                                ⋮
-                            </button>
-                            <div id="headerActionsMenu" 
-                                 style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 220px; margin-top: 4px;">
-                                <a href="{{ route('projects.create') }}" 
-                                   style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
-                                   onmouseover="this.style.background='#f9fafb'"
-                                   onmouseout="this.style.background='white'">
-                                    ➕ Neues Projekt anlegen
-                                </a>
-                                <button type="button" 
-                                        onclick="syncMocoProjects()"
-                                        style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: none; border: none; color: #111827; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
-                                        onmouseover="this.style.background='#f9fafb'"
-                                        onmouseout="this.style.background='white'">
-                                    🔄 MOCO synchronisieren
-                                </button>
-                                <a href="{{ route('projects.index') }}" 
-                                   style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; transition: all 0.15s;"
-                                   onmouseover="this.style.background='#f9fafb'"
-                                   onmouseout="this.style.background='white'">
-                                    📊 Zur Projektverwaltung
-                                </a>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-                <div style="display: flex; gap: 16px; margin-top: 10px; align-items: center; flex-wrap: wrap;">
-                    @if($viewMode === 'employees')
-                        <div style="color: #6b7280; font-size: 14px;">Mitarbeiter:</div>
-                        <div style="font-weight: 600; color: #111827;">{{ $timelineByEmployee->count() }}</div>
-                    @else
-                        <div style="color: #6b7280; font-size: 14px;">Projekte:</div>
-                        <div style="font-weight: 600; color: #111827;">{{ $projects->count() }}</div>
-                        <div style="height: 16px; width: 1px; background: #e5e7eb;"></div>
-                        <div style="display: inline-flex; align-items: center; gap: 8px;">
-                            <span style="color: #6b7280; font-size: 14px;">In Bearbeitung:</span>
-                            <span style="font-weight: 600; color: #10b981;">{{ $projects->filter(function ($p) {
-                                if ($p->finish_date) {
-                                    return \Carbon\Carbon::parse($p->finish_date)->isFuture();
-                                }
-                                return $p->status === 'in_bearbeitung' || $p->status === 'active' || $p->status === 'planning';
-                            })->count() }}</span>
-                        </div>
-                        <div style="display: inline-flex; align-items: center; gap: 8px;">
-                            <span style="color: #6b7280; font-size: 14px;">Abgeschlossen:</span>
-                            <span style="font-weight: 600; color: #6b7280;">{{ $projects->filter(function ($p) {
-                                if ($p->finish_date) {
-                                    return \Carbon\Carbon::parse($p->finish_date)->isPast();
-                                }
-                                return $p->status === 'abgeschlossen' || $p->status === 'completed';
-                            })->count() }}</span>
-                        </div>
-                    @endif
-                </div>
+    {{-- ULTRA-KOMPAKTER HEADER (eine Zeile) --}}
+    <div style="background: white; padding: 12px 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                {{-- Statistik-Badge mit Labels (links) --}}
                 @if($viewMode === 'employees')
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                        <button id="ganttEmployeeUndo" type="button" disabled style="padding: 10px 16px; background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; opacity: 0.5; transition: all 0.2s ease;">Änderung rückgängig</button>
-                        <span style="font-size: 12px; color: #6b7280;">Snapping & Undo aktiv – Änderungen werden übernommen, sobald du loslässt.</span>
+                    <span style="background: #f3f4f6; color: #111827; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                        <span style="color: #6b7280; font-weight: 500;">Mitarbeiter:</span>
+                        <span style="font-weight: 700;">{{ $timelineByEmployee->count() }}</span>
+                    </span>
+                @else
+                    @php
+                        $totalCount = $projects->count();
+                        $activeCount = $projects->filter(function ($p) {
+                            if ($p->finish_date) {
+                                return \Carbon\Carbon::parse($p->finish_date)->isFuture();
+                            }
+                            return $p->status === 'in_bearbeitung' || $p->status === 'active' || $p->status === 'planning';
+                        })->count();
+                        $completedCount = $projects->filter(function ($p) {
+                            if ($p->finish_date) {
+                                return \Carbon\Carbon::parse($p->finish_date)->isPast();
+                            }
+                            return $p->status === 'abgeschlossen' || $p->status === 'completed';
+                        })->count();
+                    @endphp
+                    <div style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px;">
+                        {{-- Gesamt --}}
+                        <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Gesamt</span>
+                            <span style="color: #111827; font-size: 14px; font-weight: 700;">{{ $totalCount }}</span>
+                        </div>
+                        <span style="color: #d1d5db;">·</span>
+                        {{-- Aktiv --}}
+                        <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="color: #10b981; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Aktiv</span>
+                            <span style="color: #10b981; font-size: 14px; font-weight: 700;">{{ $activeCount }}</span>
+                        </div>
+                        <span style="color: #d1d5db;">·</span>
+                        {{-- Fertig --}}
+                        <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="color: #9ca3af; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Fertig</span>
+                            <span style="color: #9ca3af; font-size: 14px; font-weight: 700;">{{ $completedCount }}</span>
+                        </div>
                     </div>
                 @endif
-            </div>
-            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                {{-- View Mode Toggle --}}
-                <div style="background: #f3f4f6; border-radius: 999px; padding: 4px; display: inline-flex;">
+
+                {{-- View Mode Tabs (kompakt) --}}
+                <div style="background: #f3f4f6; border-radius: 8px; padding: 3px; display: inline-flex;">
                     <a href="{{ route('gantt.index', ['view' => 'projects']) }}"
-                       style="padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; text-decoration: none; color: {{ $viewMode === 'projects' ? '#ffffff' : '#374151' }}; background: {{ $viewMode === 'projects' ? '#111827' : 'transparent' }}; transition: all 0.2s ease;">
+                       style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: {{ $viewMode === 'projects' ? '#ffffff' : '#374151' }}; background: {{ $viewMode === 'projects' ? '#111827' : 'transparent' }}; transition: all 0.15s ease;">
                         Projekte
                     </a>
                     <a href="{{ route('gantt.index', ['view' => 'employees']) }}"
-                       style="padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; text-decoration: none; color: {{ $viewMode === 'employees' ? '#ffffff' : '#374151' }}; background: {{ $viewMode === 'employees' ? '#111827' : 'transparent' }}; transition: all 0.2s ease;">
+                       style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: {{ $viewMode === 'employees' ? '#ffffff' : '#374151' }}; background: {{ $viewMode === 'employees' ? '#111827' : 'transparent' }}; transition: all 0.15s ease;">
                         Mitarbeiter
                     </a>
                 </div>
 
-                {{-- Zoom Controls --}}
-                <div style="display: flex; gap: 6px; align-items: center; background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px;">
-                    <span style="font-size: 12px; color: #6b7280; font-weight: 500; padding: 0 8px;">🔍 Ansicht:</span>
-                    @php
-                        $zoomOptions = [
-                            'month' => ['label' => 'Monate', 'title' => 'Monatsansicht', 'icon' => '📅'],
-                            'week' => ['label' => 'Wochen', 'title' => 'Wochenansicht', 'icon' => '📆'],
-                            'day' => ['label' => 'Tage', 'title' => 'Tagesansicht', 'icon' => '🗓️'],
-                        ];
-                    @endphp
-                    @foreach($zoomOptions as $zoomKey => $zoomData)
-                        <a href="{{ route('gantt.index', array_merge(request()->query(), ['zoom' => $zoomKey])) }}"
-                           title="{{ $zoomData['title'] }}"
-                           style="padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: {{ $currentZoom === $zoomKey ? '#ffffff' : '#374151' }}; background: {{ $currentZoom === $zoomKey ? '#3b82f6' : 'transparent' }}; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px;"
-                           onmouseover="this.style.background = '{{ $currentZoom === $zoomKey ? '#2563eb' : '#f3f4f6' }}'"
-                           onmouseout="this.style.background = '{{ $currentZoom === $zoomKey ? '#3b82f6' : 'transparent' }}'">
-                            <span>{{ $zoomData['icon'] }}</span>
-                            <span>{{ $zoomData['label'] }}</span>
+                {{-- Ansicht Dropdown --}}
+                <div style="position: relative; display: inline-block;">
+                    <button type="button" 
+                            class="view-menu-btn"
+                            onclick="event.stopPropagation(); toggleViewMenu();"
+                            style="background: white; border: 1px solid #e5e7eb; cursor: pointer; padding: 6px 12px; color: #374151; font-size: 13px; font-weight: 600; transition: all 0.15s; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;"
+                            onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
+                            onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'">
+                        @php
+                            $currentZoomIcon = ['month' => '📅', 'week' => '📆', 'day' => '🗓️'][$currentZoom] ?? '📅';
+                        @endphp
+                        <span>{{ $currentZoomIcon }}</span>
+                        <span>Ansicht</span>
+                        <span style="font-size: 10px;">▼</span>
+                    </button>
+                    <div id="viewMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 160px;">
+                        <a href="{{ route('gantt.index', array_merge(request()->query(), ['zoom' => 'month'])) }}"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: {{ $currentZoom === 'month' ? '#3b82f6' : '#374151' }}; text-decoration: none; font-size: 13px; font-weight: {{ $currentZoom === 'month' ? '600' : '500' }}; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📅</span>
+                            <span>Monate</span>
+                            @if($currentZoom === 'month')<span style="margin-left: auto; color: #3b82f6; font-size: 14px;">✓</span>@endif
                         </a>
-                    @endforeach
+                        <a href="{{ route('gantt.index', array_merge(request()->query(), ['zoom' => 'week'])) }}"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: {{ $currentZoom === 'week' ? '#3b82f6' : '#374151' }}; text-decoration: none; font-size: 13px; font-weight: {{ $currentZoom === 'week' ? '600' : '500' }}; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📆</span>
+                            <span>Wochen</span>
+                            @if($currentZoom === 'week')<span style="margin-left: auto; color: #3b82f6; font-size: 14px;">✓</span>@endif
+                        </a>
+                        <a href="{{ route('gantt.index', array_merge(request()->query(), ['zoom' => 'day'])) }}"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: {{ $currentZoom === 'day' ? '#3b82f6' : '#374151' }}; text-decoration: none; font-size: 13px; font-weight: {{ $currentZoom === 'day' ? '600' : '500' }}; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">🗓️</span>
+                            <span>Tage</span>
+                            @if($currentZoom === 'day')<span style="margin-left: auto; color: #3b82f6; font-size: 14px;">✓</span>@endif
+                        </a>
+                    </div>
                 </div>
 
-                {{-- Filter Toggle Button --}}
-                @if($viewMode === 'projects')
-                    <button id="toggleFiltersBtn" onclick="toggleFilters()" style="background: #ffffff; color: #374151; padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;"
+                {{-- Mehr Dropdown --}}
+                <div style="position: relative; display: inline-block;">
+                    <button type="button" 
+                            class="more-menu-btn"
+                            onclick="event.stopPropagation(); toggleMoreMenu();"
+                            style="background: white; border: 1px solid #e5e7eb; cursor: pointer; padding: 6px 12px; color: #374151; font-size: 13px; font-weight: 600; transition: all 0.15s; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;"
                             onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
-                            onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
-                        🔍 Filter
-                        <span id="filterIndicator" style="display: {{ count(array_filter(Session::get('gantt_filters', []))) > 0 ? 'inline-flex' : 'none' }}; background: #ef4444; color: white; border-radius: 999px; width: 20px; height: 20px; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">{{ count(array_filter(Session::get('gantt_filters', []))) }}</span>
+                            onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'">
+                        <span style="font-size: 16px; line-height: 1;">⋮</span>
+                        <span>Mehr</span>
+                    </button>
+                    <div id="moreMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 200px;">
+                        <a href="{{ route('gantt.export') }}" 
+                           onclick="handleExportClick(event, this)"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: #374151; text-decoration: none; font-size: 13px; font-weight: 500; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📤</span>
+                            <span>Excel Export</span>
+                        </a>
+                        <a href="{{ route('projects.index') }}" 
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: #374151; text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📊</span>
+                            <span>Projektverwaltung</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: center;">
+                {{-- Filter Button --}}
+                @if($viewMode === 'projects')
+                    @php
+                        $hasActiveFilters = count(array_filter(Session::get('gantt_filters', []))) > 0;
+                    @endphp
+                    <button id="toggleFiltersBtn" onclick="toggleFilterModal()" 
+                            style="background: {{ $hasActiveFilters ? '#3b82f6' : '#ffffff' }}; color: {{ $hasActiveFilters ? '#ffffff' : '#374151' }}; padding: 6px 12px; border: 1px solid {{ $hasActiveFilters ? '#3b82f6' : '#e5e7eb' }}; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;"
+                            onmouseover="this.style.background='{{ $hasActiveFilters ? '#2563eb' : '#f9fafb' }}'; this.style.borderColor='{{ $hasActiveFilters ? '#2563eb' : '#d1d5db' }}'"
+                            onmouseout="this.style.background='{{ $hasActiveFilters ? '#3b82f6' : '#ffffff' }}'; this.style.borderColor='{{ $hasActiveFilters ? '#3b82f6' : '#e5e7eb' }}'">
+                        <span>🔍</span>
+                        <span>Filter</span>
+                        @if($hasActiveFilters)
+                            <span style="background: rgba(255,255,255,0.3); color: white; border-radius: 10px; padding: 2px 6px; font-size: 11px; font-weight: 700;">
+                                {{ count(array_filter(Session::get('gantt_filters', []))) }}
+                            </span>
+                        @endif
                     </button>
                 @endif
-
-                {{-- Excel Export --}}
-                <a href="{{ route('gantt.export') }}" 
-                   onclick="handleExportClick(event, this)"
-                   style="background: #ffffff; color: #374151; padding: 10px 20px; border: 1px solid #e5e7eb; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;"
-                   onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
-                   onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
-                    <span class="export-text">📤 Excel Export</span>
-                </a>
             </div>
         </div>
     </div>
+    
+    {{-- GLOBAL JavaScript für Header-Dropdowns (für beide Ansichten) --}}
+    <script>
+    // Toggle View Menu (Ansicht Dropdown) - GLOBAL
+    window.toggleViewMenu = function() {
+        const menu = document.getElementById('viewMenu');
+        if (!menu) return;
+        
+        // Close all other menus
+        const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #moreMenu, #headerActionsMenu');
+        allMenus.forEach(m => m.style.display = 'none');
+        
+        // Toggle menu with dynamic positioning
+        const currentDisplay = menu.style.display;
+        const button = document.querySelector('.view-menu-btn');
+        
+        if (currentDisplay === 'block') {
+            menu.style.display = 'none';
+        } else {
+            if (button) {
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+            }
+            menu.style.display = 'block';
+        }
+    }
 
-    {{-- Collapsible Filter Panel (Projects Only) --}}
+    // Toggle More Menu (Mehr Dropdown) - GLOBAL
+    window.toggleMoreMenu = function() {
+        const menu = document.getElementById('moreMenu');
+        if (!menu) return;
+        
+        // Close all other menus
+        const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #headerActionsMenu');
+        allMenus.forEach(m => m.style.display = 'none');
+        
+        // Toggle menu with dynamic positioning
+        const currentDisplay = menu.style.display;
+        const button = document.querySelector('.more-menu-btn');
+        
+        if (currentDisplay === 'block') {
+            menu.style.display = 'none';
+        } else {
+            if (button) {
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+            }
+            menu.style.display = 'block';
+        }
+    }
+    
+    // Close menus when clicking outside - GLOBAL
+    document.addEventListener('click', function(e) {
+        const viewMenu = document.getElementById('viewMenu');
+        const viewBtn = e.target.closest('.view-menu-btn');
+        
+        const moreMenu = document.getElementById('moreMenu');
+        const moreBtn = e.target.closest('.more-menu-btn');
+        
+        // Close view menu if clicking outside
+        if (viewMenu && !viewBtn && !viewMenu.contains(e.target)) {
+            viewMenu.style.display = 'none';
+        }
+        
+        // Close more menu if clicking outside
+        if (moreMenu && !moreBtn && !moreMenu.contains(e.target)) {
+            moreMenu.style.display = 'none';
+        }
+    });
+    </script>
+
+    {{-- Filter Modal (Projects Only) - Komplett versteckt bis Button-Klick --}}
     @if($viewMode === 'projects')
         @php
             // Prüfe ob Filter aktiv sind (nicht-leere Werte)
@@ -149,15 +245,38 @@
                                !empty($ganttFilters['timeframe']) || 
                                !empty($ganttFilters['sort']);
         @endphp
-        <div id="filterPanel" style="display: {{ $hasActiveFilters ? 'block' : 'none' }}; background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
-                <button onclick="clearAllFilters()" style="background: #fef2f2; color: #dc2626; padding: 6px 12px; border: 1px solid #fecaca; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;"
-                        onmouseover="this.style.background='#fee2e2'"
-                        onmouseout="this.style.background='#fef2f2'">
-                    🗑️ Filter zurücksetzen
-                </button>
+        
+        {{-- Modal Backdrop --}}
+        <div id="filterModalBackdrop" onclick="toggleFilterModal()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 99998; backdrop-filter: blur(4px); transition: all 0.3s ease;"></div>
+        
+        {{-- Modal Content --}}
+        <div id="filterModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 99999; transition: all 0.3s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f3f4f6;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
+                    @if($hasActiveFilters)
+                        <span style="background: #3b82f6; color: white; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700;">
+                            {{ count(array_filter([$ganttFilters['search'] ?? '', $ganttFilters['status'] ?? '', $ganttFilters['employee'] ?? '', $ganttFilters['timeframe'] ?? '', $ganttFilters['sort'] ?? ''])) }} aktiv
+                        </span>
+                    @endif
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button onclick="clearAllFilters()" style="background: #fef2f2; color: #dc2626; padding: 6px 12px; border: 1px solid #fecaca; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                            onmouseover="this.style.background='#fee2e2'"
+                            onmouseout="this.style.background='#fef2f2'">
+                        🗑️ Zurücksetzen
+                    </button>
+                    <button onclick="toggleFilterModal()" style="background: #f3f4f6; color: #6b7280; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; line-height: 1;"
+                            onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'"
+                            onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'"
+                            title="Schließen">
+                        ✕
+                    </button>
+                </div>
             </div>
+            
+            {{-- Filter Form Content --}}
+            <div id="filterContent">
             <form method="GET" action="{{ route('gantt.index') }}" id="ganttFilterForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                 <input type="hidden" name="view" value="projects">
                 
@@ -228,7 +347,8 @@
                     </select>
                 </div>
             </form>
-        </div>
+            </div>{{-- End Filter Content --}}
+        </div>{{-- End Filter Modal --}}
     @endif
 
     @if($viewMode === 'employees')
@@ -246,12 +366,24 @@
             if (!menu) return;
             
             // Close all other menus
-            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu');
             allMenus.forEach(m => m.style.display = 'none');
             
-            // Toggle this menu
+            // Toggle menu with dynamic positioning
             const currentDisplay = menu.style.display;
-            menu.style.display = currentDisplay === 'block' ? 'none' : 'block';
+            const button = document.querySelector('.header-actions-btn');
+            
+            if (currentDisplay === 'block') {
+                menu.style.display = 'none';
+            } else {
+                if (button) {
+                    const buttonRect = button.getBoundingClientRect();
+                    menu.style.position = 'fixed';
+                    menu.style.top = (buttonRect.bottom + 4) + 'px';
+                    menu.style.left = (buttonRect.left) + 'px';
+                }
+                menu.style.display = 'block';
+            }
         }
 
         // Close all menus when clicking outside
@@ -259,9 +391,25 @@
             const headerMenu = document.getElementById('headerActionsMenu');
             const headerBtn = e.target.closest('.header-actions-btn');
             
+            const viewMenu = document.getElementById('viewMenu');
+            const viewBtn = e.target.closest('.view-menu-btn');
+            
+            const moreMenu = document.getElementById('moreMenu');
+            const moreBtn = e.target.closest('.more-menu-btn');
+            
             // Close header menu if clicking outside
             if (headerMenu && !headerBtn && !headerMenu.contains(e.target)) {
                 headerMenu.style.display = 'none';
+            }
+            
+            // Close view menu if clicking outside
+            if (viewMenu && !viewBtn && !viewMenu.contains(e.target)) {
+                viewMenu.style.display = 'none';
+            }
+            
+            // Close more menu if clicking outside
+            if (moreMenu && !moreBtn && !moreMenu.contains(e.target)) {
+                moreMenu.style.display = 'none';
             }
         });
 
@@ -320,7 +468,7 @@
             }
             
             // Close all other menus
-            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu, #headerActionsMenu');
             allMenus.forEach(m => {
                 if (m.id !== 'projectMenu' + projectId) {
                     m.style.display = 'none';
@@ -356,7 +504,7 @@
             }
             
             // Close all other menus
-            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu');
             allMenus.forEach(m => {
                 if (m.id !== menuId) {
                     m.style.display = 'none';
@@ -533,6 +681,163 @@
             const modal = document.getElementById('employeeUtilizationModal');
             if (modal) modal.style.display = 'none';
         }
+
+        // =============== PROJECT COLLAPSE/EXPAND FUNCTIONALITY ===============
+        
+        // Toggle single project
+        window.toggleProject = function(projectId) {
+            const projectRow = document.querySelector(`.gantt-project-row[data-project-id="${projectId}"]`);
+            if (!projectRow) return;
+            
+            const employeesContainer = projectRow.querySelector('.project-employees-container');
+            const collapseBtn = projectRow.querySelector('.project-collapse-btn');
+            const collapseIcon = collapseBtn?.querySelector('.collapse-icon');
+            const isCollapsed = projectRow.getAttribute('data-collapsed') === 'true';
+            
+            if (isCollapsed) {
+                // Expand
+                projectRow.setAttribute('data-collapsed', 'false');
+                employeesContainer.style.maxHeight = employeesContainer.scrollHeight + 'px';
+                employeesContainer.style.opacity = '1';
+                collapseIcon.textContent = '▼';
+                
+                // Save state
+                saveProjectState(projectId, false);
+                
+                // After animation, set max-height to none
+                setTimeout(() => {
+                    if (projectRow.getAttribute('data-collapsed') === 'false') {
+                        employeesContainer.style.maxHeight = 'none';
+                    }
+                }, 300);
+            } else {
+                // Collapse
+                employeesContainer.style.maxHeight = employeesContainer.scrollHeight + 'px';
+                employeesContainer.offsetHeight; // Force reflow
+                employeesContainer.style.maxHeight = '0';
+                employeesContainer.style.opacity = '0';
+                collapseIcon.textContent = '▶';
+                projectRow.setAttribute('data-collapsed', 'true');
+                
+                // Save state
+                saveProjectState(projectId, true);
+            }
+        }
+        
+        // Toggle all projects
+        window.toggleAllProjects = function() {
+            // Wait a bit to ensure DOM is ready
+            setTimeout(() => {
+                const allProjectRows = document.querySelectorAll('.gantt-project-row');
+                const collapseAllBtn = document.getElementById('collapseAllBtn');
+                
+                console.log('=== TOGGLE ALL PROJECTS DEBUG ===');
+                console.log('Total project rows found:', allProjectRows.length);
+                
+                // Log each project
+                allProjectRows.forEach((row, index) => {
+                    const projectId = row.getAttribute('data-project-id');
+                    const isCollapsed = row.getAttribute('data-collapsed');
+                    const hasCollapseBtn = row.querySelector('.project-collapse-btn') !== null;
+                    console.log(`Project ${index + 1}: ID=${projectId}, collapsed=${isCollapsed}, hasBtn=${hasCollapseBtn}`);
+                });
+                
+                // Only toggle projects that HAVE a collapse button
+                const projectsWithButton = Array.from(allProjectRows).filter(row => 
+                    row.querySelector('.project-collapse-btn') !== null
+                );
+                
+                console.log('Projects WITH collapse button:', projectsWithButton.length);
+                
+                // Check if at least one is expanded
+                const someExpanded = projectsWithButton.some(row => 
+                    row.getAttribute('data-collapsed') !== 'true'
+                );
+                
+                if (someExpanded) {
+                    // Collapse all (only those with button)
+                    console.log('Collapsing all projects with button...');
+                    projectsWithButton.forEach((row, index) => {
+                        const projectId = row.getAttribute('data-project-id');
+                        if (row.getAttribute('data-collapsed') !== 'true') {
+                            console.log(`  Collapsing project ${index + 1}: ID=${projectId}`);
+                            toggleProject(projectId);
+                        }
+                    });
+                    collapseAllBtn.textContent = '▶';
+                } else {
+                    // Expand all (only those with button)
+                    console.log('Expanding all projects with button...');
+                    projectsWithButton.forEach((row, index) => {
+                        const projectId = row.getAttribute('data-project-id');
+                        if (row.getAttribute('data-collapsed') === 'true') {
+                            console.log(`  Expanding project ${index + 1}: ID=${projectId}`);
+                            toggleProject(projectId);
+                        }
+                    });
+                    collapseAllBtn.textContent = '▼';
+                }
+                
+                console.log('=== END DEBUG ===');
+            }, 50);
+        }
+        
+        // Save project collapse state to localStorage
+        function saveProjectState(projectId, isCollapsed) {
+            let projectStates = JSON.parse(localStorage.getItem('gantt_project_states') || '{}');
+            projectStates[projectId] = isCollapsed;
+            localStorage.setItem('gantt_project_states', JSON.stringify(projectStates));
+        }
+        
+        // Restore project collapse states from localStorage
+        function restoreProjectStates() {
+            const projectStates = JSON.parse(localStorage.getItem('gantt_project_states') || '{}');
+            
+            Object.keys(projectStates).forEach(projectId => {
+                const isCollapsed = projectStates[projectId];
+                if (isCollapsed) {
+                    const projectRow = document.querySelector(`.gantt-project-row[data-project-id="${projectId}"]`);
+                    if (projectRow) {
+                        const employeesContainer = projectRow.querySelector('.project-employees-container');
+                        const collapseBtn = projectRow.querySelector('.project-collapse-btn');
+                        const collapseIcon = collapseBtn?.querySelector('.collapse-icon');
+                        
+                        employeesContainer.style.maxHeight = '0';
+                        employeesContainer.style.opacity = '0';
+                        employeesContainer.style.transition = 'none';
+                        if (collapseIcon) collapseIcon.textContent = '▶';
+                        projectRow.setAttribute('data-collapsed', 'true');
+                        
+                        setTimeout(() => {
+                            employeesContainer.style.transition = 'all 0.3s ease';
+                        }, 100);
+                    }
+                }
+            });
+            
+            updateCollapseAllButton();
+        }
+        
+        // Update collapse all button
+        function updateCollapseAllButton() {
+            const allProjectRows = document.querySelectorAll('.gantt-project-row');
+            const collapseAllBtn = document.getElementById('collapseAllBtn');
+            
+            if (!collapseAllBtn || allProjectRows.length === 0) return;
+            
+            const allCollapsed = Array.from(allProjectRows).every(row => 
+                row.getAttribute('data-collapsed') === 'true'
+            );
+            
+            collapseAllBtn.textContent = allCollapsed ? '▶' : '▼';
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            restoreProjectStates();
+        });
+        
+        // =============== END PROJECT COLLAPSE/EXPAND FUNCTIONALITY ===============
         </script>
         
         @include('gantt.partials.timeline-projects', [
@@ -544,66 +849,37 @@
 </div>
 
 <script>
-// Filter Panel Toggle with State Persistence
-function toggleFilters() {
-    const panel = document.getElementById('filterPanel');
-    const btn = document.getElementById('toggleFiltersBtn');
-    if (panel.style.display === 'none' || panel.style.display === '') {
-        panel.style.display = 'block';
-        btn.style.background = '#3b82f6';
-        btn.style.color = '#ffffff';
-        btn.style.borderColor = '#3b82f6';
-        localStorage.setItem('gantt_filter_panel_open', '1');
-        
-        // Update Hover für geöffneten Zustand
-        btn.onmouseover = function() {
-            this.style.background = '#2563eb';
-            this.style.borderColor = '#2563eb';
-        };
-        btn.onmouseout = function() {
-            this.style.background = '#3b82f6';
-            this.style.borderColor = '#3b82f6';
-        };
+// Filter Modal Toggle (komplett versteckt/angezeigt)
+function toggleFilterModal() {
+    const modal = document.getElementById('filterModal');
+    const backdrop = document.getElementById('filterModalBackdrop');
+    
+    if (!modal || !backdrop) return;
+    
+    // Close all other menus
+    const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu, #headerActionsMenu');
+    allMenus.forEach(m => m.style.display = 'none');
+    
+    // Toggle modal
+    if (modal.style.display === 'block') {
+        // Close modal
+        modal.style.display = 'none';
+        backdrop.style.display = 'none';
+        document.body.style.overflow = ''; // Re-enable scrolling
     } else {
-        panel.style.display = 'none';
-        btn.style.background = '#ffffff';
-        btn.style.color = '#374151';
-        btn.style.borderColor = '#e5e7eb';
-        localStorage.setItem('gantt_filter_panel_open', '0');
-        
-        // Update Hover für geschlossenen Zustand
-        btn.onmouseover = function() {
-            this.style.background = '#f9fafb';
-            this.style.borderColor = '#d1d5db';
-        };
-        btn.onmouseout = function() {
-            this.style.background = '#ffffff';
-            this.style.borderColor = '#e5e7eb';
-        };
+        // Open modal
+        modal.style.display = 'block';
+        backdrop.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Disable background scrolling
     }
 }
 
-// Initialize Filter Panel State on Page Load
-document.addEventListener('DOMContentLoaded', function() {
-    const panel = document.getElementById('filterPanel');
-    const btn = document.getElementById('toggleFiltersBtn');
-    
-    if (panel && btn) {
-        // Wenn Panel initial sichtbar ist (wegen aktiven Filtern)
-        if (panel.style.display === 'block') {
-            btn.style.background = '#3b82f6';
-            btn.style.color = '#ffffff';
-            btn.style.borderColor = '#3b82f6';
-            
-            // Update Hover-Events für aktiven Zustand
-            btn.onmouseover = function() {
-                this.style.background = '#2563eb';
-                this.style.borderColor = '#2563eb';
-            };
-            btn.onmouseout = function() {
-                this.style.background = '#3b82f6';
-                this.style.borderColor = '#3b82f6';
-            };
+// Escape key closes modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('filterModal');
+        if (modal && modal.style.display === 'block') {
+            toggleFilterModal();
         }
     }
 });

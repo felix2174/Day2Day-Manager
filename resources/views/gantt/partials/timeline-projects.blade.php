@@ -29,7 +29,54 @@
                     <div id="ganttContent" style="display: flex; flex-direction: column; gap: 12px; padding: 12px 12px 16px; min-width: 100%;">
                         {{-- Header --}}
                         <div style="display: flex; gap: 12px; align-items: stretch;">
-                            <div style="width: 260px; min-width: 260px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; padding: 12px 16px; font-weight: 600; color: #374151;">Projekt</div>
+                            <div style="width: 260px; min-width: 260px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-weight: 600; color: #374151;">
+                                <span>Projekt</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    {{-- Collapse All Button --}}
+                                    <button type="button" 
+                                            id="collapseAllBtn"
+                                            onclick="event.stopPropagation(); toggleAllProjects();"
+                                            title="Alle Projekte ein-/ausklappen"
+                                            style="background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; padding: 4px 10px; color: #6b7280; font-size: 14px; line-height: 1; transition: all 0.2s; border-radius: 6px; font-weight: 600;" 
+                                            onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'" 
+                                            onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'">
+                                        ▼
+                                    </button>
+                                    {{-- Quick Actions Menu --}}
+                                    <div style="position: relative;">
+                                        <button type="button" 
+                                                class="header-actions-btn"
+                                                onclick="event.stopPropagation(); toggleHeaderActionsMenu();"
+                                                style="background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; padding: 4px 10px; color: #6b7280; font-size: 16px; line-height: 1; transition: all 0.2s; border-radius: 6px; font-weight: 600; z-index: 1002; pointer-events: auto;" 
+                                                onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'" 
+                                                onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'">
+                                            ⋮
+                                        </button>
+                                    <div id="headerActionsMenu" 
+                                         style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 220px;">
+                                        <a href="{{ route('projects.create') }}" 
+                                           style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                                           onmouseover="this.style.background='#f9fafb'"
+                                           onmouseout="this.style.background='white'">
+                                            ➕ Neues Projekt anlegen
+                                        </a>
+                                        <button type="button" 
+                                                onclick="syncMocoProjects()"
+                                                style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: none; border: none; color: #111827; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                                                onmouseover="this.style.background='#f9fafb'"
+                                                onmouseout="this.style.background='white'">
+                                            🔄 MOCO synchronisieren
+                                        </button>
+                                        <a href="{{ route('projects.index') }}" 
+                                           style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; transition: all 0.15s;"
+                                           onmouseover="this.style.background='#f9fafb'"
+                                           onmouseout="this.style.background='white'">
+                                            📊 Zur Projektverwaltung
+                                        </a>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
                             <div style="flex: 1; position: relative; height: 40px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; overflow: visible; z-index: 10;">
                                 @foreach($timelineMonths as $index => $monthData)
                                     @php
@@ -92,7 +139,15 @@
                                 $progress = round($project->progress ?? 0);
                             @endphp
                             @php
-                                $assignmentCount = $projectAssignments->count();
+                                // Load fresh assignments directly from database to get accurate count
+                                $freshAssignments = \App\Models\Assignment::where('project_id', $project->id)
+                                    ->with('employee')
+                                    ->orderBy('display_order')
+                                    ->get();
+                                
+                                // Count all assignments (even "Unbekannt" ones)
+                                // The "Unbekannt" filtering happens later in the display loop
+                                $assignmentCount = $freshAssignments->count();
                                 $timelineHeight = 40 + ($assignmentCount > 0 ? $assignmentCount * 32 : 0);
                             @endphp
                                 @php
@@ -100,9 +155,20 @@
                                     $projectAssignments = collect($projectData['assignments'] ?? [])->values();
                                     $projectSummary = $projectData['summary'] ?? [];
                                 @endphp
-                                <div class="gantt-project-row" data-project-id="{{ $project->id }}" style="border: 1px solid #e5e7eb; border-radius: 8px; background: white; padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow: visible;">
+                                <div class="gantt-project-row" data-project-id="{{ $project->id }}" data-collapsed="false" style="border: 1px solid #e5e7eb; border-radius: 8px; background: white; padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow: visible;">
                                     <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: center;">
                                         <div style="display: flex; align-items: center; gap: 8px;">
+                                            {{-- Collapse Icon (immer sichtbar für alle Projekte) --}}
+                                            <button type="button" 
+                                                    class="project-collapse-btn" 
+                                                    data-project-id="{{ $project->id }}"
+                                                    onclick="event.stopPropagation(); toggleProject({{ $project->id }});"
+                                                    title="Mitarbeiter ein-/ausblenden"
+                                                    style="background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280; font-size: 14px; line-height: 1; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 20px;" 
+                                                    onmouseover="this.style.color='#111827'" 
+                                                    onmouseout="this.style.color='#6b7280'">
+                                                <span class="collapse-icon">▼</span>
+                                            </button>
                                             {{-- Project Menu (Three Dots) --}}
                                             <div style="position: relative; display: inline-block; z-index: 1001; overflow: visible;">
                                                 <button type="button" 
@@ -194,11 +260,8 @@
 
                                     <div style="display: flex; flex-direction: column; gap: 8px;">
                                         @php
-                                            // Load fresh assignments directly from database for this project
-                                            $freshAssignments = \App\Models\Assignment::where('project_id', $project->id)
-                                                ->with('employee')
-                                                ->orderBy('display_order')
-                                                ->get();
+                                            // Use already loaded fresh assignments from above (no duplicate query!)
+                                            // $freshAssignments already loaded above for accurate count
                                             
                                             // Convert to the format expected by the view
                                             $assignmentsForView = $freshAssignments->map(function($assignment) use ($timelineStart, $timelineEnd) {
@@ -223,6 +286,8 @@
                                             // Group assignments by employee
                                             $assignmentsByEmployee = $assignmentsForView->groupBy('employee_id');
                                         @endphp
+                                        {{-- Collapsible Employee Container --}}
+                                        <div class="project-employees-container" data-project-id="{{ $project->id }}" style="display: block; transition: all 0.3s ease; overflow: hidden;">
                                         @forelse($assignmentsByEmployee as $employeeId => $employeeAssignments)
                                             @php
                                                 $firstAssignment = $employeeAssignments->first();
@@ -324,6 +389,7 @@
                                                 <div style="height: 1px; background: #e5e7eb;"></div>
                                             </div>
                                         @endforelse
+                                        </div>{{-- End Collapsible Employee Container --}}
                                     </div>
                                 </div>
                             @endforeach

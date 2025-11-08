@@ -73,6 +73,7 @@ git push gitlab main
 ```bash
 # Verbinde dich mit dem Server
 ssh enodia@192.168.228.30
+# MB6g5f!TK2grz!xq
 
 # Oder falls du direkt als root einloggst:
 ssh root@192.168.228.30
