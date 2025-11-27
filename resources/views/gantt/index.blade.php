@@ -458,14 +458,10 @@
 
         // Toggle Project Menu - Must be defined BEFORE the HTML that uses it
         window.toggleProjectMenu = function(projectId) {
-            console.log('toggleProjectMenu called with:', projectId);
             const menu = document.getElementById('projectMenu' + projectId);
             const button = document.querySelector(`[data-project-id="${projectId}"].project-menu-btn`);
             
-            if (!menu || !button) {
-                console.error('Menu or button not found for project:', projectId);
-                return;
-            }
+            if (!menu || !button) return;
             
             // Close all other menus
             const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu, #headerActionsMenu');
@@ -487,21 +483,15 @@
                 menu.style.left = (buttonRect.left) + 'px';
                 menu.style.display = 'block';
             }
-            
-            console.log('Menu display changed to:', menu.style.display);
         }
 
         // Toggle Employee Menu - Must be defined BEFORE the HTML that uses it
         window.toggleEmployeeMenu = function(projectId, employeeId) {
-            console.log('toggleEmployeeMenu called with:', projectId, employeeId);
             const menuId = 'employeeMenu' + projectId + '_' + employeeId;
             const menu = document.getElementById(menuId);
             const button = document.querySelector(`[data-project-id="${projectId}"][data-employee-id="${employeeId}"].employee-menu-btn`);
             
-            if (!menu || !button) {
-                console.error('Menu or button not found for employee:', projectId, employeeId);
-                return;
-            }
+            if (!menu || !button) return;
             
             // Close all other menus
             const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu');
@@ -523,8 +513,6 @@
                 menu.style.left = (buttonRect.left) + 'px';
                 menu.style.display = 'block';
             }
-            
-            console.log('Menu display changed to:', menu.style.display);
         }
 
         // Modal functions - Must be defined BEFORE the HTML that uses them
@@ -548,8 +536,6 @@
         }
 
         window.openManageTasksModal = function(projectId, employeeId, employeeName) {
-            console.log('openManageTasksModal called:', { projectId, employeeId, employeeName });
-            
             // Close employee menu
             const employeeMenu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
             if (employeeMenu) employeeMenu.style.display = 'none';
@@ -571,39 +557,31 @@
             // Load tasks via AJAX
             const baseUrl = '{{ url("/") }}';
             const url = `${baseUrl}/gantt/projects/${projectId}/employees/${employeeId}/tasks`;
-            console.log('Full URL:', url);
-            console.log('Base URL:', baseUrl);
             
             fetch(url)
                 .then(response => {
-                    console.log('Response status:', response.status);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Tasks loaded:', data);
                     if (typeof window.renderTasksList === 'function') {
                         window.renderTasksList(data.tasks || [], projectId, employeeId);
                     } else {
-                        console.error('renderTasksList function not found');
                         if (container) {
                             container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler: renderTasksList Funktion nicht gefunden.</p></div>';
                         }
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading tasks:', error);
                     if (container) {
-                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Aufgaben.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">URL: ' + url + '<br>' + error.message + '</p></div>';
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Aufgaben.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">' + error.message + '</p></div>';
                     }
                 });
         }
 
         window.openEmployeeUtilizationModal = function(employeeId, employeeName) {
-            console.log('openEmployeeUtilizationModal called:', { employeeId, employeeName });
-            
             // Show loading state
             const nameElement = document.getElementById('utilizationEmployeeName');
             const contentElement = document.getElementById('utilizationContent');
@@ -618,27 +596,22 @@
             // Load utilization data
             const baseUrl = '{{ url("/") }}';
             const url = `${baseUrl}/gantt/employees/${employeeId}/utilization`;
-            console.log('Full URL:', url);
-            console.log('Base URL:', baseUrl);
             
             fetch(url)
                 .then(response => {
-                    console.log('Response status:', response.status);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Utilization loaded:', data);
                     if (typeof window.renderUtilizationView === 'function') {
                         window.renderUtilizationView(data, employeeName);
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading utilization:', error);
                     if (contentElement) {
-                        contentElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Auslastungsdaten.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">URL: ' + url + '<br>' + error.message + '</p></div>';
+                        contentElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Auslastungsdaten.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">' + error.message + '</p></div>';
                     }
                 });
         }
@@ -731,23 +704,10 @@
                 const allProjectRows = document.querySelectorAll('.gantt-project-row');
                 const collapseAllBtn = document.getElementById('collapseAllBtn');
                 
-                console.log('=== TOGGLE ALL PROJECTS DEBUG ===');
-                console.log('Total project rows found:', allProjectRows.length);
-                
-                // Log each project
-                allProjectRows.forEach((row, index) => {
-                    const projectId = row.getAttribute('data-project-id');
-                    const isCollapsed = row.getAttribute('data-collapsed');
-                    const hasCollapseBtn = row.querySelector('.project-collapse-btn') !== null;
-                    console.log(`Project ${index + 1}: ID=${projectId}, collapsed=${isCollapsed}, hasBtn=${hasCollapseBtn}`);
-                });
-                
                 // Only toggle projects that HAVE a collapse button
                 const projectsWithButton = Array.from(allProjectRows).filter(row => 
                     row.querySelector('.project-collapse-btn') !== null
                 );
-                
-                console.log('Projects WITH collapse button:', projectsWithButton.length);
                 
                 // Check if at least one is expanded
                 const someExpanded = projectsWithButton.some(row => 
@@ -756,29 +716,23 @@
                 
                 if (someExpanded) {
                     // Collapse all (only those with button)
-                    console.log('Collapsing all projects with button...');
-                    projectsWithButton.forEach((row, index) => {
+                    projectsWithButton.forEach(row => {
                         const projectId = row.getAttribute('data-project-id');
                         if (row.getAttribute('data-collapsed') !== 'true') {
-                            console.log(`  Collapsing project ${index + 1}: ID=${projectId}`);
                             toggleProject(projectId);
                         }
                     });
                     collapseAllBtn.textContent = '▶';
                 } else {
                     // Expand all (only those with button)
-                    console.log('Expanding all projects with button...');
-                    projectsWithButton.forEach((row, index) => {
+                    projectsWithButton.forEach(row => {
                         const projectId = row.getAttribute('data-project-id');
                         if (row.getAttribute('data-collapsed') === 'true') {
-                            console.log(`  Expanding project ${index + 1}: ID=${projectId}`);
                             toggleProject(projectId);
                         }
                     });
                     collapseAllBtn.textContent = '▼';
                 }
-                
-                console.log('=== END DEBUG ===');
             }, 50);
         }
         
@@ -934,7 +888,6 @@ function handleExportClick(event, link) {
         link.style.pointerEvents = '';
     }, 3000);
 }
-</script>
 </script>
 
 @endsection

@@ -174,7 +174,7 @@
                                                 <button type="button" 
                                                         class="project-menu-btn" 
                                                         data-project-id="{{ $project->id }}"
-                                                        onclick="console.log('Project button clicked:', {{ $project->id }}); event.stopPropagation(); event.stopImmediatePropagation(); window.toggleProjectMenu({{ $project->id }}); return false;"
+                                                        onclick="event.stopPropagation(); event.stopImmediatePropagation(); window.toggleProjectMenu({{ $project->id }}); return false;"
                                                         style="background: none; border: none; cursor: pointer; padding: 4px 8px; color: #6b7280; font-size: 18px; line-height: 1; transition: all 0.2s; position: relative; z-index: 1002; pointer-events: auto;" 
                                                         onmouseover="this.style.color='#111827'" 
                                                         onmouseout="this.style.color='#6b7280'">
@@ -307,7 +307,7 @@
                                                                 class="employee-menu-btn" 
                                                                 data-project-id="{{ $project->id }}"
                                                                 data-employee-id="{{ $employeeId }}"
-                                                                onclick="console.log('Employee button clicked:', {{ $project->id }}, {{ $employeeId }}); event.stopPropagation(); event.stopImmediatePropagation(); window.toggleEmployeeMenu({{ $project->id }}, {{ $employeeId }}); return false;"
+                                                                onclick="event.stopPropagation(); event.stopImmediatePropagation(); window.toggleEmployeeMenu({{ $project->id }}, {{ $employeeId }}); return false;"
                                                                 style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #6b7280; font-size: 16px; line-height: 1; transition: all 0.2s; position: relative; z-index: 1002; pointer-events: auto;" 
                                                                 onmouseover="this.style.color='#111827'" 
                                                                 onmouseout="this.style.color='#6b7280'">
