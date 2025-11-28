@@ -464,6 +464,17 @@ class GanttController extends Controller
             ->get()
             ->groupBy('employee_id');
 
+        // Load booked hours from time_entries (last 30 days) for all employees
+        $periodStart = now()->subDays(30)->startOfDay();
+        $periodEnd = now()->endOfDay();
+        $employeeBookedHours = DB::table('time_entries')
+            ->whereIn('employee_id', $employees->pluck('id')->toArray())
+            ->whereBetween('date', [$periodStart, $periodEnd])
+            ->select('employee_id', DB::raw('SUM(hours) as total_hours'))
+            ->groupBy('employee_id')
+            ->pluck('total_hours', 'employee_id')
+            ->toArray();
+
         $timelineByEmployee = collect();
 
         foreach ($employees as $employee) {
@@ -645,6 +656,7 @@ class GanttController extends Controller
                         'total_weekly_load' => 0,
                         'overload_ratio' => null,
                         'project_count' => 0,
+                        'booked_hours_30d' => round($employeeBookedHours[$employee->id] ?? 0, 1),
                     ],
                     'span' => [
                         'raw_start' => $timelineStart,
@@ -760,6 +772,7 @@ class GanttController extends Controller
                     'peak_utilization_percent' => $utilizationMetrics['peak_utilization_percent'] ?? 0,
                     'average_utilization_percent' => $utilizationMetrics['average_utilization_percent'] ?? 0,
                     'has_absences' => $employeeAbsenceData->isNotEmpty(),
+                    'booked_hours_30d' => round($employeeBookedHours[$employee->id] ?? 0, 1),
                 ],
                 'span' => [
                     'raw_start' => $employeeRawStart,
