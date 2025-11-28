@@ -71,50 +71,82 @@ class DashboardController extends Controller
             ? round(($totalEstimatedHours / max($totalActualHours, 1)) * 100, 1)
             : 100;
         
-        // 4. TEAM UTILIZATION
+        // 4. TEAM UTILIZATION - Basierend auf ECHTEN gebuchten Stunden aus MOCO
         $employees = DB::table('employees')
             ->where('is_active', true)
             ->get();
         
-        $totalCapacity = 0;
-        $totalAssigned = 0;
+        // Zeiträume definieren: Letzte 30 Tage für bessere Datenabdeckung
+        $periodStart = now()->subDays(30)->startOfDay();
+        $periodEnd = now()->endOfDay();
+        $previousPeriodStart = now()->subDays(60)->startOfDay();
+        $previousPeriodEnd = now()->subDays(31)->endOfDay();
+        
         $employeeWorkloads = [];
+        $totalHoursThisWeek = 0;
         $overloadedEmployees = 0;
         
         foreach ($employees as $employee) {
-            $assignments = DB::table('assignments')
+            // Echte gebuchte Stunden aus time_entries (MOCO) - Letzte 30 Tage
+            $hoursThisWeek = DB::table('time_entries')
+                ->where('employee_id', $employee->id)
+                ->whereBetween('date', [$periodStart, $periodEnd])
+                ->sum('hours');
+            
+            $hoursLastWeek = DB::table('time_entries')
+                ->where('employee_id', $employee->id)
+                ->whereBetween('date', [$previousPeriodStart, $previousPeriodEnd])
+                ->sum('hours');
+            
+            // Top 3 Projekte (letzte 30 Tage)
+            $topProjects = DB::table('time_entries')
+                ->join('projects', 'time_entries.project_id', '=', 'projects.id')
+                ->where('time_entries.employee_id', $employee->id)
+                ->whereBetween('time_entries.date', [$periodStart, $periodEnd])
+                ->select('projects.name', DB::raw('SUM(time_entries.hours) as hours'))
+                ->groupBy('projects.id', 'projects.name')
+                ->orderByDesc('hours')
+                ->limit(3)
+                ->get();
+            
+            // Anzahl aktiver Projekte
+            $activeProjectCount = DB::table('assignments')
                 ->where('employee_id', $employee->id)
                 ->where('start_date', '<=', now())
                 ->where('end_date', '>=', now())
-                ->get();
+                ->count();
             
-            $assignedHours = $assignments->sum('weekly_hours');
-            $weeklyCapacity = $employee->weekly_capacity ?? 40;
-            $utilization = $weeklyCapacity > 0 ? ($assignedHours / $weeklyCapacity) * 100 : 0;
+            $totalHoursThisWeek += $hoursThisWeek;
             
-            $totalCapacity += $weeklyCapacity;
-            $totalAssigned += $assignedHours;
+            // Trend berechnen (Vergleich zum Vormonat)
+            $trend = $hoursLastWeek > 0 
+                ? round((($hoursThisWeek - $hoursLastWeek) / $hoursLastWeek) * 100, 0)
+                : ($hoursThisWeek > 0 ? 100 : 0);
             
-            if ($utilization > 100) {
+            // Schwellwerte für 30 Tage: 180h = viel, 120h = normal, <80h = wenig
+            if ($hoursThisWeek > 180) {
                 $overloadedEmployees++;
             }
             
             $employeeWorkloads[] = [
                 'id' => $employee->id,
                 'name' => $employee->first_name . ' ' . $employee->last_name,
-                'utilization' => round($utilization, 1),
-                'assigned_hours' => $assignedHours,
-                'capacity' => $weeklyCapacity,
-                'status' => $utilization > 100 ? 'overloaded' : ($utilization >= 85 ? 'high' : ($utilization >= 70 ? 'optimal' : 'low'))
+                'hours_this_week' => round($hoursThisWeek, 1),
+                'hours_last_week' => round($hoursLastWeek, 1),
+                'trend' => $trend,
+                'project_count' => $activeProjectCount,
+                'top_projects' => $topProjects,
+                'status' => $hoursThisWeek > 180 ? 'high' : ($hoursThisWeek >= 120 ? 'normal' : 'low')
             ];
         }
         
+        // Sortieren nach Stunden diese Woche (absteigend)
         usort($employeeWorkloads, function($a, $b) {
-            return $b['utilization'] <=> $a['utilization'];
+            return $b['hours_this_week'] <=> $a['hours_this_week'];
         });
         
-        $averageUtilization = $totalCapacity > 0 
-            ? round(($totalAssigned / $totalCapacity) * 100, 1)
+        $averageUtilization = count($employeeWorkloads) > 0 
+            ? round($totalHoursThisWeek / count($employeeWorkloads), 1)
             : 0;
         
         // 5. PROJECT DISTRIBUTION & STATUS
@@ -334,7 +366,7 @@ class DashboardController extends Controller
         $alerts = [
             'overloaded_employees' => $overloadedEmployees,
             'delayed_projects' => $projectHealth['delayed'],
-            'low_utilization' => collect($employeeWorkloads)->filter(fn($e) => $e['utilization'] < 70)->count()
+            'low_utilization' => collect($employeeWorkloads)->filter(fn($e) => $e['hours_this_week'] < 80)->count()
         ];
         
         // ==================== LEGACY DATA (for compatibility) ====================

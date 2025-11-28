@@ -202,9 +202,10 @@ class SyncMocoEmployees extends Command
      */
     protected function calculateWeeklyCapacity(array $mocoUser): float
     {
-        // MOCO stores capacity per week in hours
-        // Default to 40 hours if not set
-        return $mocoUser['work_time_per_day'] ?? 8.0;
+        // MOCO provides work_time_per_day (e.g., 8 hours)
+        // Convert to weekly capacity: daily hours × 5 work days
+        $dailyHours = $mocoUser['work_time_per_day'] ?? 8.0;
+        return $dailyHours * 5; // 8h/day × 5 days = 40h/week
     }
 
     /**

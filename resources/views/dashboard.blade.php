@@ -221,6 +221,110 @@
             </div>
         </div>
 
+        <!-- Team Workload Widget - Echte gebuchte Stunden aus MOCO -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+            <!-- Top Performers - Meiste Stunden diese Woche -->
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div>
+                        <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">Gebuchte Stunden</h3>
+                        <p style="color: #6b7280; font-size: 14px; margin: 4px 0 0 0;">Letzte 30 Tage (Top 5)</p>
+                    </div>
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 16px;">⏱</span>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto;">
+                    @php
+                        $topWorkers = collect($employeeWorkloads)->filter(fn($e) => $e['hours_this_week'] > 0)->take(5);
+                    @endphp
+                    @forelse($topWorkers as $employee)
+                        @php
+                            $statusColor = $employee['hours_this_week'] > 180 ? '#ef4444' : ($employee['hours_this_week'] >= 120 ? '#3b82f6' : '#10b981');
+                            $bgColor = $employee['hours_this_week'] > 180 ? '#fef2f2' : ($employee['hours_this_week'] >= 120 ? '#eff6ff' : '#f0fdf4');
+                        @endphp
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: {{ $bgColor }}; border-radius: 8px; border-left: 4px solid {{ $statusColor }};">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #111827; font-size: 14px;">{{ $employee['name'] }}</div>
+                                <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">
+                                    {{ $employee['project_count'] }} aktive Projekte
+                                    @if($employee['top_projects']->count() > 0)
+                                        <br><span style="color: #9ca3af;">→ {{ $employee['top_projects']->first()->name }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 20px; font-weight: 700; color: {{ $statusColor }};">{{ $employee['hours_this_week'] }}h</div>
+                                @if($employee['trend'] != 0)
+                                    <div style="font-size: 11px; color: {{ $employee['trend'] > 0 ? '#10b981' : '#ef4444' }}; font-weight: 500;">
+                                        {{ $employee['trend'] > 0 ? '+' : '' }}{{ $employee['trend'] }}% vs. Vormonat
+                                    </div>
+                                @else
+                                    <div style="font-size: 11px; color: #9ca3af;">wie Vormonat</div>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div style="text-align: center; padding: 30px; color: #6b7280;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">📊</div>
+                            <p style="margin: 0; font-size: 14px; font-weight: 500;">Keine Zeitbuchungen diese Woche</p>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #9ca3af;">Daten aus MOCO werden synchronisiert</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Low Activity - Wenig Stunden diese Woche -->
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <div>
+                        <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">Wenig Aktivität</h3>
+                        <p style="color: #6b7280; font-size: 14px; margin: 4px 0 0 0;">Letzte 30 Tage (unter 80h)</p>
+                    </div>
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: white; font-size: 16px;">📉</span>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 12px; max-height: 280px; overflow-y: auto;">
+                    @php
+                        $lowActivity = collect($employeeWorkloads)
+                            ->filter(fn($e) => $e['hours_this_week'] < 80 && $e['project_count'] > 0)
+                            ->sortBy('hours_this_week')
+                            ->take(5);
+                    @endphp
+                    @forelse($lowActivity as $employee)
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #fffbeb; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #111827; font-size: 14px;">{{ $employee['name'] }}</div>
+                                <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">
+                                    {{ $employee['project_count'] }} aktive Projekte
+                                    @if($employee['hours_last_week'] > 0)
+                                        <br><span style="color: #9ca3af;">Vormonat: {{ $employee['hours_last_week'] }}h</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 20px; font-weight: 700; color: #f59e0b;">{{ $employee['hours_this_week'] }}h</div>
+                                <div style="font-size: 11px; color: #d97706; font-weight: 500;">
+                                    @if($employee['hours_this_week'] == 0)
+                                        Keine Buchungen
+                                    @else
+                                        Unter Durchschnitt
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div style="text-align: center; padding: 30px; color: #10b981;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">✓</div>
+                            <p style="margin: 0; font-size: 14px; font-weight: 500;">Alle Mitarbeiter aktiv</p>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">Alle haben diese Woche gebucht</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
         <!-- Revenue Trend Chart -->
         <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -279,23 +383,28 @@
             @endif
         </div>
 
-        <!-- Team Utilization & Alerts -->
+        <!-- Team Workload & Alerts -->
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
-            <!-- Resource Heatmap -->
+            <!-- Hours Heatmap -->
             <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Ressourcen-Auslastung</h3>
-                <p style="color: #6b7280; font-size: 14px; margin: 0 0 16px 0;">Top 10 Mitarbeiter nach Auslastung</p>
+                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 8px 0;">Gebuchte Stunden</h3>
+                <p style="color: #6b7280; font-size: 14px; margin: 0 0 16px 0;">Top 10 Mitarbeiter diese Woche</p>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     @foreach(array_slice($employeeWorkloads, 0, 10) as $workload)
-                <div>
+                    @php
+                        $hours = $workload['hours_this_week'] ?? 0;
+                        $barWidth = min(($hours / 50) * 100, 100);
+                        $barColor = $hours > 45 ? 'linear-gradient(90deg, #ef4444, #dc2626)' : ($hours >= 30 ? 'linear-gradient(90deg, #3b82f6, #2563eb)' : 'linear-gradient(90deg, #10b981, #059669)');
+                    @endphp
+                    <div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <span style="color: #374151; font-size: 14px; font-weight: 500;">{{ $workload['name'] }}</span>
-                            <span style="color: #111827; font-size: 14px; font-weight: 600;">{{ $workload['utilization'] }}%</span>
+                            <span style="color: #111827; font-size: 14px; font-weight: 600;">{{ $hours }}h</span>
                         </div>
                         <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
-                            <div style="height: 100%; background: {{ $workload['status'] === 'overloaded' ? 'linear-gradient(90deg, #ef4444, #dc2626)' : ($workload['status'] === 'high' ? 'linear-gradient(90deg, #f59e0b, #d97706)' : ($workload['status'] === 'optimal' ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #6b7280, #4b5563)')) }}; width: {{ min($workload['utilization'], 100) }}%; transition: width 0.3s ease; border-radius: 4px;"></div>
+                            <div style="height: 100%; background: {{ $barColor }}; width: {{ $barWidth }}%; transition: width 0.3s ease; border-radius: 4px;"></div>
                         </div>
-                </div>
+                    </div>
                     @endforeach
                 </div>
             </div>
@@ -462,31 +571,39 @@
 
             <!-- Resource Allocation Details -->
             <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Detaillierte Ressourcen-Allocation</h3>
+                <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Wochenübersicht Mitarbeiter</h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                     @foreach($employeeWorkloads as $workload)
+                    @php
+                        $hours = $workload['hours_this_week'] ?? 0;
+                        $status = $workload['status'] ?? 'low';
+                        $barWidth = min(($hours / 50) * 100, 100);
+                        $barColor = $hours > 45 ? 'linear-gradient(90deg, #ef4444, #dc2626)' : ($hours >= 30 ? 'linear-gradient(90deg, #3b82f6, #2563eb)' : 'linear-gradient(90deg, #10b981, #059669)');
+                        $badgeBg = $hours > 45 ? '#fee2e2' : ($hours >= 30 ? '#dbeafe' : '#d1fae5');
+                        $badgeColor = $hours > 45 ? '#991b1b' : ($hours >= 30 ? '#1e40af' : '#065f46');
+                    @endphp
                     <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                             <span style="color: #111827; font-weight: 600; font-size: 14px;">{{ $workload['name'] }}</span>
-                            <span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; background: {{ $workload['status'] === 'overloaded' ? '#fee2e2' : ($workload['status'] === 'high' ? '#fef3c7' : ($workload['status'] === 'optimal' ? '#d1fae5' : '#f3f4f6')) }}; color: {{ $workload['status'] === 'overloaded' ? '#991b1b' : ($workload['status'] === 'high' ? '#92400e' : ($workload['status'] === 'optimal' ? '#065f46' : '#374151')) }};">
-                                {{ $workload['utilization'] }}%
+                            <span style="padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; background: {{ $badgeBg }}; color: {{ $badgeColor }};">
+                                {{ $hours }}h
                             </span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="color: #6b7280; font-size: 12px;">Zugewiesen:</span>
-                            <span style="color: #111827; font-size: 12px; font-weight: 500;">{{ $workload['assigned_hours'] }}h</span>
+                            <span style="color: #6b7280; font-size: 12px;">Aktive Projekte:</span>
+                            <span style="color: #111827; font-size: 12px; font-weight: 500;">{{ $workload['project_count'] ?? 0 }}</span>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
-                            <span style="color: #6b7280; font-size: 12px;">Kapazität:</span>
-                            <span style="color: #111827; font-size: 12px; font-weight: 500;">{{ $workload['capacity'] }}h</span>
+                            <span style="color: #6b7280; font-size: 12px;">Letzte Woche:</span>
+                            <span style="color: #111827; font-size: 12px; font-weight: 500;">{{ $workload['hours_last_week'] ?? 0 }}h</span>
                         </div>
                         <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 12px;">
-                            <div style="height: 100%; background: {{ $workload['status'] === 'overloaded' ? 'linear-gradient(90deg, #ef4444, #dc2626)' : ($workload['status'] === 'high' ? 'linear-gradient(90deg, #f59e0b, #d97706)' : ($workload['status'] === 'optimal' ? 'linear-gradient(90deg, #10b981, #059669)' : 'linear-gradient(90deg, #6b7280, #4b5563)')) }}; width: {{ min($workload['utilization'], 100) }}%;"></div>
+                            <div style="height: 100%; background: {{ $barColor }}; width: {{ $barWidth }}%;"></div>
                         </div>
-                </div>
+                    </div>
                     @endforeach
                 </div>
-                </div>
+            </div>
         </div>
     </div>
 </div>
