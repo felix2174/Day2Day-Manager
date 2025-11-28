@@ -57,12 +57,12 @@ class GanttController extends Controller
     public function index()
     {
         // Lade gespeicherte Filter-Einstellungen aus der Session
-        // DEFAULT: Nur aktuelle Projekte laden für bessere Performance
+        // DEFAULT: Alle Projekte laden (MOCO-Daten kommen aus Cache)
         $filters = Session::get('gantt_filters', [
             'status' => '',
             'sort' => '',
             'employee' => '',
-            'timeframe' => 'current', // DEFAULT: Nur aktuelle Projekte
+            'timeframe' => '', // DEFAULT: Alle Projekte anzeigen
             'custom_date_from' => '',
             'custom_date_to' => '',
             'search' => '',
@@ -112,7 +112,7 @@ class GanttController extends Controller
                     $moco = app(MocoService::class);
                     // Cache MOCO-Userprojekte für kurze Zeit, um Performance zu verbessern
                     $cacheKey = 'moco:user_projects:' . (int)$emp->moco_id;
-                    $userProjects = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($moco, $emp) {
+                    $userProjects = Cache::remember($cacheKey, now()->addMinutes(120), function () use ($moco, $emp) {
                         return $moco->getUserProjects((int)$emp->moco_id);
                     });
                     // Sammle MOCO Projekt-IDs
@@ -234,8 +234,8 @@ class GanttController extends Controller
             $query->orderBy('start_date');
         }
 
-        // PERFORMANCE: Limit auf 50 Projekte (kann per Filter überschrieben werden)
-        $limit = request()->query('limit', 50);
+        // PERFORMANCE: Limit auf 100 Projekte (kann per Filter überschrieben werden)
+        $limit = request()->query('limit', 100);
         if ($limit > 200) {
             $limit = 200; // Maximal 200 Projekte für Performance
         }
@@ -252,13 +252,13 @@ class GanttController extends Controller
             });
         }
         
-        // PERFORMANCE: Cache die Projekte-Query für 5 Minuten (Cache-Key basierend auf Filtern)
+        // PERFORMANCE: Cache die Projekte-Query für 60 Minuten (Cache-Key basierend auf Filtern)
         $cacheKey = 'gantt:projects:' . md5(json_encode($filters) . ':' . $limit);
         
         // Zähle Gesamtanzahl vor Limit (für Info-Meldung)
         $totalProjectsCount = $query->count();
         
-        $projects = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($query, $limit) {
+        $projects = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($query, $limit) {
             return $query->limit($limit)->get();
         });
         
@@ -541,7 +541,7 @@ class GanttController extends Controller
                     /** @var MocoService $mocoService */
                     $mocoService = app(MocoService::class);
                     $cacheKey = 'moco:user_projects:' . (int) $employee->moco_id;
-                    $mocoProjects = $this->rememberMoco($cacheKey, 10, function () use ($mocoService, $employee) {
+                    $mocoProjects = $this->rememberMoco($cacheKey, 120, function () use ($mocoService, $employee) {
                         return $mocoService->getUserProjects($employee->moco_id);
                     });
                     if (!is_array($mocoProjects) || empty($mocoProjects)) {
@@ -812,7 +812,7 @@ class GanttController extends Controller
             $mocoService = app(MocoService::class);
             foreach ($mocoProjectIds as $mocoId) {
                 $cacheKey = 'moco:project_team:' . (int) $mocoId;
-                $teamMembers = $this->rememberMoco($cacheKey, 15, function () use ($mocoService, $mocoId) {
+                $teamMembers = $this->rememberMoco($cacheKey, 120, function () use ($mocoService, $mocoId) {
                     return $mocoService->getProjectTeam($mocoId);
                 });
                 if ($teamMembers) {
@@ -1031,7 +1031,7 @@ class GanttController extends Controller
             $mocoService = app(MocoService::class);
             foreach ($mocoProjectIds as $mocoId) {
                 $cacheKey = 'moco:project_assignments:' . (int) $mocoId;
-                $assignments = $this->rememberMoco($cacheKey, 15, function () use ($mocoService, $mocoId) {
+                $assignments = $this->rememberMoco($cacheKey, 120, function () use ($mocoService, $mocoId) {
                     return $mocoService->getProjectAssignmentsCached($mocoId);
                 });
                 $assignments = collect($assignments);
@@ -1046,11 +1046,11 @@ class GanttController extends Controller
 
             $teamMembers = collect($projectAssignmentsGroupedArray[$projectId]['team_members'] ?? []);
             if ($teamMembers->isEmpty() && $mocoId) {
-                $fetched = collect($this->rememberMoco('moco:project_team:' . (int) $mocoId, 15, function () use ($mocoService, $mocoId) {
+                $fetched = collect($this->rememberMoco('moco:project_team:' . (int) $mocoId, 120, function () use ($mocoService, $mocoId) {
                     return $mocoService->getProjectTeam($mocoId);
                 }) ?? []);
                 if ($fetched->isEmpty()) {
-                    $projectDetail = $this->rememberMoco('moco:project_detail:' . (int) $mocoId, 15, function () use ($mocoService, $mocoId) {
+                    $projectDetail = $this->rememberMoco('moco:project_detail:' . (int) $mocoId, 120, function () use ($mocoService, $mocoId) {
                         return $mocoService->getProject($mocoId);
                     });
                     if ($projectDetail && isset($projectDetail['contracts'])) {
