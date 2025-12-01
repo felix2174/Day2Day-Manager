@@ -61,7 +61,7 @@
                                             ➕ Neues Projekt anlegen
                                         </a>
                                         <button type="button" 
-                                                onclick="syncMocoProjects()"
+                                                onclick="syncMocoProjects(ganttConfig.baseUrl, ganttConfig.csrfToken, ganttConfig.mocoSyncUrl)"
                                                 style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: none; border: none; color: #111827; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
                                                 onmouseover="this.style.background='#f9fafb'"
                                                 onmouseout="this.style.background='white'">
@@ -182,7 +182,7 @@
                                                 </button>
                                                 <div id="projectMenu{{ $project->id }}" style="display: none; position: fixed; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 99999; min-width: 220px; max-width: 280px; white-space: nowrap;">
                                                     <div style="padding: 4px 0;">
-                                                        <button type="button" onclick="openAddEmployeeModal({{ $project->id }})" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
+                                                        <button type="button" onclick="openAddEmployeeModal({{ $project->id }}, ganttConfig.baseUrl)" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                                                             <span style="font-size: 16px; color: #10b981;">➕</span>
                                                             <span style="font-weight: 500;">Mitarbeiter hinzufügen</span>
                                                         </button>
@@ -315,16 +315,16 @@
                                                         </button>
                                                         <div id="employeeMenu{{ $project->id }}_{{ $employeeId }}" style="display: none; position: fixed; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 99999; min-width: 220px; max-width: 280px; white-space: nowrap;">
                                                             <div style="padding: 4px 0;">
-                                                                <button type="button" onclick="openAddTaskModal({{ $project->id }}, {{ $employeeId }})" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
+                                                                <button type="button" onclick="openAddTaskModal({{ $project->id }}, {{ $employeeId }}, ganttConfig.baseUrl)" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                                                                     <span style="font-size: 16px; color: #10b981;">➕</span>
                                                                     <span style="font-weight: 500;">Aufgabe hinzufügen</span>
                                                                 </button>
                                                                 <div style="height: 1px; background: #e5e7eb; margin: 4px 0;"></div>
-                                                                <button type="button" onclick="openManageTasksModal({{ $project->id }}, {{ $employeeId }}, '{{ $employeeName }}')" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
+                                                                <button type="button" onclick="openManageTasksModal({{ $project->id }}, {{ $employeeId }}, '{{ $employeeName }}', ganttConfig.baseUrl)" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                                                                     <span style="font-size: 16px; color: #3b82f6;">📋</span>
                                                                     <span style="font-weight: 500;">Aufgaben verwalten</span>
                                                                 </button>
-                                                                <button type="button" onclick="openEmployeeUtilizationModal({{ $employeeId }}, '{{ $employeeName }}')" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
+                                                                <button type="button" onclick="openEmployeeUtilizationModal({{ $employeeId }}, '{{ $employeeName }}', ganttConfig.baseUrl)" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                                                                     <span style="font-size: 16px; color: #8b5cf6;">📊</span>
                                                                     <span style="font-weight: 500;">Auslastung anzeigen</span>
                                                                 </button>
@@ -1231,7 +1231,7 @@ window.cancelTaskEdit = function(taskId, projectId, employeeId) {
     if (typeof window.openManageTasksModal === 'function') {
         const nameElement = document.getElementById('manageTasksEmployeeName');
         if (nameElement) {
-            window.openManageTasksModal(projectId, employeeId, nameElement.textContent);
+            window.openManageTasksModal(projectId, employeeId, nameElement.textContent, ganttConfig.baseUrl);
         }
     }
 }
@@ -1267,7 +1267,7 @@ window.saveTaskEdit = function(event, taskId, projectId, employeeId) {
             if (typeof window.openManageTasksModal === 'function') {
                 const nameElement = document.getElementById('manageTasksEmployeeName');
                 if (nameElement) {
-                    window.openManageTasksModal(projectId, employeeId, nameElement.textContent);
+                    window.openManageTasksModal(projectId, employeeId, nameElement.textContent, ganttConfig.baseUrl);
                 }
             }
             
