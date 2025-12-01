@@ -2,101 +2,236 @@
 
 <?php $__env->startSection('content'); ?>
 <div style="width: 100%; margin: 0; padding: 0;">
-    <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-            <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 12px;">
-                <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;"><?php echo e($viewMode === 'employees' ? 'Gantt-Diagramm: Mitarbeiter' : 'Gantt-Diagramm: Projekte'); ?></h1>
-                <div style="display: flex; gap: 16px; margin-top: 10px; align-items: center; flex-wrap: wrap;">
-                    <?php if($viewMode === 'employees'): ?>
-                        <div style="color: #6b7280; font-size: 14px;">Mitarbeiter:</div>
-                        <div style="font-weight: 600; color: #111827;"><?php echo e($timelineByEmployee->count()); ?></div>
-                    <?php else: ?>
-                        <div style="color: #6b7280; font-size: 14px;">Projekte:</div>
-                        <div style="font-weight: 600; color: #111827;"><?php echo e($projects->count()); ?></div>
-                        <div style="height: 16px; width: 1px; background: #e5e7eb;"></div>
-                        <div style="display: inline-flex; align-items: center; gap: 8px;">
-                            <span style="color: #6b7280; font-size: 14px;">In Bearbeitung:</span>
-                            <span style="font-weight: 600; color: #10b981;"><?php echo e($projects->filter(function ($p) {
-                                if ($p->finish_date) {
-                                    return \Carbon\Carbon::parse($p->finish_date)->isFuture();
-                                }
-                                return $p->status === 'in_bearbeitung' || $p->status === 'active' || $p->status === 'planning';
-                            })->count()); ?></span>
-                        </div>
-                        <div style="display: inline-flex; align-items: center; gap: 8px;">
-                            <span style="color: #6b7280; font-size: 14px;">Abgeschlossen:</span>
-                            <span style="font-weight: 600; color: #6b7280;"><?php echo e($projects->filter(function ($p) {
-                                if ($p->finish_date) {
-                                    return \Carbon\Carbon::parse($p->finish_date)->isPast();
-                                }
-                                return $p->status === 'abgeschlossen' || $p->status === 'completed';
-                            })->count()); ?></span>
-                        </div>
-                    <?php endif; ?>
-                </div>
+    
+    <div style="background: white; padding: 12px 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                
                 <?php if($viewMode === 'employees'): ?>
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                        <button id="ganttEmployeeUndo" type="button" disabled style="padding: 10px 16px; background: #ffffff; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; opacity: 0.5; transition: all 0.2s ease;">Änderung rückgängig</button>
-                        <span style="font-size: 12px; color: #6b7280;">Snapping & Undo aktiv – Änderungen werden übernommen, sobald du loslässt.</span>
+                    <span style="background: #f3f4f6; color: #111827; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                        <span style="color: #6b7280; font-weight: 500;">Mitarbeiter:</span>
+                        <span style="font-weight: 700;"><?php echo e($timelineByEmployee->count()); ?></span>
+                    </span>
+                <?php else: ?>
+                    <?php
+                        $totalCount = $projects->count();
+                        $activeCount = $projects->filter(function ($p) {
+                            if ($p->finish_date) {
+                                return \Carbon\Carbon::parse($p->finish_date)->isFuture();
+                            }
+                            return $p->status === 'in_bearbeitung' || $p->status === 'active' || $p->status === 'planning';
+                        })->count();
+                        $completedCount = $projects->filter(function ($p) {
+                            if ($p->finish_date) {
+                                return \Carbon\Carbon::parse($p->finish_date)->isPast();
+                            }
+                            return $p->status === 'abgeschlossen' || $p->status === 'completed';
+                        })->count();
+                    ?>
+                    <div style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px;">
+                        
+                        <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Gesamt</span>
+                            <span style="color: #111827; font-size: 14px; font-weight: 700;"><?php echo e($totalCount); ?></span>
+                        </div>
+                        <span style="color: #d1d5db;">·</span>
+                        
+                        <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="color: #10b981; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Aktiv</span>
+                            <span style="color: #10b981; font-size: 14px; font-weight: 700;"><?php echo e($activeCount); ?></span>
+                        </div>
+                        <span style="color: #d1d5db;">·</span>
+                        
+                        <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="color: #9ca3af; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Fertig</span>
+                            <span style="color: #9ca3af; font-size: 14px; font-weight: 700;"><?php echo e($completedCount); ?></span>
+                        </div>
                     </div>
                 <?php endif; ?>
-            </div>
-            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+
                 
-                <div style="background: #f3f4f6; border-radius: 999px; padding: 4px; display: inline-flex;">
+                <div style="background: #f3f4f6; border-radius: 8px; padding: 3px; display: inline-flex;">
                     <a href="<?php echo e(route('gantt.index', ['view' => 'projects'])); ?>"
-                       style="padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; text-decoration: none; color: <?php echo e($viewMode === 'projects' ? '#ffffff' : '#374151'); ?>; background: <?php echo e($viewMode === 'projects' ? '#111827' : 'transparent'); ?>; transition: all 0.2s ease;">
+                       style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: <?php echo e($viewMode === 'projects' ? '#ffffff' : '#374151'); ?>; background: <?php echo e($viewMode === 'projects' ? '#111827' : 'transparent'); ?>; transition: all 0.15s ease;">
                         Projekte
                     </a>
                     <a href="<?php echo e(route('gantt.index', ['view' => 'employees'])); ?>"
-                       style="padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 500; text-decoration: none; color: <?php echo e($viewMode === 'employees' ? '#ffffff' : '#374151'); ?>; background: <?php echo e($viewMode === 'employees' ? '#111827' : 'transparent'); ?>; transition: all 0.2s ease;">
+                       style="padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: <?php echo e($viewMode === 'employees' ? '#ffffff' : '#374151'); ?>; background: <?php echo e($viewMode === 'employees' ? '#111827' : 'transparent'); ?>; transition: all 0.15s ease;">
                         Mitarbeiter
                     </a>
                 </div>
 
                 
-                <div style="display: flex; gap: 6px; align-items: center; background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 4px;">
-                    <span style="font-size: 12px; color: #6b7280; font-weight: 500; padding: 0 8px;">🔍 Ansicht:</span>
-                    <?php
-                        $zoomOptions = [
-                            'month' => ['label' => 'Monate', 'title' => 'Monatsansicht', 'icon' => '📅'],
-                            'week' => ['label' => 'Wochen', 'title' => 'Wochenansicht', 'icon' => '📆'],
-                            'day' => ['label' => 'Tage', 'title' => 'Tagesansicht', 'icon' => '🗓️'],
-                        ];
-                    ?>
-                    <?php $__currentLoopData = $zoomOptions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $zoomKey => $zoomData): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <a href="<?php echo e(route('gantt.index', array_merge(request()->query(), ['zoom' => $zoomKey]))); ?>"
-                           title="<?php echo e($zoomData['title']); ?>"
-                           style="padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: <?php echo e($currentZoom === $zoomKey ? '#ffffff' : '#374151'); ?>; background: <?php echo e($currentZoom === $zoomKey ? '#3b82f6' : 'transparent'); ?>; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px;"
-                           onmouseover="this.style.background = '<?php echo e($currentZoom === $zoomKey ? '#2563eb' : '#f3f4f6'); ?>'"
-                           onmouseout="this.style.background = '<?php echo e($currentZoom === $zoomKey ? '#3b82f6' : 'transparent'); ?>'">
-                            <span><?php echo e($zoomData['icon']); ?></span>
-                            <span><?php echo e($zoomData['label']); ?></span>
+                <div style="position: relative; display: inline-block;">
+                    <button type="button" 
+                            class="view-menu-btn"
+                            onclick="event.stopPropagation(); toggleViewMenu();"
+                            style="background: white; border: 1px solid #e5e7eb; cursor: pointer; padding: 6px 12px; color: #374151; font-size: 13px; font-weight: 600; transition: all 0.15s; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;"
+                            onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
+                            onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'">
+                        <?php
+                            $currentZoomIcon = ['month' => '📅', 'week' => '📆', 'day' => '🗓️'][$currentZoom] ?? '📅';
+                        ?>
+                        <span><?php echo e($currentZoomIcon); ?></span>
+                        <span>Ansicht</span>
+                        <span style="font-size: 10px;">▼</span>
+                    </button>
+                    <div id="viewMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 160px;">
+                        <a href="<?php echo e(route('gantt.index', array_merge(request()->query(), ['zoom' => 'month']))); ?>"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: <?php echo e($currentZoom === 'month' ? '#3b82f6' : '#374151'); ?>; text-decoration: none; font-size: 13px; font-weight: <?php echo e($currentZoom === 'month' ? '600' : '500'); ?>; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📅</span>
+                            <span>Monate</span>
+                            <?php if($currentZoom === 'month'): ?><span style="margin-left: auto; color: #3b82f6; font-size: 14px;">✓</span><?php endif; ?>
                         </a>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                        <a href="<?php echo e(route('gantt.index', array_merge(request()->query(), ['zoom' => 'week']))); ?>"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: <?php echo e($currentZoom === 'week' ? '#3b82f6' : '#374151'); ?>; text-decoration: none; font-size: 13px; font-weight: <?php echo e($currentZoom === 'week' ? '600' : '500'); ?>; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📆</span>
+                            <span>Wochen</span>
+                            <?php if($currentZoom === 'week'): ?><span style="margin-left: auto; color: #3b82f6; font-size: 14px;">✓</span><?php endif; ?>
+                        </a>
+                        <a href="<?php echo e(route('gantt.index', array_merge(request()->query(), ['zoom' => 'day']))); ?>"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: <?php echo e($currentZoom === 'day' ? '#3b82f6' : '#374151'); ?>; text-decoration: none; font-size: 13px; font-weight: <?php echo e($currentZoom === 'day' ? '600' : '500'); ?>; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">🗓️</span>
+                            <span>Tage</span>
+                            <?php if($currentZoom === 'day'): ?><span style="margin-left: auto; color: #3b82f6; font-size: 14px;">✓</span><?php endif; ?>
+                        </a>
+                    </div>
                 </div>
 
                 
-                <?php if($viewMode === 'projects'): ?>
-                    <button id="toggleFiltersBtn" onclick="toggleFilters()" style="background: #ffffff; color: #374151; padding: 10px 16px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;"
+                <div style="position: relative; display: inline-block;">
+                    <button type="button" 
+                            class="more-menu-btn"
+                            onclick="event.stopPropagation(); toggleMoreMenu();"
+                            style="background: white; border: 1px solid #e5e7eb; cursor: pointer; padding: 6px 12px; color: #374151; font-size: 13px; font-weight: 600; transition: all 0.15s; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;"
                             onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
-                            onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
-                        🔍 Filter
-                        <span id="filterIndicator" style="display: <?php echo e(count(array_filter(Session::get('gantt_filters', []))) > 0 ? 'inline-flex' : 'none'); ?>; background: #ef4444; color: white; border-radius: 999px; width: 20px; height: 20px; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;"><?php echo e(count(array_filter(Session::get('gantt_filters', [])))); ?></span>
+                            onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'">
+                        <span style="font-size: 16px; line-height: 1;">⋮</span>
+                        <span>Mehr</span>
+                    </button>
+                    <div id="moreMenu" style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 200px;">
+                        <a href="<?php echo e(route('gantt.export')); ?>" 
+                           onclick="handleExportClick(event, this)"
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: #374151; text-decoration: none; font-size: 13px; font-weight: 500; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📤</span>
+                            <span>Excel Export</span>
+                        </a>
+                        <a href="<?php echo e(route('projects.index')); ?>" 
+                           style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: #374151; text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.15s;"
+                           onmouseover="this.style.background='#f9fafb'"
+                           onmouseout="this.style.background='white'">
+                            <span style="font-size: 16px;">📊</span>
+                            <span>Projektverwaltung</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; align-items: center;">
+                
+                <?php if($viewMode === 'projects'): ?>
+                    <?php
+                        $hasActiveFilters = count(array_filter(Session::get('gantt_filters', []))) > 0;
+                    ?>
+                    <button id="toggleFiltersBtn" onclick="toggleFilterModal()" 
+                            style="background: <?php echo e($hasActiveFilters ? '#3b82f6' : '#ffffff'); ?>; color: <?php echo e($hasActiveFilters ? '#ffffff' : '#374151'); ?>; padding: 6px 12px; border: 1px solid <?php echo e($hasActiveFilters ? '#3b82f6' : '#e5e7eb'); ?>; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;"
+                            onmouseover="this.style.background='<?php echo e($hasActiveFilters ? '#2563eb' : '#f9fafb'); ?>'; this.style.borderColor='<?php echo e($hasActiveFilters ? '#2563eb' : '#d1d5db'); ?>'"
+                            onmouseout="this.style.background='<?php echo e($hasActiveFilters ? '#3b82f6' : '#ffffff'); ?>'; this.style.borderColor='<?php echo e($hasActiveFilters ? '#3b82f6' : '#e5e7eb'); ?>'">
+                        <span>🔍</span>
+                        <span>Filter</span>
+                        <?php if($hasActiveFilters): ?>
+                            <span style="background: rgba(255,255,255,0.3); color: white; border-radius: 10px; padding: 2px 6px; font-size: 11px; font-weight: 700;">
+                                <?php echo e(count(array_filter(Session::get('gantt_filters', [])))); ?>
+
+                            </span>
+                        <?php endif; ?>
                     </button>
                 <?php endif; ?>
-
-                
-                <a href="<?php echo e(route('gantt.export')); ?>" 
-                   onclick="handleExportClick(event, this)"
-                   style="background: #ffffff; color: #374151; padding: 10px 20px; border: 1px solid #e5e7eb; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;"
-                   onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
-                   onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
-                    <span class="export-text">📤 Excel Export</span>
-                </a>
             </div>
         </div>
     </div>
+    
+    
+    <script>
+    // Toggle View Menu (Ansicht Dropdown) - GLOBAL
+    window.toggleViewMenu = function() {
+        const menu = document.getElementById('viewMenu');
+        if (!menu) return;
+        
+        // Close all other menus
+        const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #moreMenu, #headerActionsMenu');
+        allMenus.forEach(m => m.style.display = 'none');
+        
+        // Toggle menu with dynamic positioning
+        const currentDisplay = menu.style.display;
+        const button = document.querySelector('.view-menu-btn');
+        
+        if (currentDisplay === 'block') {
+            menu.style.display = 'none';
+        } else {
+            if (button) {
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+            }
+            menu.style.display = 'block';
+        }
+    }
+
+    // Toggle More Menu (Mehr Dropdown) - GLOBAL
+    window.toggleMoreMenu = function() {
+        const menu = document.getElementById('moreMenu');
+        if (!menu) return;
+        
+        // Close all other menus
+        const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #headerActionsMenu');
+        allMenus.forEach(m => m.style.display = 'none');
+        
+        // Toggle menu with dynamic positioning
+        const currentDisplay = menu.style.display;
+        const button = document.querySelector('.more-menu-btn');
+        
+        if (currentDisplay === 'block') {
+            menu.style.display = 'none';
+        } else {
+            if (button) {
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+            }
+            menu.style.display = 'block';
+        }
+    }
+    
+    // Close menus when clicking outside - GLOBAL
+    document.addEventListener('click', function(e) {
+        const viewMenu = document.getElementById('viewMenu');
+        const viewBtn = e.target.closest('.view-menu-btn');
+        
+        const moreMenu = document.getElementById('moreMenu');
+        const moreBtn = e.target.closest('.more-menu-btn');
+        
+        // Close view menu if clicking outside
+        if (viewMenu && !viewBtn && !viewMenu.contains(e.target)) {
+            viewMenu.style.display = 'none';
+        }
+        
+        // Close more menu if clicking outside
+        if (moreMenu && !moreBtn && !moreMenu.contains(e.target)) {
+            moreMenu.style.display = 'none';
+        }
+    });
+    </script>
 
     
     <?php if($viewMode === 'projects'): ?>
@@ -109,15 +244,38 @@
                                !empty($ganttFilters['timeframe']) || 
                                !empty($ganttFilters['sort']);
         ?>
-        <div id="filterPanel" style="display: <?php echo e($hasActiveFilters ? 'block' : 'none'); ?>; background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="font-size: 16px; font-weight: 600; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
-                <button onclick="clearAllFilters()" style="background: #fef2f2; color: #dc2626; padding: 6px 12px; border: 1px solid #fecaca; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;"
-                        onmouseover="this.style.background='#fee2e2'"
-                        onmouseout="this.style.background='#fef2f2'">
-                    🗑️ Filter zurücksetzen
-                </button>
+        
+        
+        <div id="filterModalBackdrop" onclick="toggleFilterModal()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 99998; backdrop-filter: blur(4px); transition: all 0.3s ease;"></div>
+        
+        
+        <div id="filterModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; max-height: 80vh; overflow-y: auto; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 99999; transition: all 0.3s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f3f4f6;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
+                    <?php if($hasActiveFilters): ?>
+                        <span style="background: #3b82f6; color: white; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700;">
+                            <?php echo e(count(array_filter([$ganttFilters['search'] ?? '', $ganttFilters['status'] ?? '', $ganttFilters['employee'] ?? '', $ganttFilters['timeframe'] ?? '', $ganttFilters['sort'] ?? '']))); ?> aktiv
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button onclick="clearAllFilters()" style="background: #fef2f2; color: #dc2626; padding: 6px 12px; border: 1px solid #fecaca; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;"
+                            onmouseover="this.style.background='#fee2e2'"
+                            onmouseout="this.style.background='#fef2f2'">
+                        🗑️ Zurücksetzen
+                    </button>
+                    <button onclick="toggleFilterModal()" style="background: #f3f4f6; color: #6b7280; padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s ease; line-height: 1;"
+                            onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'"
+                            onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'"
+                            title="Schließen">
+                        ✕
+                    </button>
+                </div>
             </div>
+            
+            
+            <div id="filterContent">
             <form method="GET" action="<?php echo e(route('gantt.index')); ?>" id="ganttFilterForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                 <input type="hidden" name="view" value="projects">
                 
@@ -189,6 +347,7 @@
                     </select>
                 </div>
             </form>
+            </div>
         </div>
     <?php endif; ?>
 
@@ -199,6 +358,442 @@
             'totalTimelineDays' => $totalTimelineDays
         ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php else: ?>
+        
+        <script>
+        // Toggle Header Actions Menu (Quick Actions)
+        window.toggleHeaderActionsMenu = function() {
+            const menu = document.getElementById('headerActionsMenu');
+            if (!menu) return;
+            
+            // Close all other menus
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu');
+            allMenus.forEach(m => m.style.display = 'none');
+            
+            // Toggle menu with dynamic positioning
+            const currentDisplay = menu.style.display;
+            const button = document.querySelector('.header-actions-btn');
+            
+            if (currentDisplay === 'block') {
+                menu.style.display = 'none';
+            } else {
+                if (button) {
+                    const buttonRect = button.getBoundingClientRect();
+                    menu.style.position = 'fixed';
+                    menu.style.top = (buttonRect.bottom + 4) + 'px';
+                    menu.style.left = (buttonRect.left) + 'px';
+                }
+                menu.style.display = 'block';
+            }
+        }
+
+        // Close all menus when clicking outside
+        document.addEventListener('click', function(e) {
+            const headerMenu = document.getElementById('headerActionsMenu');
+            const headerBtn = e.target.closest('.header-actions-btn');
+            
+            const viewMenu = document.getElementById('viewMenu');
+            const viewBtn = e.target.closest('.view-menu-btn');
+            
+            const moreMenu = document.getElementById('moreMenu');
+            const moreBtn = e.target.closest('.more-menu-btn');
+            
+            // Close header menu if clicking outside
+            if (headerMenu && !headerBtn && !headerMenu.contains(e.target)) {
+                headerMenu.style.display = 'none';
+            }
+            
+            // Close view menu if clicking outside
+            if (viewMenu && !viewBtn && !viewMenu.contains(e.target)) {
+                viewMenu.style.display = 'none';
+            }
+            
+            // Close more menu if clicking outside
+            if (moreMenu && !moreBtn && !moreMenu.contains(e.target)) {
+                moreMenu.style.display = 'none';
+            }
+        });
+
+        // MOCO Sync - Shows loading state and refreshes page
+        window.syncMocoProjects = function() {
+            if (!confirm('Möchten Sie jetzt die Projekt-Daten von MOCO synchronisieren?\n\nDies kann einige Sekunden dauern.')) {
+                return;
+            }
+            
+            // Show loading overlay
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 99999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);';
+            overlay.innerHTML = `
+                <div style="background: white; padding: 32px; border-radius: 16px; text-align: center; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⏳</div>
+                    <div style="font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 8px;">MOCO Synchronisierung läuft...</div>
+                    <div style="font-size: 14px; color: #6b7280;">Bitte warten Sie einen Moment.</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            
+            // Execute sync command via AJAX
+            fetch('<?php echo e(route('moco.sync')); ?>', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                overlay.remove();
+                if (data.success) {
+                    alert('✅ Synchronisierung erfolgreich!\n\n' + (data.message || 'Daten wurden aktualisiert.'));
+                    location.reload();
+                } else {
+                    alert('❌ Fehler bei der Synchronisierung:\n\n' + (data.message || 'Unbekannter Fehler'));
+                }
+            })
+            .catch(error => {
+                overlay.remove();
+                console.error('Sync error:', error);
+                alert('❌ Fehler bei der Synchronisierung:\n\n' + error.message);
+            });
+        }
+
+        // Toggle Project Menu - Must be defined BEFORE the HTML that uses it
+        window.toggleProjectMenu = function(projectId) {
+            const menu = document.getElementById('projectMenu' + projectId);
+            const button = document.querySelector(`[data-project-id="${projectId}"].project-menu-btn`);
+            
+            if (!menu || !button) return;
+            
+            // Close all other menus
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu, #headerActionsMenu');
+            allMenus.forEach(m => {
+                if (m.id !== 'projectMenu' + projectId) {
+                    m.style.display = 'none';
+                }
+            });
+            
+            const currentDisplay = menu.style.display;
+            
+            if (currentDisplay === 'block') {
+                menu.style.display = 'none';
+            } else {
+                // Position the menu relative to the button
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+                menu.style.display = 'block';
+            }
+        }
+
+        // Toggle Employee Menu - Must be defined BEFORE the HTML that uses it
+        window.toggleEmployeeMenu = function(projectId, employeeId) {
+            const menuId = 'employeeMenu' + projectId + '_' + employeeId;
+            const menu = document.getElementById(menuId);
+            const button = document.querySelector(`[data-project-id="${projectId}"][data-employee-id="${employeeId}"].employee-menu-btn`);
+            
+            if (!menu || !button) return;
+            
+            // Close all other menus
+            const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu');
+            allMenus.forEach(m => {
+                if (m.id !== menuId) {
+                    m.style.display = 'none';
+                }
+            });
+            
+            const currentDisplay = menu.style.display;
+            
+            if (currentDisplay === 'block') {
+                menu.style.display = 'none';
+            } else {
+                // Position the menu relative to the button
+                const buttonRect = button.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.top = (buttonRect.bottom + 4) + 'px';
+                menu.style.left = (buttonRect.left) + 'px';
+                menu.style.display = 'block';
+            }
+        }
+
+        // Modal functions - Must be defined BEFORE the HTML that uses them
+        window.openAddTaskModal = function(projectId, employeeId) {
+            document.getElementById('taskModalProjectId').value = projectId;
+            document.getElementById('taskModalEmployeeId').value = employeeId;
+            const baseUrl = '<?php echo e(url('/')); ?>';
+            document.getElementById('addTaskForm').action = baseUrl + '/gantt/projects/' + projectId + '/employees/' + employeeId + '/tasks';
+            document.getElementById('addTaskModal').style.display = 'flex';
+            // Close the dropdown
+            const menu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
+            if (menu) menu.style.display = 'none';
+            // Set default start date to today
+            const startDateInput = document.getElementById('taskStartDate');
+            if (startDateInput) {
+                startDateInput.value = new Date().toISOString().split('T')[0];
+            }
+            if (typeof updateDurationMode === 'function') {
+                updateDurationMode();
+            }
+        }
+
+        window.openManageTasksModal = function(projectId, employeeId, employeeName) {
+            // Close employee menu
+            const employeeMenu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
+            if (employeeMenu) employeeMenu.style.display = 'none';
+            
+            // Set employee name
+            const nameElement = document.getElementById('manageTasksEmployeeName');
+            if (nameElement) nameElement.textContent = employeeName;
+            
+            // Show modal immediately
+            const modal = document.getElementById('manageTasksModal');
+            if (modal) modal.style.display = 'block';
+            
+            // Show loading state
+            const container = document.getElementById('tasksListContainer');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 48px; margin-bottom: 16px;">⏳</div><p style="color: #6b7280;">Lade Aufgaben...</p></div>';
+            }
+            
+            // Load tasks via AJAX
+            const baseUrl = '<?php echo e(url("/")); ?>';
+            const url = `${baseUrl}/gantt/projects/${projectId}/employees/${employeeId}/tasks`;
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (typeof window.renderTasksList === 'function') {
+                        window.renderTasksList(data.tasks || [], projectId, employeeId);
+                    } else {
+                        if (container) {
+                            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler: renderTasksList Funktion nicht gefunden.</p></div>';
+                        }
+                    }
+                })
+                .catch(error => {
+                    if (container) {
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Aufgaben.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">' + error.message + '</p></div>';
+                    }
+                });
+        }
+
+        window.openEmployeeUtilizationModal = function(employeeId, employeeName) {
+            // Show loading state
+            const nameElement = document.getElementById('utilizationEmployeeName');
+            const contentElement = document.getElementById('utilizationContent');
+            const modal = document.getElementById('employeeUtilizationModal');
+            
+            if (nameElement) nameElement.textContent = employeeName;
+            if (contentElement) {
+                contentElement.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 48px; margin-bottom: 16px;">⏳</div><p style="color: #6b7280;">Lade Auslastungsdaten...</p></div>';
+            }
+            if (modal) modal.style.display = 'block';
+            
+            // Load utilization data
+            const baseUrl = '<?php echo e(url("/")); ?>';
+            const url = `${baseUrl}/gantt/employees/${employeeId}/utilization`;
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (typeof window.renderUtilizationView === 'function') {
+                        window.renderUtilizationView(data, employeeName);
+                    }
+                })
+                .catch(error => {
+                    if (contentElement) {
+                        contentElement.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Auslastungsdaten.</p><p style="font-size: 12px; color: #6b7280; margin-top: 8px;">' + error.message + '</p></div>';
+                    }
+                });
+        }
+
+        window.openAddEmployeeModal = function(projectId) {
+            const modalProjectId = document.getElementById('modalProjectId');
+            const addEmployeeForm = document.getElementById('addEmployeeForm');
+            const addEmployeeModal = document.getElementById('addEmployeeModal');
+            const projectMenu = document.getElementById('projectMenu' + projectId);
+            
+            if (modalProjectId) modalProjectId.value = projectId;
+            if (addEmployeeForm) {
+                const baseUrl = '<?php echo e(url('/')); ?>';
+                // Use bulk-assign route for multi-select support
+                addEmployeeForm.action = baseUrl + '/gantt/bulk-assign-employees';
+            }
+            if (addEmployeeModal) addEmployeeModal.style.display = 'flex';
+            if (projectMenu) projectMenu.style.display = 'none';
+        }
+
+        // Close Modal Functions - Must be defined BEFORE the HTML that uses them
+        window.closeAddEmployeeModal = function() {
+            const modal = document.getElementById('addEmployeeModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.closeAddTaskModal = function() {
+            const modal = document.getElementById('addTaskModal');
+            const form = document.getElementById('addTaskForm');
+            if (modal) modal.style.display = 'none';
+            if (form) form.reset();
+        }
+
+        window.closeManageTasksModal = function() {
+            const modal = document.getElementById('manageTasksModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        window.closeEmployeeUtilizationModal = function() {
+            const modal = document.getElementById('employeeUtilizationModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        // =============== PROJECT COLLAPSE/EXPAND FUNCTIONALITY ===============
+        
+        // Toggle single project
+        window.toggleProject = function(projectId) {
+            const projectRow = document.querySelector(`.gantt-project-row[data-project-id="${projectId}"]`);
+            if (!projectRow) return;
+            
+            const employeesContainer = projectRow.querySelector('.project-employees-container');
+            const collapseBtn = projectRow.querySelector('.project-collapse-btn');
+            const collapseIcon = collapseBtn?.querySelector('.collapse-icon');
+            const isCollapsed = projectRow.getAttribute('data-collapsed') === 'true';
+            
+            if (isCollapsed) {
+                // Expand
+                projectRow.setAttribute('data-collapsed', 'false');
+                employeesContainer.style.maxHeight = employeesContainer.scrollHeight + 'px';
+                employeesContainer.style.opacity = '1';
+                collapseIcon.textContent = '▼';
+                
+                // Save state
+                saveProjectState(projectId, false);
+                
+                // After animation, set max-height to none
+                setTimeout(() => {
+                    if (projectRow.getAttribute('data-collapsed') === 'false') {
+                        employeesContainer.style.maxHeight = 'none';
+                    }
+                }, 300);
+            } else {
+                // Collapse
+                employeesContainer.style.maxHeight = employeesContainer.scrollHeight + 'px';
+                employeesContainer.offsetHeight; // Force reflow
+                employeesContainer.style.maxHeight = '0';
+                employeesContainer.style.opacity = '0';
+                collapseIcon.textContent = '▶';
+                projectRow.setAttribute('data-collapsed', 'true');
+                
+                // Save state
+                saveProjectState(projectId, true);
+            }
+        }
+        
+        // Toggle all projects
+        window.toggleAllProjects = function() {
+            // Wait a bit to ensure DOM is ready
+            setTimeout(() => {
+                const allProjectRows = document.querySelectorAll('.gantt-project-row');
+                const collapseAllBtn = document.getElementById('collapseAllBtn');
+                
+                // Only toggle projects that HAVE a collapse button
+                const projectsWithButton = Array.from(allProjectRows).filter(row => 
+                    row.querySelector('.project-collapse-btn') !== null
+                );
+                
+                // Check if at least one is expanded
+                const someExpanded = projectsWithButton.some(row => 
+                    row.getAttribute('data-collapsed') !== 'true'
+                );
+                
+                if (someExpanded) {
+                    // Collapse all (only those with button)
+                    projectsWithButton.forEach(row => {
+                        const projectId = row.getAttribute('data-project-id');
+                        if (row.getAttribute('data-collapsed') !== 'true') {
+                            toggleProject(projectId);
+                        }
+                    });
+                    collapseAllBtn.textContent = '▶';
+                } else {
+                    // Expand all (only those with button)
+                    projectsWithButton.forEach(row => {
+                        const projectId = row.getAttribute('data-project-id');
+                        if (row.getAttribute('data-collapsed') === 'true') {
+                            toggleProject(projectId);
+                        }
+                    });
+                    collapseAllBtn.textContent = '▼';
+                }
+            }, 50);
+        }
+        
+        // Save project collapse state to localStorage
+        function saveProjectState(projectId, isCollapsed) {
+            let projectStates = JSON.parse(localStorage.getItem('gantt_project_states') || '{}');
+            projectStates[projectId] = isCollapsed;
+            localStorage.setItem('gantt_project_states', JSON.stringify(projectStates));
+        }
+        
+        // Restore project collapse states from localStorage
+        function restoreProjectStates() {
+            const projectStates = JSON.parse(localStorage.getItem('gantt_project_states') || '{}');
+            
+            Object.keys(projectStates).forEach(projectId => {
+                const isCollapsed = projectStates[projectId];
+                if (isCollapsed) {
+                    const projectRow = document.querySelector(`.gantt-project-row[data-project-id="${projectId}"]`);
+                    if (projectRow) {
+                        const employeesContainer = projectRow.querySelector('.project-employees-container');
+                        const collapseBtn = projectRow.querySelector('.project-collapse-btn');
+                        const collapseIcon = collapseBtn?.querySelector('.collapse-icon');
+                        
+                        employeesContainer.style.maxHeight = '0';
+                        employeesContainer.style.opacity = '0';
+                        employeesContainer.style.transition = 'none';
+                        if (collapseIcon) collapseIcon.textContent = '▶';
+                        projectRow.setAttribute('data-collapsed', 'true');
+                        
+                        setTimeout(() => {
+                            employeesContainer.style.transition = 'all 0.3s ease';
+                        }, 100);
+                    }
+                }
+            });
+            
+            updateCollapseAllButton();
+        }
+        
+        // Update collapse all button
+        function updateCollapseAllButton() {
+            const allProjectRows = document.querySelectorAll('.gantt-project-row');
+            const collapseAllBtn = document.getElementById('collapseAllBtn');
+            
+            if (!collapseAllBtn || allProjectRows.length === 0) return;
+            
+            const allCollapsed = Array.from(allProjectRows).every(row => 
+                row.getAttribute('data-collapsed') === 'true'
+            );
+            
+            collapseAllBtn.textContent = allCollapsed ? '▶' : '▼';
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            restoreProjectStates();
+        });
+        
+        // =============== END PROJECT COLLAPSE/EXPAND FUNCTIONALITY ===============
+        </script>
+        
         <?php echo $__env->make('gantt.partials.timeline-projects', [
             'timelineStart' => $timelineStart,
             'timelineEnd' => $timelineEnd,
@@ -208,66 +803,37 @@
 </div>
 
 <script>
-// Filter Panel Toggle with State Persistence
-function toggleFilters() {
-    const panel = document.getElementById('filterPanel');
-    const btn = document.getElementById('toggleFiltersBtn');
-    if (panel.style.display === 'none' || panel.style.display === '') {
-        panel.style.display = 'block';
-        btn.style.background = '#3b82f6';
-        btn.style.color = '#ffffff';
-        btn.style.borderColor = '#3b82f6';
-        localStorage.setItem('gantt_filter_panel_open', '1');
-        
-        // Update Hover für geöffneten Zustand
-        btn.onmouseover = function() {
-            this.style.background = '#2563eb';
-            this.style.borderColor = '#2563eb';
-        };
-        btn.onmouseout = function() {
-            this.style.background = '#3b82f6';
-            this.style.borderColor = '#3b82f6';
-        };
+// Filter Modal Toggle (komplett versteckt/angezeigt)
+function toggleFilterModal() {
+    const modal = document.getElementById('filterModal');
+    const backdrop = document.getElementById('filterModalBackdrop');
+    
+    if (!modal || !backdrop) return;
+    
+    // Close all other menus
+    const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"], #viewMenu, #moreMenu, #headerActionsMenu');
+    allMenus.forEach(m => m.style.display = 'none');
+    
+    // Toggle modal
+    if (modal.style.display === 'block') {
+        // Close modal
+        modal.style.display = 'none';
+        backdrop.style.display = 'none';
+        document.body.style.overflow = ''; // Re-enable scrolling
     } else {
-        panel.style.display = 'none';
-        btn.style.background = '#ffffff';
-        btn.style.color = '#374151';
-        btn.style.borderColor = '#e5e7eb';
-        localStorage.setItem('gantt_filter_panel_open', '0');
-        
-        // Update Hover für geschlossenen Zustand
-        btn.onmouseover = function() {
-            this.style.background = '#f9fafb';
-            this.style.borderColor = '#d1d5db';
-        };
-        btn.onmouseout = function() {
-            this.style.background = '#ffffff';
-            this.style.borderColor = '#e5e7eb';
-        };
+        // Open modal
+        modal.style.display = 'block';
+        backdrop.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Disable background scrolling
     }
 }
 
-// Initialize Filter Panel State on Page Load
-document.addEventListener('DOMContentLoaded', function() {
-    const panel = document.getElementById('filterPanel');
-    const btn = document.getElementById('toggleFiltersBtn');
-    
-    if (panel && btn) {
-        // Wenn Panel initial sichtbar ist (wegen aktiven Filtern)
-        if (panel.style.display === 'block') {
-            btn.style.background = '#3b82f6';
-            btn.style.color = '#ffffff';
-            btn.style.borderColor = '#3b82f6';
-            
-            // Update Hover-Events für aktiven Zustand
-            btn.onmouseover = function() {
-                this.style.background = '#2563eb';
-                this.style.borderColor = '#2563eb';
-            };
-            btn.onmouseout = function() {
-                this.style.background = '#3b82f6';
-                this.style.borderColor = '#3b82f6';
-            };
+// Escape key closes modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('filterModal');
+        if (modal && modal.style.display === 'block') {
+            toggleFilterModal();
         }
     }
 });
@@ -322,7 +888,6 @@ function handleExportClick(event, link) {
         link.style.pointerEvents = '';
     }, 3000);
 }
-</script>
 </script>
 
 <?php $__env->stopSection(); ?>

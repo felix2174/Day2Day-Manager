@@ -34,3 +34,6 @@ Route::middleware('auth')->get('/employees/active', function () {
     ]);
 });
 
+
+
+

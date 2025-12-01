@@ -631,7 +631,7 @@ document.addEventListener('click', function(e) {
 // Add Employee Modal
 // Note: openAddEmployeeModal and closeAddEmployeeModal are defined in gantt/index.blade.php BEFORE this include
 
-// Add Task Modal  
+// Add Task Modal
 // Note: openAddTaskModal and closeAddTaskModal are defined in gantt/index.blade.php BEFORE this include
 
 // Duration Mode Toggle
@@ -722,7 +722,7 @@ document.addEventListener('keydown', function(e) {
         
         // Close project bar tooltip
         if (typeof hideProjectBarTooltip === 'function') {
-            hideProjectBarTooltip();
+        hideProjectBarTooltip();
         }
     }
 });

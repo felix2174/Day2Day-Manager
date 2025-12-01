@@ -396,7 +396,7 @@
                         $barWidth = min(($hours / 50) * 100, 100);
                         $barColor = $hours > 45 ? 'linear-gradient(90deg, #ef4444, #dc2626)' : ($hours >= 30 ? 'linear-gradient(90deg, #3b82f6, #2563eb)' : 'linear-gradient(90deg, #10b981, #059669)');
                     @endphp
-                    <div>
+                <div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <span style="color: #374151; font-size: 14px; font-weight: 500;">{{ $workload['name'] }}</span>
                             <span style="color: #111827; font-size: 14px; font-weight: 600;">{{ $hours }}h</span>
@@ -404,7 +404,7 @@
                         <div style="width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
                             <div style="height: 100%; background: {{ $barColor }}; width: {{ $barWidth }}%; transition: width 0.3s ease; border-radius: 4px;"></div>
                         </div>
-                    </div>
+                </div>
                     @endforeach
                 </div>
             </div>
@@ -600,10 +600,10 @@
                         <div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 12px;">
                             <div style="height: 100%; background: {{ $barColor }}; width: {{ $barWidth }}%;"></div>
                         </div>
-                    </div>
+                </div>
                     @endforeach
                 </div>
-            </div>
+                </div>
         </div>
     </div>
 </div>

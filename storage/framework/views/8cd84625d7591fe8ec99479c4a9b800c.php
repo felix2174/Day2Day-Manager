@@ -365,32 +365,32 @@
     <nav class="sidebar">
         <ul class="sidebar-nav">
             <li>
-                <a href="/dashboard" class="<?php echo e(request()->is('dashboard') ? 'active' : ''); ?>">
+                <a href="<?php echo e(route('dashboard')); ?>" class="<?php echo e(request()->is('dashboard') ? 'active' : ''); ?>">
                     Dashboard
                 </a>
             </li>
             <li>
-                <a href="/employees" class="<?php echo e(request()->is('employees*') ? 'active' : ''); ?>">
+                <a href="<?php echo e(route('employees.index')); ?>" class="<?php echo e(request()->is('employees*') ? 'active' : ''); ?>">
                     Mitarbeiter
                 </a>
             </li>
             <li>
-                <a href="/projects" class="<?php echo e(request()->is('projects*') ? 'active' : ''); ?>">
+                <a href="<?php echo e(route('projects.index')); ?>" class="<?php echo e(request()->is('projects*') ? 'active' : ''); ?>">
                     Projekte
                 </a>
             </li>
             <li>
-                <a href="/absences" class="<?php echo e(request()->is('absences*') ? 'active' : ''); ?>">
+                <a href="<?php echo e(route('absences.index')); ?>" class="<?php echo e(request()->is('absences*') ? 'active' : ''); ?>">
                     Abwesenheiten
                 </a>
             </li>
             <li>
-                <a href="/gantt" class="<?php echo e(request()->is('gantt*') ? 'active' : ''); ?>">
+                <a href="<?php echo e(route('gantt.index')); ?>" class="<?php echo e(request()->is('gantt*') ? 'active' : ''); ?>">
                     Gantt-Diagramm
                 </a>
             </li>
             <li>
-                <a href="/moco" class="<?php echo e(request()->is('moco*') ? 'active' : ''); ?>">
+                <a href="<?php echo e(route('moco.index')); ?>" class="<?php echo e(request()->is('moco*') ? 'active' : ''); ?>">
                     MOCO Integration
                 </a>
             </li>
@@ -547,12 +547,13 @@ window.toggleQuickActions = function(event, projectId) {
     }
     
     dropdown.dataset.projectId = projectId;
+    const baseUrl = '<?php echo e(url('/')); ?>';
     dropdown.innerHTML = `
-        <a href="/projects/${projectId}" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #374151; font-size: 13px; transition: background 0.2s ease;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
+        <a href="${baseUrl}/projects/${projectId}" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #374151; font-size: 13px; transition: background 0.2s ease;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             Details ansehen
         </a>
-        <a href="/projects/${projectId}/edit" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #374151; font-size: 13px; border-top: 1px solid #f3f4f6; transition: background 0.2s ease;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
+        <a href="${baseUrl}/projects/${projectId}/edit" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; text-decoration: none; color: #374151; font-size: 13px; border-top: 1px solid #f3f4f6; transition: background 0.2s ease;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             Bearbeiten
         </a>

@@ -82,9 +82,17 @@
                                 ?>
                                 <div class="employee-row" data-employee-id="<?php echo e($employee->id); ?>" data-row-key="employee-<?php echo e($employee->id); ?>" style="display: flex; gap: 12px; align-items: stretch;">
                                     <div class="employee-row-card" style="position: sticky; left: 0; width: 260px; min-width: 260px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; cursor: grab; z-index: 3;">
+                                        <?php
+                                            $bookedHours = $entry['summary']['booked_hours_30d'] ?? 0;
+                                            $bookedColor = $bookedHours > 120 ? '#10b981' : ($bookedHours > 60 ? '#3b82f6' : ($bookedHours > 0 ? '#3b82f6' : '#9ca3af'));
+                                            $projectCount = $entry['summary']['project_count'] ?? 0;
+                                        ?>
                                         <div style="font-weight: 600; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?php echo e($employee->first_name); ?> <?php echo e($employee->last_name); ?>"><?php echo e($employee->first_name); ?> <?php echo e($employee->last_name); ?></div>
-                                        <div style="color: #6b7280; font-size: 12px;">Kapazität: <?php echo e($capacity); ?>h/W</div>
-                                        <div style="color: #6b7280; font-size: 12px;">Geplant: <?php echo e($totalWeeklyLoad); ?>h/W</div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="color: #6b7280; font-size: 12px;">Gebucht (30T):</span>
+                                            <span style="color: <?php echo e($bookedColor); ?>; font-size: 13px; font-weight: 700;"><?php echo e($bookedHours); ?>h</span>
+                                        </div>
+                                        <div style="color: #6b7280; font-size: 11px;"><?php echo e($projectCount); ?> Projekte · <?php echo e($capacity); ?>h/W Kapazität</div>
                                         <?php if(!empty($employee->department)): ?>
                                             <div style="color: #6b7280; font-size: 12px;"><?php echo e($employee->department); ?></div>
                                         <?php endif; ?>

@@ -170,3 +170,6 @@ echo "  - Logs prüfen: tail -100 storage/logs/laravel.log"
 echo ""
 
 
+
+
+

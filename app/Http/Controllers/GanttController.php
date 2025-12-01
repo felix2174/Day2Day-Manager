@@ -1722,10 +1722,10 @@ class GanttController extends Controller
         if ($assigned === 0) {
             // Check if AJAX request
             if ($request->expectsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Keine Mitarbeiter zugewiesen. Alle sind bereits im Projekt.'
-                ], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'Keine Mitarbeiter zugewiesen. Alle sind bereits im Projekt.'
+            ], 400);
             }
             
             return redirect()->route('gantt.index')
@@ -1740,12 +1740,12 @@ class GanttController extends Controller
 
         // Check if AJAX request
         if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'assigned_count' => $assigned,
-                'skipped_count' => $skipped
-            ]);
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'assigned_count' => $assigned,
+            'skipped_count' => $skipped
+        ]);
         }
         
         return redirect()->route('gantt.index')
@@ -1989,7 +1989,7 @@ class GanttController extends Controller
 
         // Try to load employee, but don't fail if doesn't exist (MOCO integration)
         $employee = Employee::find($employeeId);
-        
+
         // Get absences for this employee
         $absences = Absence::where('employee_id', $employeeId)->get();
 

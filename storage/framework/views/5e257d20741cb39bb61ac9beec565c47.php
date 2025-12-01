@@ -29,7 +29,54 @@
                     <div id="ganttContent" style="display: flex; flex-direction: column; gap: 12px; padding: 12px 12px 16px; min-width: 100%;">
                         
                         <div style="display: flex; gap: 12px; align-items: stretch;">
-                            <div style="width: 260px; min-width: 260px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; padding: 12px 16px; font-weight: 600; color: #374151;">Projekt</div>
+                            <div style="width: 260px; min-width: 260px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; font-weight: 600; color: #374151;">
+                                <span>Projekt</span>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    
+                                    <button type="button" 
+                                            id="collapseAllBtn"
+                                            onclick="event.stopPropagation(); toggleAllProjects();"
+                                            title="Alle Projekte ein-/ausklappen"
+                                            style="background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; padding: 4px 10px; color: #6b7280; font-size: 14px; line-height: 1; transition: all 0.2s; border-radius: 6px; font-weight: 600;" 
+                                            onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'" 
+                                            onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'">
+                                        ▼
+                                    </button>
+                                    
+                                    <div style="position: relative;">
+                                        <button type="button" 
+                                                class="header-actions-btn"
+                                                onclick="event.stopPropagation(); toggleHeaderActionsMenu();"
+                                                style="background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer; padding: 4px 10px; color: #6b7280; font-size: 16px; line-height: 1; transition: all 0.2s; border-radius: 6px; font-weight: 600; z-index: 1002; pointer-events: auto;" 
+                                                onmouseover="this.style.background='#e5e7eb'; this.style.color='#111827'" 
+                                                onmouseout="this.style.background='#f3f4f6'; this.style.color='#6b7280'">
+                                            ⋮
+                                        </button>
+                                    <div id="headerActionsMenu" 
+                                         style="display: none; position: fixed; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); z-index: 10000; min-width: 220px;">
+                                        <a href="<?php echo e(route('projects.create')); ?>" 
+                                           style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                                           onmouseover="this.style.background='#f9fafb'"
+                                           onmouseout="this.style.background='white'">
+                                            ➕ Neues Projekt anlegen
+                                        </a>
+                                        <button type="button" 
+                                                onclick="syncMocoProjects()"
+                                                style="display: block; width: 100%; text-align: left; padding: 12px 16px; background: none; border: none; color: #111827; font-size: 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: all 0.15s;"
+                                                onmouseover="this.style.background='#f9fafb'"
+                                                onmouseout="this.style.background='white'">
+                                            🔄 MOCO synchronisieren
+                                        </button>
+                                        <a href="<?php echo e(route('projects.index')); ?>" 
+                                           style="display: block; padding: 12px 16px; color: #111827; text-decoration: none; font-size: 14px; transition: all 0.15s;"
+                                           onmouseover="this.style.background='#f9fafb'"
+                                           onmouseout="this.style.background='white'">
+                                            📊 Zur Projektverwaltung
+                                        </a>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
                             <div style="flex: 1; position: relative; height: 40px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; overflow: visible; z-index: 10;">
                                 <?php $__currentLoopData = $timelineMonths; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $monthData): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                     <?php
@@ -92,7 +139,15 @@
                                 $progress = round($project->progress ?? 0);
                             ?>
                             <?php
-                                $assignmentCount = $projectAssignments->count();
+                                // Load fresh assignments directly from database to get accurate count
+                                $freshAssignments = \App\Models\Assignment::where('project_id', $project->id)
+                                    ->with('employee')
+                                    ->orderBy('display_order')
+                                    ->get();
+                                
+                                // Count all assignments (even "Unbekannt" ones)
+                                // The "Unbekannt" filtering happens later in the display loop
+                                $assignmentCount = $freshAssignments->count();
                                 $timelineHeight = 40 + ($assignmentCount > 0 ? $assignmentCount * 32 : 0);
                             ?>
                                 <?php
@@ -100,15 +155,32 @@
                                     $projectAssignments = collect($projectData['assignments'] ?? [])->values();
                                     $projectSummary = $projectData['summary'] ?? [];
                                 ?>
-                                <div class="gantt-project-row" data-project-id="<?php echo e($project->id); ?>" style="border: 1px solid #e5e7eb; border-radius: 8px; background: white; padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+                                <div class="gantt-project-row" data-project-id="<?php echo e($project->id); ?>" data-collapsed="false" style="border: 1px solid #e5e7eb; border-radius: 8px; background: white; padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow: visible;">
                                     <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: center;">
                                         <div style="display: flex; align-items: center; gap: 8px;">
                                             
-                                            <div style="position: relative; display: inline-block;">
-                                                <button type="button" onclick="toggleProjectMenu(<?php echo e($project->id); ?>)" style="background: none; border: none; cursor: pointer; padding: 4px 8px; color: #6b7280; font-size: 18px; line-height: 1; transition: all 0.2s;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6b7280'">
+                                            <button type="button" 
+                                                    class="project-collapse-btn" 
+                                                    data-project-id="<?php echo e($project->id); ?>"
+                                                    onclick="event.stopPropagation(); toggleProject(<?php echo e($project->id); ?>);"
+                                                    title="Mitarbeiter ein-/ausblenden"
+                                                    style="background: none; border: none; cursor: pointer; padding: 4px; color: #6b7280; font-size: 14px; line-height: 1; transition: all 0.2s; display: flex; align-items: center; justify-content: center; min-width: 20px;" 
+                                                    onmouseover="this.style.color='#111827'" 
+                                                    onmouseout="this.style.color='#6b7280'">
+                                                <span class="collapse-icon">▼</span>
+                                            </button>
+                                            
+                                            <div style="position: relative; display: inline-block; z-index: 1001; overflow: visible;">
+                                                <button type="button" 
+                                                        class="project-menu-btn" 
+                                                        data-project-id="<?php echo e($project->id); ?>"
+                                                        onclick="event.stopPropagation(); event.stopImmediatePropagation(); window.toggleProjectMenu(<?php echo e($project->id); ?>); return false;"
+                                                        style="background: none; border: none; cursor: pointer; padding: 4px 8px; color: #6b7280; font-size: 18px; line-height: 1; transition: all 0.2s; position: relative; z-index: 1002; pointer-events: auto;" 
+                                                        onmouseover="this.style.color='#111827'" 
+                                                        onmouseout="this.style.color='#6b7280'">
                                                     ⋮
                                                 </button>
-                                                <div id="projectMenu<?php echo e($project->id); ?>" style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; min-width: 220px; margin-top: 4px; overflow: hidden;">
+                                                <div id="projectMenu<?php echo e($project->id); ?>" style="display: none; position: fixed; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 99999; min-width: 220px; max-width: 280px; white-space: nowrap;">
                                                     <div style="padding: 4px 0;">
                                                         <button type="button" onclick="openAddEmployeeModal(<?php echo e($project->id); ?>)" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                                                             <span style="font-size: 16px; color: #10b981;">➕</span>
@@ -188,11 +260,8 @@
 
                                     <div style="display: flex; flex-direction: column; gap: 8px;">
                                         <?php
-                                            // Load fresh assignments directly from database for this project
-                                            $freshAssignments = \App\Models\Assignment::where('project_id', $project->id)
-                                                ->with('employee')
-                                                ->orderBy('display_order')
-                                                ->get();
+                                            // Use already loaded fresh assignments from above (no duplicate query!)
+                                            // $freshAssignments already loaded above for accurate count
                                             
                                             // Convert to the format expected by the view
                                             $assignmentsForView = $freshAssignments->map(function($assignment) use ($timelineStart, $timelineEnd) {
@@ -217,6 +286,8 @@
                                             // Group assignments by employee
                                             $assignmentsByEmployee = $assignmentsForView->groupBy('employee_id');
                                         ?>
+                                        
+                                        <div class="project-employees-container" data-project-id="<?php echo e($project->id); ?>" style="display: block; transition: all 0.3s ease; overflow: hidden;">
                                         <?php $__empty_1 = true; $__currentLoopData = $assignmentsByEmployee; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $employeeId => $employeeAssignments): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                                             <?php
                                                 $firstAssignment = $employeeAssignments->first();
@@ -231,11 +302,18 @@
                                             <div style="display: grid; grid-template-columns: 260px 1fr; gap: 12px; align-items: center; margin-top: 8px;">
                                                 <div style="height: 28px; display: flex; align-items: center; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px; padding: 0 12px; color: #111827; font-size: 13px; font-weight: 600; gap: 8px;">
                                                     
-                                                    <div style="position: relative; display: inline-block;">
-                                                        <button type="button" onclick="toggleEmployeeMenu(<?php echo e($project->id); ?>, <?php echo e($employeeId); ?>)" style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #6b7280; font-size: 16px; line-height: 1; transition: all 0.2s;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#6b7280'">
+                                                    <div style="position: relative; display: inline-block; z-index: 1001;">
+                                                        <button type="button" 
+                                                                class="employee-menu-btn" 
+                                                                data-project-id="<?php echo e($project->id); ?>"
+                                                                data-employee-id="<?php echo e($employeeId); ?>"
+                                                                onclick="event.stopPropagation(); event.stopImmediatePropagation(); window.toggleEmployeeMenu(<?php echo e($project->id); ?>, <?php echo e($employeeId); ?>); return false;"
+                                                                style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #6b7280; font-size: 16px; line-height: 1; transition: all 0.2s; position: relative; z-index: 1002; pointer-events: auto;" 
+                                                                onmouseover="this.style.color='#111827'" 
+                                                                onmouseout="this.style.color='#6b7280'">
                                                             ⋮
                                                         </button>
-                                                        <div id="employeeMenu<?php echo e($project->id); ?>_<?php echo e($employeeId); ?>" style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; min-width: 220px; margin-top: 4px; overflow: hidden;">
+                                                        <div id="employeeMenu<?php echo e($project->id); ?>_<?php echo e($employeeId); ?>" style="display: none; position: fixed; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 99999; min-width: 220px; max-width: 280px; white-space: nowrap;">
                                                             <div style="padding: 4px 0;">
                                                                 <button type="button" onclick="openAddTaskModal(<?php echo e($project->id); ?>, <?php echo e($employeeId); ?>)" style="width: 100%; text-align: left; padding: 10px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: #374151; display: flex; align-items: center; gap: 10px; transition: all 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">
                                                                     <span style="font-size: 16px; color: #10b981;">➕</span>
@@ -311,6 +389,7 @@
                                                 <div style="height: 1px; background: #e5e7eb;"></div>
                                             </div>
                                         <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -366,13 +445,22 @@
             <input type="hidden" name="project_id" id="modalProjectId" value="">
             
             <div style="margin-bottom: 20px;">
-                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Mitarbeiter auswählen</label>
-                <select name="employee_id" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #111827; background: white;">
-                    <option value="">-- Mitarbeiter wählen --</option>
+                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">Mitarbeiter auswählen (Mehrfachauswahl möglich)</label>
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; background: white;">
                     <?php $__currentLoopData = $availableEmployees; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $employee): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <option value="<?php echo e($employee->id); ?>"><?php echo e($employee->first_name); ?> <?php echo e($employee->last_name); ?></option>
+                        <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; border-radius: 6px; transition: all 0.15s;" 
+                               onmouseover="this.style.background='#f3f4f6'" 
+                               onmouseout="this.style.background='white'">
+                            <input type="checkbox" name="employee_ids[]" value="<?php echo e($employee->id); ?>" 
+                                   style="width: 18px; height: 18px; cursor: pointer; accent-color: #3b82f6;">
+                            <span style="font-size: 14px; color: #111827; flex: 1;"><?php echo e($employee->first_name); ?> <?php echo e($employee->last_name); ?></span>
+                            <?php if($employee->department): ?>
+                                <span style="font-size: 12px; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 4px;"><?php echo e($employee->department); ?></span>
+                            <?php endif; ?>
+                        </label>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                </select>
+                </div>
+                <p style="font-size: 12px; color: #6b7280; margin-top: 8px;">✓ Wähle einen oder mehrere Mitarbeiter durch Anklicken der Checkboxen aus.</p>
             </div>
             
             <div style="display: flex; gap: 12px; justify-content: flex-end;">
@@ -524,39 +612,16 @@
 </div>
 
 <script>
-// Toggle Project Menu
-function toggleProjectMenu(projectId) {
-    const menu = document.getElementById('projectMenu' + projectId);
-    const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
-    
-    // Close all other menus
-    allMenus.forEach(m => {
-        if (m.id !== 'projectMenu' + projectId) {
-            m.style.display = 'none';
-        }
-    });
-    
-    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-}
-
-// Toggle Employee Menu
-function toggleEmployeeMenu(projectId, employeeId) {
-    const menu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
-    const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
-    
-    // Close all other menus
-    allMenus.forEach(m => {
-        if (m.id !== 'employeeMenu' + projectId + '_' + employeeId) {
-            m.style.display = 'none';
-        }
-    });
-    
-    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-}
-
 // Close menus when clicking outside
+// Note: toggleProjectMenu and toggleEmployeeMenu are defined in gantt/index.blade.php BEFORE this include
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('[onclick^="toggleProjectMenu"]') && !e.target.closest('[onclick^="toggleEmployeeMenu"]') && !e.target.closest('[id^="projectMenu"]') && !e.target.closest('[id^="employeeMenu"]')) {
+    // Check if click is on a menu button or inside a menu
+    const isMenuButton = e.target.closest('.project-menu-btn') || 
+                         e.target.closest('.employee-menu-btn');
+    const isInsideMenu = e.target.closest('[id^="projectMenu"]') || 
+                         e.target.closest('[id^="employeeMenu"]');
+    
+    if (!isMenuButton && !isInsideMenu) {
         document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]').forEach(menu => {
             menu.style.display = 'none';
         });
@@ -564,35 +629,10 @@ document.addEventListener('click', function(e) {
 });
 
 // Add Employee Modal
-function openAddEmployeeModal(projectId) {
-    document.getElementById('modalProjectId').value = projectId;
-    document.getElementById('addEmployeeForm').action = '/gantt/projects/' + projectId + '/employees';
-    document.getElementById('addEmployeeModal').style.display = 'flex';
-    // Close the dropdown
-    document.getElementById('projectMenu' + projectId).style.display = 'none';
-}
+// Note: openAddEmployeeModal and closeAddEmployeeModal are defined in gantt/index.blade.php BEFORE this include
 
-function closeAddEmployeeModal() {
-    document.getElementById('addEmployeeModal').style.display = 'none';
-}
-
-// Add Task Modal
-function openAddTaskModal(projectId, employeeId) {
-    document.getElementById('taskModalProjectId').value = projectId;
-    document.getElementById('taskModalEmployeeId').value = employeeId;
-    document.getElementById('addTaskForm').action = '/gantt/projects/' + projectId + '/employees/' + employeeId + '/tasks';
-    document.getElementById('addTaskModal').style.display = 'flex';
-    // Close the dropdown
-    document.getElementById('employeeMenu' + projectId + '_' + employeeId).style.display = 'none';
-    // Set default start date to today
-    document.getElementById('taskStartDate').value = new Date().toISOString().split('T')[0];
-    updateDurationMode();
-}
-
-function closeAddTaskModal() {
-    document.getElementById('addTaskModal').style.display = 'none';
-    document.getElementById('addTaskForm').reset();
-}
+// Add Task Modal  
+// Note: openAddTaskModal and closeAddTaskModal are defined in gantt/index.blade.php BEFORE this include
 
 // Duration Mode Toggle
 function updateDurationMode() {
@@ -637,25 +677,33 @@ function calculateEndDate() {
 // Close modals when clicking outside
 document.getElementById('addEmployeeModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        closeAddEmployeeModal();
+        if (typeof window.closeAddEmployeeModal === 'function') {
+            window.closeAddEmployeeModal();
+        }
     }
 });
 
 document.getElementById('addTaskModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        closeAddTaskModal();
+        if (typeof window.closeAddTaskModal === 'function') {
+            window.closeAddTaskModal();
+        }
     }
 });
 
 document.getElementById('manageTasksModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        closeManageTasksModal();
+        if (typeof window.closeManageTasksModal === 'function') {
+            window.closeManageTasksModal();
+        }
     }
 });
 
 document.getElementById('employeeUtilizationModal')?.addEventListener('click', function(e) {
     if (e.target === this) {
-        closeEmployeeUtilizationModal();
+        if (typeof window.closeEmployeeUtilizationModal === 'function') {
+            window.closeEmployeeUtilizationModal();
+        }
     }
 });
 
@@ -663,17 +711,19 @@ document.getElementById('employeeUtilizationModal')?.addEventListener('click', f
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' || e.keyCode === 27) {
         // Close all modals
-        closeAddEmployeeModal();
-        closeAddTaskModal();
-        closeManageTasksModal();
-        closeEmployeeUtilizationModal();
+        if (typeof window.closeAddEmployeeModal === 'function') window.closeAddEmployeeModal();
+        if (typeof window.closeAddTaskModal === 'function') window.closeAddTaskModal();
+        if (typeof window.closeManageTasksModal === 'function') window.closeManageTasksModal();
+        if (typeof window.closeEmployeeUtilizationModal === 'function') window.closeEmployeeUtilizationModal();
         
         // Close all dropdown menus
         const allMenus = document.querySelectorAll('[id^="projectMenu"], [id^="employeeMenu"]');
         allMenus.forEach(menu => menu.style.display = 'none');
         
         // Close project bar tooltip
-        hideProjectBarTooltip();
+        if (typeof hideProjectBarTooltip === 'function') {
+            hideProjectBarTooltip();
+        }
     }
 });
 
@@ -1049,7 +1099,7 @@ function attachEmployeeTooltipListeners() {
 }
 
 // Remove Employees Modal Functions
-function openRemoveEmployeesModal(projectId) {
+window.openRemoveEmployeesModal = function(projectId) {
     // Close project menu
     const projectMenu = document.getElementById('projectMenu' + projectId);
     if (projectMenu) projectMenu.style.display = 'none';
@@ -1059,32 +1109,9 @@ function openRemoveEmployeesModal(projectId) {
 }
 
 // Manage Tasks Modal Functions
-function openManageTasksModal(projectId, employeeId, employeeName) {
-    // Close employee menu
-    const employeeMenu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
-    if (employeeMenu) employeeMenu.style.display = 'none';
-    
-    // Set employee name
-    document.getElementById('manageTasksEmployeeName').textContent = employeeName;
-    
-    // Load tasks via AJAX
-    fetch(`/gantt/projects/${projectId}/employees/${employeeId}/tasks`)
-        .then(response => response.json())
-        .then(data => {
-            renderTasksList(data.tasks, projectId, employeeId);
-            document.getElementById('manageTasksModal').style.display = 'block';
-        })
-        .catch(error => {
-            console.error('Error loading tasks:', error);
-            alert('Fehler beim Laden der Aufgaben.');
-        });
-}
-
-function closeManageTasksModal() {
-    document.getElementById('manageTasksModal').style.display = 'none';
-}
-
-function renderTasksList(tasks, projectId, employeeId) {
+// Note: openManageTasksModal and closeManageTasksModal are defined in gantt/index.blade.php BEFORE this include
+// renderTasksList must be in window scope to be accessible
+window.renderTasksList = function(tasks, projectId, employeeId) {
     const container = document.getElementById('tasksListContainer');
     
     if (tasks.length === 0) {
@@ -1146,12 +1173,13 @@ function renderTasksList(tasks, projectId, employeeId) {
     container.innerHTML = html;
 }
 
-function editTask(taskId, projectId, employeeId) {
+window.editTask = function(taskId, projectId, employeeId) {
     const taskElement = document.getElementById('task-' + taskId);
     if (!taskElement) return;
     
     // Get current task data
-    fetch(`/gantt/tasks/${taskId}`)
+    const baseUrl = '<?php echo e(url('/')); ?>';
+    fetch(`${baseUrl}/gantt/tasks/${taskId}`)
         .then(response => response.json())
         .then(data => {
             const task = data.task;
@@ -1198,12 +1226,17 @@ function editTask(taskId, projectId, employeeId) {
         });
 }
 
-function cancelTaskEdit(taskId, projectId, employeeId) {
+window.cancelTaskEdit = function(taskId, projectId, employeeId) {
     // Reload the tasks list to restore original view
-    openManageTasksModal(projectId, employeeId, document.getElementById('manageTasksEmployeeName').textContent);
+    if (typeof window.openManageTasksModal === 'function') {
+        const nameElement = document.getElementById('manageTasksEmployeeName');
+        if (nameElement) {
+            window.openManageTasksModal(projectId, employeeId, nameElement.textContent);
+        }
+    }
 }
 
-function saveTaskEdit(event, taskId, projectId, employeeId) {
+window.saveTaskEdit = function(event, taskId, projectId, employeeId) {
     event.preventDefault();
     
     const form = event.target;
@@ -1217,10 +1250,12 @@ function saveTaskEdit(event, taskId, projectId, employeeId) {
         weekly_hours: formData.get('weekly_hours'),
     };
     
-    fetch(`/gantt/tasks/${taskId}`, {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const baseUrl = '<?php echo e(url('/')); ?>';
+    fetch(`${baseUrl}/gantt/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
-            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
+            'X-CSRF-TOKEN': csrfToken,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(data)
@@ -1229,7 +1264,12 @@ function saveTaskEdit(event, taskId, projectId, employeeId) {
     .then(data => {
         if (data.success) {
             // Reload tasks list to show updated task
-            openManageTasksModal(projectId, employeeId, document.getElementById('manageTasksEmployeeName').textContent);
+            if (typeof window.openManageTasksModal === 'function') {
+                const nameElement = document.getElementById('manageTasksEmployeeName');
+                if (nameElement) {
+                    window.openManageTasksModal(projectId, employeeId, nameElement.textContent);
+                }
+            }
             
             // Also reload the gantt page to reflect changes
             setTimeout(() => {
@@ -1245,15 +1285,17 @@ function saveTaskEdit(event, taskId, projectId, employeeId) {
     });
 }
 
-function deleteTask(taskId, projectId, employeeId, taskName) {
+window.deleteTask = function(taskId, projectId, employeeId, taskName) {
     if (!confirm(`Möchten Sie die Aufgabe "${taskName}" wirklich löschen?`)) {
         return;
     }
     
-    fetch(`/gantt/tasks/${taskId}`, {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const baseUrl = '<?php echo e(url('/')); ?>';
+    fetch(`${baseUrl}/gantt/tasks/${taskId}`, {
         method: 'DELETE',
         headers: {
-            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
+            'X-CSRF-TOKEN': csrfToken,
             'Content-Type': 'application/json',
         }
     })
@@ -1268,7 +1310,9 @@ function deleteTask(taskId, projectId, employeeId, taskName) {
                 setTimeout(() => {
                     taskElement.remove();
                     // Close modal and reload page to update gantt timeline
-                    closeManageTasksModal();
+                    if (typeof window.closeManageTasksModal === 'function') {
+                        window.closeManageTasksModal();
+                    }
                     window.location.reload();
                 }, 300);
             }
@@ -1288,38 +1332,43 @@ function deleteTask(taskId, projectId, employeeId, taskName) {
  * ENTSCHEIDUNG: Separate Modal (nicht inline) für klare UX
  * GRUND: User braucht Übersicht über alle Mitarbeiter
  */
-function openTransferModal(taskId, projectId, employeeId, taskName) {
+window.openTransferModal = function(taskId, projectId, employeeId, taskName) {
     document.getElementById('transferTaskId').value = taskId;
     document.getElementById('transferProjectId').value = projectId;
     document.getElementById('transferOldEmployeeId').value = employeeId;
     document.getElementById('transferTaskName').textContent = `"${taskName}"`;
     
     // Reset form
-    document.getElementById('transferNewEmployeeId').value = '';
     document.getElementById('transferReason').value = '';
     document.getElementById('reasonCharCount').textContent = '0';
     
-    // Remove current employee from dropdown (can't transfer to same employee)
+    // Update dropdown: disable/mark current employee
     const dropdown = document.getElementById('transferNewEmployeeId');
     const options = dropdown.querySelectorAll('option');
+    
     options.forEach(option => {
         if (option.value == employeeId) {
             option.disabled = true;
             option.style.color = '#9ca3af';
-            option.textContent = option.textContent + ' (Aktuell zugewiesen)';
-        } else {
+            const originalText = option.textContent.replace(' (Aktuell zugewiesen)', '');
+            option.textContent = originalText + ' (Aktuell zugewiesen)';
+        } else if (option.value !== '') {
             option.disabled = false;
             option.style.color = '';
             option.textContent = option.textContent.replace(' (Aktuell zugewiesen)', '');
         }
     });
     
+    // Reset selection
+    dropdown.value = '';
+    
     // Show modal
     document.getElementById('transferTaskModal').style.display = 'block';
 }
 
-function closeTransferModal() {
-    document.getElementById('transferTaskModal').style.display = 'none';
+window.closeTransferModal = function() {
+    const modal = document.getElementById('transferTaskModal');
+    if (modal) modal.style.display = 'none';
 }
 
 /**
@@ -1327,7 +1376,7 @@ function closeTransferModal() {
  * 
  * FALLBACK: Bei Fehler bleibt Modal offen mit Fehlermeldung
  */
-function submitTransfer(event) {
+window.submitTransfer = function(event) {
     event.preventDefault();
     
     const taskId = document.getElementById('transferTaskId').value;
@@ -1355,10 +1404,12 @@ function submitTransfer(event) {
     submitBtn.style.opacity = '0.7';
     
     // Send transfer request
-    fetch(`/gantt/tasks/${taskId}/transfer`, {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const baseUrl = '<?php echo e(url('/')); ?>';
+    fetch(`${baseUrl}/gantt/tasks/${taskId}/transfer`, {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
+            'X-CSRF-TOKEN': csrfToken,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -1371,8 +1422,12 @@ function submitTransfer(event) {
         if (data.success) {
             // Success: Show message and reload
             alert(data.message);
-            closeTransferModal();
-            closeManageTasksModal();
+            if (typeof window.closeTransferModal === 'function') {
+                window.closeTransferModal();
+            }
+            if (typeof window.closeManageTasksModal === 'function') {
+                window.closeManageTasksModal();
+            }
             window.location.reload(); // Reload to update Gantt timeline
         } else {
             // Error: Show message but keep modal open
@@ -1401,36 +1456,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-    .catch(error => {
-        console.error('Error deleting task:', error);
-        alert('Fehler beim Löschen der Aufgabe.');
-    });
-}
-
 // Employee Utilization Modal Functions
-function openEmployeeUtilizationModal(employeeId, employeeName) {
-    // Show loading state
-    document.getElementById('utilizationEmployeeName').textContent = employeeName;
-    document.getElementById('utilizationContent').innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 48px; margin-bottom: 16px;">⏳</div><p style="color: #6b7280;">Lade Auslastungsdaten...</p></div>';
-    document.getElementById('employeeUtilizationModal').style.display = 'block';
-    
-    // Load utilization data
-    fetch(`/gantt/employees/${employeeId}/utilization`)
-        .then(response => response.json())
-        .then(data => {
-            renderUtilizationView(data, employeeName);
-        })
-        .catch(error => {
-            console.error('Error loading utilization:', error);
-            document.getElementById('utilizationContent').innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;"><div style="font-size: 48px; margin-bottom: 16px;">⚠️</div><p>Fehler beim Laden der Auslastungsdaten.</p></div>';
-        });
-}
+// Note: openEmployeeUtilizationModal and closeEmployeeUtilizationModal are defined in gantt/index.blade.php BEFORE this include
+// renderUtilizationView is defined here as it's only used internally
 
-function closeEmployeeUtilizationModal() {
-    document.getElementById('employeeUtilizationModal').style.display = 'none';
-}
-
-function renderUtilizationView(data, employeeName) {
+window.renderUtilizationView = function(data, employeeName) {
     const container = document.getElementById('utilizationContent');
     const tasks = data.tasks || [];
     const peakHours = data.peak_weekly_hours || 0;
@@ -1587,7 +1617,7 @@ function renderUtilizationView(data, employeeName) {
 }
 
 // Remove Employee from Project
-function removeEmployeeFromProject(projectId, employeeId, employeeName) {
+window.removeEmployeeFromProject = function(projectId, employeeId, employeeName) {
     // Close employee menu
     const employeeMenu = document.getElementById('employeeMenu' + projectId + '_' + employeeId);
     if (employeeMenu) employeeMenu.style.display = 'none';
@@ -1595,12 +1625,14 @@ function removeEmployeeFromProject(projectId, employeeId, employeeName) {
     // Submit deletion via form
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = '/gantt/projects/' + projectId + '/employees/' + employeeId + '/remove';
+    const baseUrl = '<?php echo e(url('/')); ?>';
+    form.action = baseUrl + '/gantt/projects/' + projectId + '/employees/' + employeeId + '/remove';
     
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = '_token';
-    csrfInput.value = '<?php echo e(csrf_token()); ?>';
+    csrfInput.value = csrfToken;
     
     const methodInput = document.createElement('input');
     methodInput.type = 'hidden';
@@ -1614,7 +1646,7 @@ function removeEmployeeFromProject(projectId, employeeId, employeeName) {
 }
 
 // Bulk Assign Modal
-function openBulkAssignModal(projectId, projectName) {
+window.openBulkAssignModal = function(projectId, projectName) {
     const modal = document.getElementById('bulkAssignModal');
     if (!modal) return;
     
@@ -1627,12 +1659,12 @@ function openBulkAssignModal(projectId, projectName) {
     modal.style.display = 'flex';
 }
 
-function closeBulkAssignModal() {
+window.closeBulkAssignModal = function() {
     const modal = document.getElementById('bulkAssignModal');
     if (modal) modal.style.display = 'none';
 }
 
-function submitBulkAssign(event) {
+window.submitBulkAssign = function(event) {
     event.preventDefault();
     
     const form = event.target;
@@ -1656,11 +1688,13 @@ function submitBulkAssign(event) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Wird zugewiesen...';
     
-    fetch('<?php echo e(route('gantt.bulk-assign-employees')); ?>', {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const baseUrl = '<?php echo e(url('/')); ?>';
+    fetch(baseUrl + '/gantt/bulk-assign-employees', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
+            'X-CSRF-TOKEN': csrfToken,
             'Accept': 'application/json'
         },
         body: JSON.stringify({
@@ -1809,10 +1843,12 @@ document.addEventListener('click', function(event) {
                     style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white; cursor: pointer;"
                     onchange="this.style.borderColor='#3b82f6'">
                     <option value="">-- Mitarbeiter wählen --</option>
-                    <?php if(isset($availableEmployees)): ?>
-                        <?php $__currentLoopData = $availableEmployees->where('is_active', true)->sortBy('last_name'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $employee): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <option value="<?php echo e($employee->id); ?>"><?php echo e($employee->name); ?></option>
+                    <?php if(isset($availableEmployees) && $availableEmployees->isNotEmpty()): ?>
+                        <?php $__currentLoopData = $availableEmployees->sortBy('last_name'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $employee): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($employee->id); ?>"><?php echo e($employee->first_name); ?> <?php echo e($employee->last_name); ?></option>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                    <?php else: ?>
+                        <option value="" disabled>Keine Mitarbeiter verfügbar</option>
                     <?php endif; ?>
                 </select>
             </div>
