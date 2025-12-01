@@ -1,63 +1,71 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid px-4 py-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">📅 Abwesenheiten</h1>
-            <p class="text-gray-600 mt-1">Übersicht aller synchronisierten Abwesenheiten aus MOCO</p>
-        </div>
-        <div class="flex gap-3">
-            <a href="{{ route('absences.create') }}" class="btn btn-primary">
-                ➕ Neue Abwesenheit
-            </a>
-            <a href="{{ route('moco.index') }}" class="btn btn-secondary">
-                🔄 Synchronisieren
-            </a>
-        </div>
-    </div>
+<div style="width: 100%; margin: 0; padding: 0;">
+    <!-- Ultra-kompakter Header (eine Zeile) -->
+    <div class="card-header" style="padding: 12px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+            <!-- Links: Statistiken -->
+            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <div style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px;">
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase;">Gesamt</span>
+                        <span style="color: #111827; font-size: 14px; font-weight: 700;">{{ $stats['total'] }}</span>
+                    </div>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #10b981; font-size: 11px; font-weight: 500; text-transform: uppercase;">Urlaub</span>
+                        <span style="color: #10b981; font-size: 14px; font-weight: 700;">{{ $stats['urlaub'] }}</span>
+                    </div>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #dc2626; font-size: 11px; font-weight: 500; text-transform: uppercase;">Krank</span>
+                        <span style="color: #dc2626; font-size: 14px; font-weight: 700;">{{ $stats['krankheit'] }}</span>
+                    </div>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #8b5cf6; font-size: 11px; font-weight: 500; text-transform: uppercase;">Fortbildung</span>
+                        <span style="color: #8b5cf6; font-size: 14px; font-weight: 700;">{{ $stats['fortbildung'] }}</span>
+                    </div>
+                </div>
 
-    <!-- Statistik-Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-            <div class="text-gray-600 text-sm font-medium">Gesamt</div>
-            <div class="text-3xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</div>
-            <div class="text-gray-500 text-xs mt-1">Abwesenheiten</div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-            <div class="text-gray-600 text-sm font-medium">Urlaub</div>
-            <div class="text-3xl font-bold text-green-600 mt-1">{{ $stats['urlaub'] }}</div>
-            <div class="text-gray-500 text-xs mt-1">🏖️ Geplante Urlaubstage</div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
-            <div class="text-gray-600 text-sm font-medium">Krankheit</div>
-            <div class="text-3xl font-bold text-red-600 mt-1">{{ $stats['krankheit'] }}</div>
-            <div class="text-gray-500 text-xs mt-1">🤒 Krankheitstage</div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-            <div class="text-gray-600 text-sm font-medium">Fortbildung</div>
-            <div class="text-3xl font-bold text-purple-600 mt-1">{{ $stats['fortbildung'] }}</div>
-            <div class="text-gray-500 text-xs mt-1">📚 Fortbildungstage</div>
-        </div>
-    </div>
-
-    <!-- Filter-Sektion (Horizontal Layout mit Auto-Apply) -->
-    <div class="bg-white rounded-lg shadow mb-6">
-        <div class="p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">🔍 Filter</h3>
-                <a href="{{ route('absences.index') }}" class="text-gray-500 hover:text-gray-700 transition" title="Filter zurücksetzen">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </a>
+                <!-- Filter Button -->
+                <button id="toggleFiltersBtn" onclick="toggleFilterModal()" 
+                        style="background: {{ request()->hasAny(['employee_id', 'type', 'from', 'to']) ? '#3b82f6' : '#ffffff' }}; color: {{ request()->hasAny(['employee_id', 'type', 'from', 'to']) ? '#ffffff' : '#374151' }}; padding: 6px 12px; border: 1px solid {{ request()->hasAny(['employee_id', 'type', 'from', 'to']) ? '#3b82f6' : '#e5e7eb' }}; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;">
+                    <span>🔍</span>
+                    <span>Filter</span>
+                    @if(request()->hasAny(['employee_id', 'type', 'from', 'to']))
+                        <span style="background: rgba(255,255,255,0.3); color: white; border-radius: 10px; padding: 2px 6px; font-size: 11px; font-weight: 700;">
+                            {{ count(array_filter([request('employee_id'), request('type'), request('from'), request('to')])) }}
+                        </span>
+                    @endif
+                </button>
             </div>
-            <form method="GET" action="{{ route('absences.index') }}" id="filterForm" class="flex flex-wrap gap-4">
-                <!-- Mitarbeiter-Filter -->
-                <div class="flex-1 min-w-[200px]">
-                    <label for="employee_id" class="block text-sm font-medium text-gray-700 mb-2">Mitarbeiter</label>
-                    <select name="employee_id" id="employee_id" onchange="document.getElementById('filterForm').submit()" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+
+            <!-- Rechts: Buttons -->
+            <div style="display: flex; gap: 8px;">
+                <a href="{{ route('moco.index') }}" class="btn btn-secondary btn-sm">🔄 Sync</a>
+                <a href="{{ route('absences.create') }}" class="btn btn-primary btn-sm">+ Neue Abwesenheit</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Modal (versteckt) -->
+    <div id="filterModalBackdrop" onclick="toggleFilterModal()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 99998; backdrop-filter: blur(4px);"></div>
+    
+    <div id="filterModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 99999;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f3f4f6;">
+            <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
+            <button onclick="toggleFilterModal()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; color: #9ca3af; padding: 4px;"
+                    onmouseover="this.style.color='#374151'" onmouseout="this.style.color='#9ca3af'">✕</button>
+        </div>
+        
+        <form method="GET" action="{{ route('absences.index') }}" id="filterForm">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                <!-- Mitarbeiter -->
+                <div style="grid-column: span 2;">
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Mitarbeiter</label>
+                    <select name="employee_id" id="employee_id" class="form-select" style="width: 100%;">
                         <option value="">Alle Mitarbeiter</option>
                         @foreach($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -67,10 +75,10 @@
                     </select>
                 </div>
 
-                <!-- Typ-Filter -->
-                <div class="flex-1 min-w-[180px]">
-                    <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Typ</label>
-                    <select name="type" id="type" onchange="document.getElementById('filterForm').submit()" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <!-- Typ -->
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Typ</label>
+                    <select name="type" id="type" class="form-select" style="width: 100%;">
                         <option value="">Alle Typen</option>
                         <option value="urlaub" {{ request('type') == 'urlaub' ? 'selected' : '' }}>🏖️ Urlaub</option>
                         <option value="krankheit" {{ request('type') == 'krankheit' ? 'selected' : '' }}>🤒 Krankheit</option>
@@ -79,22 +87,28 @@
                 </div>
 
                 <!-- Datum Von -->
-                <div class="flex-1 min-w-[160px]">
-                    <label for="from" class="block text-sm font-medium text-gray-700 mb-2">Von</label>
-                    <input type="date" name="from" id="from" value="{{ request('from') }}" onchange="document.getElementById('filterForm').submit()" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Von</label>
+                    <input type="date" name="from" id="from" value="{{ request('from') }}" class="form-input" style="width: 100%;">
                 </div>
 
                 <!-- Datum Bis -->
-                <div class="flex-1 min-w-[160px]">
-                    <label for="to" class="block text-sm font-medium text-gray-700 mb-2">Bis</label>
-                    <input type="date" name="to" id="to" value="{{ request('to') }}" onchange="document.getElementById('filterForm').submit()" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <div>
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Bis</label>
+                    <input type="date" name="to" id="to" value="{{ request('to') }}" class="form-input" style="width: 100%;">
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f3f4f6;">
+                <a href="{{ route('absences.index') }}" class="btn btn-ghost btn-sm">↺ Alle Filter zurücksetzen</a>
+                <button type="submit" class="btn btn-primary btn-sm">Filter anwenden</button>
+            </div>
+        </form>
     </div>
 
     <!-- Mitarbeiter-Accordions -->
-    <div class="space-y-4">
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 20px;">
         @forelse($absencesByEmployee as $employeeId => $data)
             @php
                 $employee = $data['employee'];
@@ -278,7 +292,7 @@
                 </svg>
             </div>
             <div class="ml-3">
-                <p class="text-sm text-blue-700">
+                <p style="font-size: 14px; color: #1e40af;">
                     <strong>Hinweis:</strong> Abwesenheiten werden automatisch aus MOCO synchronisiert. 
                     Letzte Synchronisation: {{ \Illuminate\Support\Facades\Cache::get('moco:absences:last_sync')?->diffForHumans() ?? 'Noch nie' }}
                 </p>
@@ -286,4 +300,25 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleFilterModal() {
+    const modal = document.getElementById('filterModal');
+    const backdrop = document.getElementById('filterModalBackdrop');
+    const isVisible = modal.style.display === 'block';
+    
+    modal.style.display = isVisible ? 'none' : 'block';
+    backdrop.style.display = isVisible ? 'none' : 'block';
+    document.body.style.overflow = isVisible ? '' : 'hidden';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('filterModal');
+        if (modal && modal.style.display === 'block') {
+            toggleFilterModal();
+        }
+    }
+});
+</script>
 @endsection

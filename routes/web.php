@@ -8,6 +8,7 @@ use App\Http\Controllers\GanttController;
 use App\Http\Controllers\MocoController;
 use App\Http\Controllers\ProjectAssignmentOverrideController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\SearchController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,6 +45,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     // Dashboard (alle eingeloggten User)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // ========== GLOBAL SEARCH ==========
+    Route::get('/search', [SearchController::class, 'search'])->name('search');
 
     // ========== EMPLOYEES ROUTES (mit Permissions) ==========
     Route::prefix('employees')->name('employees.')->group(function () {

@@ -1754,13 +1754,14 @@ class GanttController extends Controller
 
     public function addTaskToEmployee(Request $request, Project $project, Employee $employee)
     {
+        // Ticket #6: weekly_hours akzeptiert jetzt Dezimalzahlen (z.B. 2.5 = 2h 30min)
         $request->validate([
             'task_name' => 'required|string|max:255',
             'task_description' => 'nullable|string',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'end_date_fixed' => 'nullable|date|after_or_equal:start_date',
-            'weekly_hours' => 'nullable|integer|min:1|max:40',
+            'weekly_hours' => 'nullable|numeric|min:0.25|max:40',
         ]);
 
         // Determine end date based on which mode was used
@@ -1865,20 +1866,64 @@ class GanttController extends Controller
 
     /**
      * Delete a task (assignment)
+     * 
+     * Ticket #5: Wenn die letzte Aufgabe gelöscht wird, erstelle einen Platzhalter
+     * mit task_name=null und weekly_hours=0. Die View zeigt dann einen Hinweis-Balken
+     * statt einer echten Aufgabe.
      */
     public function deleteTask(Assignment $assignment)
     {
         $taskName = $assignment->task_name;
+        $projectId = $assignment->project_id;
+        $employeeId = $assignment->employee_id;
+        
+        // Prüfen: Hat der MA noch andere ECHTE Aufgaben in diesem Projekt?
+        $otherRealTasks = Assignment::where('project_id', $projectId)
+            ->where('employee_id', $employeeId)
+            ->where('id', '!=', $assignment->id)
+            ->whereNotNull('task_name')
+            ->where('weekly_hours', '>', 0)
+            ->count();
+        
+        // Aufgabe löschen
         $assignment->delete();
-
+        
+        // Wenn das die letzte echte Aufgabe war: Platzhalter erstellen
+        if ($otherRealTasks === 0) {
+            // Prüfen ob bereits ein Platzhalter existiert
+            $existingPlaceholder = Assignment::where('project_id', $projectId)
+                ->where('employee_id', $employeeId)
+                ->whereNull('task_name')
+                ->where('weekly_hours', 0)
+                ->first();
+                
+            if (!$existingPlaceholder) {
+                Assignment::create([
+                    'project_id' => $projectId,
+                    'employee_id' => $employeeId,
+                    'task_name' => null,
+                    'weekly_hours' => 0,
+                    'start_date' => now(),
+                    'end_date' => now()->addMonth(),
+                    'source' => Assignment::SOURCE_MANUAL,
+                    'is_active' => true,
+                ]);
+            }
+        }
+        
         return response()->json([
             'success' => true,
             'message' => 'Aufgabe "' . $taskName . '" wurde gelöscht.',
+            'employee_has_no_tasks' => ($otherRealTasks === 0),
+            'employee_id' => $employeeId,
+            'project_id' => $projectId,
         ]);
     }
 
     /**
      * Update a task (assignment)
+     * 
+     * Ticket #6: weekly_hours akzeptiert jetzt Dezimalzahlen (z.B. 2.5 = 2h 30min)
      */
     public function updateTask(Request $request, Assignment $assignment)
     {
@@ -1887,7 +1932,7 @@ class GanttController extends Controller
             'task_description' => 'nullable|string',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'weekly_hours' => 'nullable|integer|min:1|max:40',
+            'weekly_hours' => 'nullable|numeric|min:0.25|max:40',
         ]);
 
         $assignment->update([

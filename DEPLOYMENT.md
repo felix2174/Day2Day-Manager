@@ -83,13 +83,17 @@ ssh root@192.168.228.30
 
 ```bash
 # WICHTIG: Als Plesk-User arbeiten, nicht als root!
-su daytoday.enodia-soft_2z8v0lj6aa7
+# Mit sudo su (funktioniert vom enodia-User aus)
+sudo su - daytoday.enodia-soft_2z8v0lj6aa7
 
 # Ins Projektverzeichnis wechseln
 cd ~/httpdocs
 ```
 
-**⚠️ Wichtig:** Arbeite immer als Plesk-User (`daytoday.enodia-soft_2z8v0lj6aa7`), nicht als root! Sonst können Dateiberechtigungen kaputt gehen.
+**⚠️ Wichtig:** 
+- Arbeite immer als Plesk-User (`daytoday.enodia-soft_2z8v0lj6aa7`), nicht als root! 
+- Sonst können Dateiberechtigungen kaputt gehen.
+- **Nutze `sudo su -`** (nicht nur `su`) - der Plesk-User hat kein eigenes Passwort!
 
 ### Schritt 3: Code aktualisieren
 
@@ -442,7 +446,7 @@ tail -f storage/logs/laravel.log
 
 ```bash
 # 1. Als Plesk-User einloggen
-su daytoday.enodia-soft_2z8v0lj6aa7
+sudo su - daytoday.enodia-soft_2z8v0lj6aa7
 cd ~/httpdocs
 
 # 2. Code aktualisieren

@@ -2,99 +2,130 @@
 
 @section('title', 'Projekte')
 
+@php
+    // Statistiken berechnen
+    $totalCount = $projects->count();
+    $activeCount = $projects->filter(function($p) {
+        if ($p->finish_date) {
+            return \Carbon\Carbon::parse($p->finish_date)->isFuture();
+        }
+        return $p->status === 'in_bearbeitung' || $p->status === 'active' || $p->status === 'planning';
+    })->count();
+    $completedCount = $projects->filter(function($p) {
+        if ($p->finish_date) {
+            return \Carbon\Carbon::parse($p->finish_date)->isPast();
+        }
+        return $p->status === 'abgeschlossen' || $p->status === 'completed';
+    })->count();
+@endphp
+
 @section('content')
 <div style="width: 100%; margin: 0; padding: 0;">
-    <!-- Page Header -->
-    <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">Projekt-Verwaltung</h1>
-                <p style="color: #6b7280; margin: 5px 0 0 0;">Verwalten Sie Ihre Projekte und deren Fortschritt</p>
-                <div style="display: flex; gap: 20px; margin-top: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Gesamt:</span>
-                        <span style="font-weight: 600; color: #111827;">{{ $projects->count() }}</span>
+    <!-- Ultra-kompakter Header (eine Zeile) -->
+    <div class="card-header" style="padding: 12px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+            <!-- Links: Statistiken -->
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <div style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px;">
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase;">Gesamt</span>
+                        <span style="color: #111827; font-size: 14px; font-weight: 700;">{{ $totalCount }}</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">In Bearbeitung:</span>
-                        <span style="font-weight: 600; color: #059669;">{{ $projects->filter(function($p) { 
-                            // MOCO-Priorität: finish_date zuerst, dann status als Fallback
-                            if ($p->finish_date) {
-                                return \Carbon\Carbon::parse($p->finish_date)->isFuture();
-                            }
-                            return $p->status === 'in_bearbeitung' || $p->status === 'active' || $p->status === 'planning';
-                        })->count() }}</span>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #10b981; font-size: 11px; font-weight: 500; text-transform: uppercase;">Aktiv</span>
+                        <span style="color: #10b981; font-size: 14px; font-weight: 700;">{{ $activeCount }}</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #6b7280; font-size: 14px;">Abgeschlossen:</span>
-                        <span style="font-weight: 600; color: #3730a3;">{{ $projects->filter(function($p) { 
-                            // MOCO-Priorität: finish_date zuerst, dann status als Fallback
-                            if ($p->finish_date) {
-                                return \Carbon\Carbon::parse($p->finish_date)->isPast();
-                            }
-                            return $p->status === 'abgeschlossen' || $p->status === 'completed';
-                        })->count() }}</span>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #9ca3af; font-size: 11px; font-weight: 500; text-transform: uppercase;">Fertig</span>
+                        <span style="color: #9ca3af; font-size: 14px; font-weight: 700;">{{ $completedCount }}</span>
                     </div>
                 </div>
-            </div>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="syncProjectStatuses()" id="syncButton" style="background: #3b82f6; color: white; padding: 10px 20px; border-radius: 12px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    Status synchronisieren
+
+                <!-- Filter Button -->
+                <button id="toggleFiltersBtn" onclick="toggleFilterModal()" 
+                        style="background: #ffffff; color: #374151; padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;"
+                        onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
+                        onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
+                    <span>🔍</span>
+                    <span>Filter</span>
+                    <span id="activeFilterCount" style="display: none; background: #3b82f6; color: white; border-radius: 10px; padding: 2px 6px; font-size: 11px; font-weight: 700;"></span>
                 </button>
-                <a href="{{ route('projects.export') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    Excel Export
-                </a>
-                <a href="{{ route('projects.import') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    CSV Import
-                </a>
-                <a href="{{ route('projects.create') }}" style="background: #ffffff; color: #374151; padding: 10px 20px; border-radius: 12px; text-decoration: none; font-size: 14px; font-weight: 500; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">
-                    Neues Projekt
-                </a>
+
+                <!-- Ergebnis-Anzeige -->
+                <div id="filterResultContainer" style="display: none;">
+                    <span id="filterResult" class="badge badge-info"></span>
+                </div>
+            </div>
+
+            <!-- Rechts: Buttons -->
+            <div style="display: flex; gap: 8px;">
+                <a href="{{ route('projects.export') }}" class="btn btn-secondary btn-sm">Excel Export</a>
+                <a href="{{ route('projects.import') }}" class="btn btn-secondary btn-sm">CSV Import</a>
+                <a href="{{ route('projects.create') }}" class="btn btn-primary btn-sm">+ Neues Projekt</a>
             </div>
         </div>
+    </div>
 
-        <!-- Filter Section -->
-        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                <span style="color: #6b7280; font-size: 14px; font-weight: 500;">Filter:</span>
-                
-                <!-- Live-Suche -->
-                <div style="position: relative; display: inline-block;">
+    <!-- Filter Modal (versteckt) -->
+    <div id="filterModalBackdrop" onclick="toggleFilterModal()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 99998; backdrop-filter: blur(4px);"></div>
+    
+    <div id="filterModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 700px; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 99999;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f3f4f6;">
+            <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
+            <button onclick="toggleFilterModal()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; color: #9ca3af; padding: 4px;"
+                    onmouseover="this.style.color='#374151'" onmouseout="this.style.color='#9ca3af'">✕</button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <!-- Suche -->
+            <div style="grid-column: span 2;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Projektname</label>
+                <div style="position: relative;">
                     <input type="text" 
                            id="searchProject" 
                            oninput="searchProjects()" 
-                           placeholder="🔍 Projektname suchen..."
-                           style="padding: 8px 32px 8px 12px; width: 240px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #374151; background: white; transition: all 0.2s ease;"
-                           onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)'"
-                           onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'">
+                           placeholder="Suche nach Projektname..."
+                           class="form-input"
+                           style="width: 100%; padding-right: 32px;">
                     <button id="clearSearchBtn" 
                             onclick="clearSearch()" 
-                            style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #9ca3af; cursor: pointer; font-size: 18px; padding: 4px 8px; display: none; transition: color 0.2s;"
-                            onmouseover="this.style.color='#ef4444'" 
-                            onmouseout="this.style.color='#9ca3af'">✕</button>
+                            style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 18px; display: none;"
+                            onmouseover="this.style.color='var(--color-danger)'" 
+                            onmouseout="this.style.color='var(--color-text-muted)'">✕</button>
                 </div>
-                
-                <!-- Status Filter -->
-                <select id="filterStatus" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #374151; cursor: pointer; background: white;">
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Status</label>
+                <select id="filterStatus" onchange="applyFilters()" class="form-select" style="width: 100%;">
                     <option value="">Alle Status</option>
                     <option value="In Bearbeitung">In Bearbeitung</option>
                     <option value="Abgeschlossen">Abgeschlossen</option>
                     <option value="Geplant">Geplant</option>
                 </select>
+            </div>
 
-                <!-- Sortierung -->
-                <select id="filterSort" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #374151; cursor: pointer; background: white;">
+            <!-- Sortierung -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Sortierung</label>
+                <select id="filterSort" onchange="applyFilters()" class="form-select" style="width: 100%;">
                     <option value="">Standard</option>
                     <option value="name-asc">Name (A-Z)</option>
                     <option value="name-desc">Name (Z-A)</option>
                     <option value="date-newest">Neueste zuerst</option>
                     <option value="date-oldest">Älteste zuerst</option>
-                    <option value="hours-high">Stunden (Hoch-Niedrig)</option>
-                    <option value="hours-low">Stunden (Niedrig-Hoch)</option>
+                    <option value="hours-high">Stunden (Hoch → Niedrig)</option>
+                    <option value="hours-low">Stunden (Niedrig → Hoch)</option>
                 </select>
+            </div>
 
-                <!-- Verantwortlicher Filter -->
-                <select id="filterResponsible" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #374151; cursor: pointer; background: white;">
+            <!-- Verantwortlicher -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Verantwortlicher</label>
+                <select id="filterResponsible" onchange="applyFilters()" class="form-select" style="width: 100%;">
                     <option value="">Alle Verantwortlichen</option>
                     @php
                         $responsibles = $projects->whereNotNull('responsible_id')->pluck('responsible')->unique('id')->sortBy('first_name');
@@ -103,9 +134,12 @@
                         <option value="{{ $responsible->id }}">{{ $responsible->first_name }} {{ $responsible->last_name }}</option>
                     @endforeach
                 </select>
+            </div>
 
-                <!-- Zeitraum Filter -->
-                <select id="filterTimeframe" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; color: #374151; cursor: pointer; background: white;">
+            <!-- Zeitraum -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Zeitraum</label>
+                <select id="filterTimeframe" onchange="applyFilters()" class="form-select" style="width: 100%;">
                     <option value="">Alle Zeiträume</option>
                     <option value="today">Heute erstellt</option>
                     <option value="week">Diese Woche</option>
@@ -113,17 +147,13 @@
                     <option value="year">Dieses Jahr</option>
                     <option value="older">Älter als 1 Jahr</option>
                 </select>
-
-                <!-- Filter zurücksetzen -->
-                <button onclick="resetFilters()" style="padding: 8px 16px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; transition: all 0.2s ease;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                    Filter zurücksetzen
-                </button>
-
-                <!-- Ergebnis-Anzeige -->
-                <div id="filterResultContainer" style="margin-left: auto; background: #f0f9ff; border: 1px solid #bae6fd; padding: 8px 16px; border-radius: 8px; display: none;">
-                    <span id="filterResult" style="color: #0369a1; font-size: 14px; font-weight: 600;"></span>
-                </div>
             </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f3f4f6;">
+            <button onclick="resetFilters()" class="btn btn-ghost btn-sm">↺ Alle Filter zurücksetzen</button>
+            <button onclick="toggleFilterModal()" class="btn btn-primary btn-sm">Schließen</button>
         </div>
     </div>
 
@@ -370,6 +400,56 @@
 @endsection
 
 <script>
+// ==================== FILTER MODAL ====================
+function toggleFilterModal() {
+    const modal = document.getElementById('filterModal');
+    const backdrop = document.getElementById('filterModalBackdrop');
+    const isVisible = modal.style.display === 'block';
+    
+    modal.style.display = isVisible ? 'none' : 'block';
+    backdrop.style.display = isVisible ? 'none' : 'block';
+    
+    // Body scroll verhindern wenn Modal offen
+    document.body.style.overflow = isVisible ? '' : 'hidden';
+}
+
+// Escape-Taste schließt Modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('filterModal');
+        if (modal && modal.style.display === 'block') {
+            toggleFilterModal();
+        }
+    }
+});
+
+// Update Filter-Button wenn Filter aktiv
+function updateFilterButton() {
+    const searchTerm = document.getElementById('searchProject')?.value || '';
+    const statusFilter = document.getElementById('filterStatus')?.value || '';
+    const sortFilter = document.getElementById('filterSort')?.value || '';
+    const responsibleFilter = document.getElementById('filterResponsible')?.value || '';
+    const timeframeFilter = document.getElementById('filterTimeframe')?.value || '';
+    
+    const activeFilters = [searchTerm, statusFilter, sortFilter, responsibleFilter, timeframeFilter].filter(f => f).length;
+    
+    const btn = document.getElementById('toggleFiltersBtn');
+    const countBadge = document.getElementById('activeFilterCount');
+    
+    if (activeFilters > 0) {
+        btn.style.background = '#3b82f6';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#3b82f6';
+        countBadge.textContent = activeFilters;
+        countBadge.style.display = 'inline';
+    } else {
+        btn.style.background = '#ffffff';
+        btn.style.color = '#374151';
+        btn.style.borderColor = '#e5e7eb';
+        countBadge.style.display = 'none';
+    }
+}
+
 // ==================== LIVE-SUCHE ====================
 function searchProjects() {
     const searchInput = document.getElementById('searchProject');
@@ -531,6 +611,9 @@ function applyFilters() {
             resultSpan.style.color = '#0369a1';
         }
     }
+    
+    // Filter-Button aktualisieren
+    updateFilterButton();
 }
 
 function resetFilters() {
@@ -546,5 +629,8 @@ function resetFilters() {
     
     // Filter neu anwenden (zeigt alle Projekte)
     applyFilters();
+    
+    // Filter-Button aktualisieren
+    updateFilterButton();
 }
 </script>

@@ -29,6 +29,7 @@ class Assignment extends Model
         'is_active' => 'boolean',
         'start_date' => 'date',
         'end_date' => 'date',
+        'weekly_hours' => 'decimal:2', // Ticket #6: Dezimalstunden (z.B. 2.5 = 2h 30min)
     ];
 
     // Konstanten für Source

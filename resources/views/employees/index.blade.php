@@ -4,89 +4,137 @@
 
 @php
 use Illuminate\Support\Facades\DB;
+// Statistiken
+$totalCount = $employees->count();
+$activeCount = $employees->where('is_active', true)->count();
+$inactiveCount = $employees->where('is_active', false)->count();
+$criticalCount = $statusCounts['critical'] ?? 0;
+$warningCount = $statusCounts['warning'] ?? 0;
+$balancedCount = $statusCounts['balanced'] ?? 0;
 @endphp
 
 @section('content')
 <div style="width: 100%; margin: 0; padding: 0;">
-    <div style="background: white; padding: 20px; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;">
-            <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h1 style="font-size: 24px; font-weight: bold; color: #111827; margin: 0;">Mitarbeiter-Verwaltung</h1>
-                        <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 14px;">Auslastung & Bottlenecks auf Basis aktueller MOCO-Daten</p>
+    <!-- Ultra-kompakter Header (eine Zeile) -->
+    <div class="card-header" style="padding: 12px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+            <!-- Links: Statistiken -->
+            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <div style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px;">
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #6b7280; font-size: 11px; font-weight: 500; text-transform: uppercase;">Gesamt</span>
+                        <span style="color: #111827; font-size: 14px; font-weight: 700;">{{ $totalCount }}</span>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <a href="{{ route('employees.export') }}" style="background: #ffffff; color: #374151; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #e5e7eb;">Excel Export</a>
-                        <a href="{{ route('employees.import') }}" style="background: #ffffff; color: #374151; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 500; border: 1px solid #e5e7eb;">CSV Import</a>
-                        <a href="{{ route('employees.create') }}" style="background: #111827; color: white; padding: 10px 16px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: 500;">Neuer Mitarbeiter</a>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #10b981; font-size: 11px; font-weight: 500; text-transform: uppercase;">Aktiv</span>
+                        <span style="color: #10b981; font-size: 14px; font-weight: 700;">{{ $activeCount }}</span>
+                    </div>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #9ca3af; font-size: 11px; font-weight: 500; text-transform: uppercase;">Inaktiv</span>
+                        <span style="color: #9ca3af; font-size: 14px; font-weight: 700;">{{ $inactiveCount }}</span>
                     </div>
                 </div>
 
-                <div style="margin-top: 16px; padding: 12px 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; display: flex; gap: 24px; flex-wrap: wrap;">
-                    <div style="min-width: 140px;">
-                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Gesamt</div>
-                        <div style="color: #111827; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $employees->count() }}</div>
+                <!-- Auslastungs-Badges -->
+                <div style="background: #f3f4f6; padding: 6px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 10px;">
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #dc2626; font-size: 11px; font-weight: 500; text-transform: uppercase;">Überlastet</span>
+                        <span style="color: #dc2626; font-size: 14px; font-weight: 700;">{{ $criticalCount }}</span>
                     </div>
-                    <div style="min-width: 140px;">
-                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Aktiv</div>
-                        <div style="color: #059669; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $employees->where('is_active', true)->count() }}</div>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #f59e0b; font-size: 11px; font-weight: 500; text-transform: uppercase;">Hoch</span>
+                        <span style="color: #f59e0b; font-size: 14px; font-weight: 700;">{{ $warningCount }}</span>
                     </div>
-                    <div style="min-width: 140px;">
-                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Inaktiv</div>
-                        <div style="color: #6b7280; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $employees->where('is_active', false)->count() }}</div>
-                    </div>
-                    <div style="min-width: 140px;">
-                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Überlastet</div>
-                        <div style="color: #b91c1c; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $statusCounts['critical'] ?? 0 }}</div>
-                    </div>
-                    <div style="min-width: 140px;">
-                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Hohe Auslastung</div>
-                        <div style="color: #f59e0b; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $statusCounts['warning'] ?? 0 }}</div>
-                    </div>
-                    <div style="min-width: 140px;">
-                        <div style="color: #6b7280; font-size: 12px; text-transform: uppercase; font-weight: 600;">Im Soll</div>
-                        <div style="color: #059669; font-weight: 600; font-size: 18px; margin-top: 2px;">{{ $statusCounts['balanced'] ?? 0 }}</div>
+                    <span style="color: #d1d5db;">·</span>
+                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                        <span style="color: #10b981; font-size: 11px; font-weight: 500; text-transform: uppercase;">OK</span>
+                        <span style="color: #10b981; font-size: 14px; font-weight: 700;">{{ $balancedCount }}</span>
                     </div>
                 </div>
+
+                <!-- Filter Button -->
+                <button id="toggleFiltersBtn" onclick="toggleFilterModal()" 
+                        style="background: #ffffff; color: #374151; padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px;"
+                        onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'"
+                        onmouseout="this.style.background='#ffffff'; this.style.borderColor='#e5e7eb'">
+                    <span>🔍</span>
+                    <span>Filter</span>
+                    <span id="activeFilterCount" style="display: none; background: #3b82f6; color: white; border-radius: 10px; padding: 2px 6px; font-size: 11px; font-weight: 700;"></span>
+                </button>
+            </div>
+
+            <!-- Rechts: Buttons -->
+            <div style="display: flex; gap: 8px;">
+                <a href="{{ route('employees.export') }}" class="btn btn-secondary btn-sm">Excel Export</a>
+                <a href="{{ route('employees.import') }}" class="btn btn-secondary btn-sm">CSV Import</a>
+                <a href="{{ route('employees.create') }}" class="btn btn-primary btn-sm">+ Neuer Mitarbeiter</a>
             </div>
         </div>
+    </div>
 
-        <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
-            <div style="display: flex; flex-direction: column;">
-                <label for="filter-active-status" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Mitarbeiter-Status</label>
-                <select id="filter-active-status" onchange="applyFilters()" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 160px;">
+    <!-- Filter Modal (versteckt) -->
+    <div id="filterModalBackdrop" onclick="toggleFilterModal()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 99998; backdrop-filter: blur(4px);"></div>
+    
+    <div id="filterModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 700px; background: white; padding: 24px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 99999;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f3f4f6;">
+            <h3 style="font-size: 18px; font-weight: 700; color: #111827; margin: 0;">🔍 Filter & Suche</h3>
+            <button onclick="toggleFilterModal()" style="background: transparent; border: none; font-size: 24px; cursor: pointer; color: #9ca3af; padding: 4px;"
+                    onmouseover="this.style.color='#374151'" onmouseout="this.style.color='#9ca3af'">✕</button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <!-- Suche -->
+            <div style="grid-column: span 2;">
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Mitarbeiter suchen</label>
+                <input id="filter-search" type="text" placeholder="Name eingeben..." class="form-input" style="width: 100%;">
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Mitarbeiter-Status</label>
+                <select id="filter-active-status" onchange="applyFilters()" class="form-select" style="width: 100%;">
                     <option value="active">Nur Aktive</option>
                     <option value="all">Alle</option>
                     <option value="inactive">Nur Inaktive</option>
                 </select>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <label for="filter-status" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Auslastungs-Status</label>
-                <select id="filter-status" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 160px;">
+
+            <!-- Auslastung -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Auslastungs-Status</label>
+                <select id="filter-status" class="form-select" style="width: 100%;">
                     <option value="all">Alle Status</option>
-                    <option value="critical">Überlastet ({{ $statusCounts['critical'] ?? 0 }})</option>
-                    <option value="warning">Hohe Auslastung ({{ $statusCounts['warning'] ?? 0 }})</option>
-                    <option value="balanced">Im Soll ({{ $statusCounts['balanced'] ?? 0 }})</option>
+                    <option value="critical">Überlastet ({{ $criticalCount }})</option>
+                    <option value="warning">Hohe Auslastung ({{ $warningCount }})</option>
+                    <option value="balanced">Im Soll ({{ $balancedCount }})</option>
                     <option value="underutilized">Unterlast ({{ $statusCounts['underutilized'] ?? 0 }})</option>
                     <option value="unknown">Ohne Daten ({{ $statusCounts['unknown'] ?? 0 }})</option>
                 </select>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <label style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Bottleneck</label>
-                <label style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; cursor: pointer; font-size: 13px; color: #374151;">
-                    <input type="checkbox" id="filter-bottleneck" style="width: 16px; height: 16px; accent-color: #ef4444;">
+
+            <!-- Abteilung -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Abteilung</label>
+                <input id="filter-department" type="text" placeholder="Abteilung suchen..." class="form-input" style="width: 100%;">
+            </div>
+
+            <!-- Bottleneck -->
+            <div>
+                <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 6px; text-transform: uppercase;">Bottleneck</label>
+                <label style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; cursor: pointer; font-size: 13px; color: #374151; width: 100%;">
+                    <input type="checkbox" id="filter-bottleneck" style="width: 16px; height: 16px; accent-color: #dc2626;">
                     Nur kritische Mitarbeiter
                 </label>
             </div>
-            <div style="display: flex; flex-direction: column;">
-                <label for="filter-department" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Abteilung</label>
-                <input id="filter-department" type="text" placeholder="Abteilung suchen" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 180px;">
-            </div>
-            <div style="display: flex; flex-direction: column;">
-                <label for="filter-search" style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase;">Suche</label>
-                <input id="filter-search" type="text" placeholder="Mitarbeiter" style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; min-width: 200px;">
-            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f3f4f6;">
+            <button onclick="resetEmployeeFilters()" class="btn btn-ghost btn-sm">↺ Alle Filter zurücksetzen</button>
+            <button onclick="toggleFilterModal()" class="btn btn-primary btn-sm">Schließen</button>
         </div>
     </div>
 
@@ -232,6 +280,67 @@ use Illuminate\Support\Facades\DB;
 </div>
 
 <script>
+    // ==================== FILTER MODAL ====================
+    function toggleFilterModal() {
+        const modal = document.getElementById('filterModal');
+        const backdrop = document.getElementById('filterModalBackdrop');
+        const isVisible = modal.style.display === 'block';
+        
+        modal.style.display = isVisible ? 'none' : 'block';
+        backdrop.style.display = isVisible ? 'none' : 'block';
+        document.body.style.overflow = isVisible ? '' : 'hidden';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('filterModal');
+            if (modal && modal.style.display === 'block') {
+                toggleFilterModal();
+            }
+        }
+    });
+
+    function updateFilterButton() {
+        const searchValue = document.getElementById('filter-search')?.value || '';
+        const activeStatus = document.getElementById('filter-active-status')?.value || 'active';
+        const status = document.getElementById('filter-status')?.value || 'all';
+        const department = document.getElementById('filter-department')?.value || '';
+        const bottleneck = document.getElementById('filter-bottleneck')?.checked || false;
+        
+        let activeFilters = 0;
+        if (searchValue) activeFilters++;
+        if (activeStatus !== 'active') activeFilters++;
+        if (status !== 'all') activeFilters++;
+        if (department) activeFilters++;
+        if (bottleneck) activeFilters++;
+        
+        const btn = document.getElementById('toggleFiltersBtn');
+        const countBadge = document.getElementById('activeFilterCount');
+        
+        if (activeFilters > 0) {
+            btn.style.background = '#3b82f6';
+            btn.style.color = '#ffffff';
+            btn.style.borderColor = '#3b82f6';
+            countBadge.textContent = activeFilters;
+            countBadge.style.display = 'inline';
+        } else {
+            btn.style.background = '#ffffff';
+            btn.style.color = '#374151';
+            btn.style.borderColor = '#e5e7eb';
+            countBadge.style.display = 'none';
+        }
+    }
+
+    function resetEmployeeFilters() {
+        document.getElementById('filter-search').value = '';
+        document.getElementById('filter-active-status').value = 'active';
+        document.getElementById('filter-status').value = 'all';
+        document.getElementById('filter-department').value = '';
+        document.getElementById('filter-bottleneck').checked = false;
+        applyFilters();
+        updateFilterButton();
+    }
+
     (function() {
         const activeStatusFilter = document.getElementById('filter-active-status');
         const statusFilter = document.getElementById('filter-status');
@@ -282,10 +391,16 @@ use Illuminate\Support\Facades\DB;
 
                 row.style.display = visible ? '' : 'none';
             });
+            
+            // Filter-Button aktualisieren
+            updateFilterButton();
         }
 
         [activeStatusFilter, statusFilter, bottleneckFilter].forEach(el => el.addEventListener('change', applyFilters));
         [departmentFilter, searchFilter].forEach(el => el.addEventListener('input', applyFilters));
+        
+        // Global verfügbar machen
+        window.applyFilters = applyFilters;
         
         // Trigger initial filter (default: active only)
         applyFilters();

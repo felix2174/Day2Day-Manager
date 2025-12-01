@@ -346,41 +346,64 @@
                                                 </div>
                                                 {{-- Timeline with all task bars for this employee --}}
                                                 <div style="position: relative; height: 28px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb;">
-                                                    @foreach($employeeAssignments as $taskIndex => $assignment)
-                                                        @php
-                                                            $assignmentStart = $assignment['start'];
-                                                            $assignmentEnd = $assignment['end'];
-                                                            $clampedStart = $assignmentStart->lt($timelineStart) ? $timelineStart->copy() : $assignmentStart;
-                                                            $clampedEnd = $assignmentEnd->gt($timelineEnd) ? $timelineEnd->copy() : $assignmentEnd;
-                                                            $offsetDays = max(0, $timelineStart->diffInDays($clampedStart));
-                                                            $durationDays = max(1, $clampedStart->diffInDays($clampedEnd) + 1);
-                                                            $leftPercent = ($offsetDays / $timelineSpanDays) * 100;
-                                                            $widthPercent = ($durationDays / $timelineSpanDays) * 100;
-                                                            $hours = $assignment['weekly_hours'];
-                                                            $assignmentId = collect($assignment['assignment_ids'] ?? [])->first();
-                                                            
-                                                            // Try to get task_name from assignment, fallback to primary_activity or generic label
-                                                            $taskName = $assignment['task_name'] ?? ($assignment['primary_activity'] ?? 'Aufgabe ' . ($taskIndex + 1));
-                                                            
-                                                            $barColor = '#0ea5e9'; // Blue for tasks
-                                                        @endphp
-                                                        <div class="project-task-bar" 
-                                                             data-project-id="{{ $project->id }}" 
-                                                             data-assignment-id="{{ $assignmentId ?? '' }}" 
-                                                             data-employee-id="{{ $employeeId }}"
-                                                             data-task-name="{{ $taskName }}"
-                                                             data-task-description="{{ $assignment['task_description'] ?? '' }}"
-                                                             data-start-date="{{ $assignmentStart->format('d.m.Y') }}"
-                                                             data-end-date="{{ $assignmentEnd->format('d.m.Y') }}"
-                                                             data-weekly-hours="{{ $hours ?? 20 }}"
-                                                             data-duration-days="{{ $assignmentStart->diffInDays($assignmentEnd) + 1 }}"
-                                                             style="position: absolute; top: 2px; left: {{ $leftPercent }}%; width: {{ $widthPercent }}%; height: calc(100% - 4px); border-radius: 8px; background: {{ $barColor }}; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.15); cursor: pointer; transition: all 0.2s;">
-                                                            <span style="padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ Str::limit($taskName, 32) }}</span>
-                                                            @if($hours)
-                                                                <span style="margin-left: 6px; font-weight: 600; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 8px; font-size: 10px;">{{ $hours }}h</span>
-                                                            @endif
+                                                    @php
+                                                        // Ticket #5: Prüfen ob MA echte Aufgaben hat (nicht nur Platzhalter)
+                                                        $realTasks = collect($employeeAssignments)->filter(function($a) {
+                                                            return !empty($a['task_name']) && $a['weekly_hours'] > 0;
+                                                        });
+                                                        $hasNoRealTasks = $realTasks->isEmpty();
+                                                    @endphp
+                                                    
+                                                    @if($hasNoRealTasks)
+                                                        {{-- Ticket #5: Hinweis-Balken für MA ohne Aufgaben --}}
+                                                        <div style="position: absolute; top: 2px; left: 5%; width: 90%; height: calc(100% - 4px); border-radius: 8px; background: #fef3c7; border: 2px dashed #f59e0b; display: flex; align-items: center; justify-content: center; gap: 8px; color: #92400e; font-size: 12px; font-weight: 500;">
+                                                            <span>⚠️ Keine Aufgaben</span>
+                                                            <button onclick="openAddTaskModal({{ $project->id }}, {{ $employeeId }}, ganttConfig.baseUrl)" style="padding: 3px 10px; background: #f59e0b; border: none; border-radius: 4px; color: white; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.2s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">
+                                                                + Aufgabe
+                                                            </button>
                                                         </div>
-                                                    @endforeach
+                                                    @else
+                                                        @foreach($employeeAssignments as $taskIndex => $assignment)
+                                                            @php
+                                                                // Skip empty placeholder assignments
+                                                                if (empty($assignment['task_name']) && ($assignment['weekly_hours'] ?? 0) == 0) {
+                                                                    continue;
+                                                                }
+                                                                
+                                                                $assignmentStart = $assignment['start'];
+                                                                $assignmentEnd = $assignment['end'];
+                                                                $clampedStart = $assignmentStart->lt($timelineStart) ? $timelineStart->copy() : $assignmentStart;
+                                                                $clampedEnd = $assignmentEnd->gt($timelineEnd) ? $timelineEnd->copy() : $assignmentEnd;
+                                                                $offsetDays = max(0, $timelineStart->diffInDays($clampedStart));
+                                                                $durationDays = max(1, $clampedStart->diffInDays($clampedEnd) + 1);
+                                                                $leftPercent = ($offsetDays / $timelineSpanDays) * 100;
+                                                                $widthPercent = ($durationDays / $timelineSpanDays) * 100;
+                                                                $hours = $assignment['weekly_hours'];
+                                                                $assignmentId = collect($assignment['assignment_ids'] ?? [])->first();
+                                                                
+                                                                // Try to get task_name from assignment, fallback to primary_activity or generic label
+                                                                $taskName = $assignment['task_name'] ?? ($assignment['primary_activity'] ?? 'Aufgabe ' . ($taskIndex + 1));
+                                                                
+                                                                $barColor = '#0ea5e9'; // Blue for tasks
+                                                            @endphp
+                                                            <div class="project-task-bar" 
+                                                                 data-project-id="{{ $project->id }}" 
+                                                                 data-assignment-id="{{ $assignmentId ?? '' }}" 
+                                                                 data-employee-id="{{ $employeeId }}"
+                                                                 data-task-name="{{ $taskName }}"
+                                                                 data-task-description="{{ $assignment['task_description'] ?? '' }}"
+                                                                 data-start-date="{{ $assignmentStart->format('d.m.Y') }}"
+                                                                 data-end-date="{{ $assignmentEnd->format('d.m.Y') }}"
+                                                                 data-weekly-hours="{{ $hours ?? 20 }}"
+                                                                 data-duration-days="{{ $assignmentStart->diffInDays($assignmentEnd) + 1 }}"
+                                                                 style="position: absolute; top: 2px; left: {{ $leftPercent }}%; width: {{ $widthPercent }}%; height: calc(100% - 4px); border-radius: 8px; background: {{ $barColor }}; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.15); cursor: pointer; transition: all 0.2s;">
+                                                                <span style="padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ Str::limit($taskName, 32) }}</span>
+                                                                @if($hours)
+                                                                    <span style="margin-left: 6px; font-weight: 600; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 8px; font-size: 10px;">{{ $hours }}h</span>
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    @endif
                                                 </div>
                                             </div>
                                         @empty
@@ -511,11 +534,11 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div>
                             <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 6px;">Von</label>
-                            <input type="date" name="start_date" id="taskStartDate" required style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                            <input type="date" name="start_date" id="taskStartDate" required style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" onchange="updateWeeklyHours()">
                         </div>
                         <div>
                             <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 6px;">Bis</label>
-                            <input type="date" name="end_date_fixed" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                            <input type="date" name="end_date_fixed" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" onchange="updateWeeklyHours()">
                         </div>
                     </div>
                 </div>
@@ -545,10 +568,53 @@
                 </div>
             </div>
             
-            {{-- Weekly Hours --}}
+            {{-- Zeitaufwand - Ticket #6: Gesamtaufwand oder Pro Woche --}}
             <div style="margin-bottom: 20px;">
-                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Wochenstunden</label>
-                <input type="number" name="weekly_hours" min="1" max="40" value="20" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #111827;">
+                <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 8px;">Zeitaufwand</label>
+                
+                {{-- Modus-Auswahl --}}
+                <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; transition: all 0.2s;" id="effortModeTotal" onclick="setEffortMode('total')">
+                        <input type="radio" name="effort_mode" value="total" checked style="cursor: pointer;">
+                        <div>
+                            <div style="font-size: 13px; color: #374151; font-weight: 500;">Gesamtaufwand</div>
+                            <div style="font-size: 11px; color: #6b7280;">z.B. 2h für ein Meeting</div>
+                        </div>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 12px; border: 2px solid #e5e7eb; border-radius: 8px; transition: all 0.2s;" id="effortModeWeekly" onclick="setEffortMode('weekly')">
+                        <input type="radio" name="effort_mode" value="weekly" style="cursor: pointer;">
+                        <div>
+                            <div style="font-size: 13px; color: #374151; font-weight: 500;">Pro Woche</div>
+                            <div style="font-size: 11px; color: #6b7280;">z.B. 4h/Woche für Support</div>
+                        </div>
+                    </label>
+                </div>
+                
+                {{-- Eingabefelder --}}
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <div style="flex: 1;">
+                        <input type="number" id="taskHours" min="0" max="999" value="1" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #111827;" onchange="updateWeeklyHours()">
+                        <div style="font-size: 11px; color: #6b7280; margin-top: 2px; text-align: center;">Stunden</div>
+                    </div>
+                    <span style="font-size: 18px; color: #6b7280;">:</span>
+                    <div style="flex: 1;">
+                        <select id="taskMinutes" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; color: #111827;" onchange="updateWeeklyHours()">
+                            <option value="0">00</option>
+                            <option value="15">15</option>
+                            <option value="30">30</option>
+                            <option value="45">45</option>
+                        </select>
+                        <div style="font-size: 11px; color: #6b7280; margin-top: 2px; text-align: center;">Minuten</div>
+                    </div>
+                </div>
+                
+                {{-- Info-Box für berechnete Werte --}}
+                <div id="effortCalculation" style="margin-top: 8px; padding: 8px 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; font-size: 12px; color: #0369a1; display: none;">
+                    <span id="effortCalculationText"></span>
+                </div>
+                
+                <input type="hidden" name="weekly_hours" id="weeklyHoursInput" value="1">
+                <input type="hidden" name="effort_mode" id="effortModeInput" value="total">
             </div>
             
             {{-- Task Description --}}
@@ -612,6 +678,41 @@
 </div>
 
 <script>
+/**
+ * Ticket #6: Formatiert Stunden benutzerfreundlich
+ * - Unter 1 Stunde: zeigt Minuten (z.B. "30 min")
+ * - Ab 1 Stunde: zeigt Stunden (z.B. "2.5h" oder "2h 30min")
+ * 
+ * @param {number} hours - Stunden als Dezimalzahl (z.B. 0.5 = 30 Minuten)
+ * @param {boolean} perWeek - Suffix "/ Woche" hinzufügen
+ * @returns {string} Formatierte Zeitangabe
+ */
+function formatHours(hours, perWeek = false) {
+    if (hours === null || hours === undefined || isNaN(hours)) {
+        return perWeek ? '0h / Woche' : '0h';
+    }
+    
+    hours = parseFloat(hours);
+    const suffix = perWeek ? ' / Woche' : '';
+    
+    if (hours < 1) {
+        // Unter 1 Stunde: In Minuten anzeigen
+        const minutes = Math.round(hours * 60);
+        return minutes + ' min' + suffix;
+    } else if (hours % 1 === 0) {
+        // Ganze Stunden
+        return hours + 'h' + suffix;
+    } else {
+        // Stunden mit Minuten
+        const fullHours = Math.floor(hours);
+        const minutes = Math.round((hours - fullHours) * 60);
+        if (minutes === 0) {
+            return fullHours + 'h' + suffix;
+        }
+        return fullHours + 'h ' + minutes + 'min' + suffix;
+    }
+}
+
 // Close menus when clicking outside
 // Note: toggleProjectMenu and toggleEmployeeMenu are defined in gantt/index.blade.php BEFORE this include
 document.addEventListener('click', function(e) {
@@ -633,6 +734,133 @@ document.addEventListener('click', function(e) {
 
 // Add Task Modal
 // Note: openAddTaskModal and closeAddTaskModal are defined in gantt/index.blade.php BEFORE this include
+
+/**
+ * Ticket #6: Konvertiert Stunden + Minuten zu Dezimalstunden
+ * Wird aufgerufen wenn Stunden oder Minuten geändert werden
+ */
+function updateWeeklyHours() {
+    const hours = parseInt(document.getElementById('taskHours')?.value) || 0;
+    const minutes = parseInt(document.getElementById('taskMinutes')?.value) || 0;
+    const totalHours = hours + (minutes / 60);
+    
+    const effortMode = document.getElementById('effortModeInput')?.value || 'total';
+    const input = document.getElementById('weeklyHoursInput');
+    
+    if (effortMode === 'total') {
+        // Gesamtaufwand: Berechne Wochenstunden basierend auf Zeitraum
+        const weeks = calculateWeeksFromDates();
+        const weeklyHours = weeks > 0 ? totalHours / weeks : totalHours;
+        if (input) input.value = weeklyHours.toFixed(2);
+        
+        // Zeige Berechnung
+        const calcBox = document.getElementById('effortCalculation');
+        const calcText = document.getElementById('effortCalculationText');
+        if (calcBox && calcText && weeks > 0 && weeks !== 1) {
+            calcBox.style.display = 'block';
+            calcText.innerHTML = `📊 ${formatHours(totalHours)} Gesamtaufwand ÷ ${weeks.toFixed(1)} Wochen = <strong>${formatHours(weeklyHours)}/Woche</strong>`;
+        } else if (calcBox) {
+            calcBox.style.display = 'none';
+        }
+    } else {
+        // Pro Woche: Direkt übernehmen
+        if (input) input.value = totalHours.toFixed(2);
+        
+        const calcBox = document.getElementById('effortCalculation');
+        if (calcBox) calcBox.style.display = 'none';
+    }
+}
+
+/**
+ * Berechnet Wochen zwischen Start- und Enddatum
+ */
+function calculateWeeksFromDates() {
+    const mode = document.querySelector('input[name="duration_mode"]:checked')?.value;
+    let startDate, endDate;
+    
+    if (mode === 'fixed') {
+        startDate = document.querySelector('input[name="start_date"]')?.value;
+        endDate = document.querySelector('input[name="end_date_fixed"]')?.value;
+    } else {
+        startDate = document.getElementById('taskStartDateFlexible')?.value;
+        const calcEnd = document.getElementById('calculatedEndDate')?.textContent;
+        // Parse German date format
+        if (calcEnd && calcEnd !== '-') {
+            const parts = calcEnd.split('.');
+            if (parts.length === 3) {
+                endDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+        }
+    }
+    
+    if (!startDate || !endDate) return 1;
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(1, days / 7);
+}
+
+/**
+ * Ticket #6: Setzt den Aufwand-Modus (Gesamt vs Pro Woche)
+ */
+function setEffortMode(mode) {
+    const totalLabel = document.getElementById('effortModeTotal');
+    const weeklyLabel = document.getElementById('effortModeWeekly');
+    const modeInput = document.getElementById('effortModeInput');
+    
+    if (mode === 'total') {
+        totalLabel.style.borderColor = '#3b82f6';
+        totalLabel.style.background = '#eff6ff';
+        weeklyLabel.style.borderColor = '#e5e7eb';
+        weeklyLabel.style.background = 'white';
+    } else {
+        weeklyLabel.style.borderColor = '#3b82f6';
+        weeklyLabel.style.background = '#eff6ff';
+        totalLabel.style.borderColor = '#e5e7eb';
+        totalLabel.style.background = 'white';
+    }
+    
+    if (modeInput) modeInput.value = mode;
+    updateWeeklyHours();
+}
+
+// Initialize effort mode styling on load
+document.addEventListener('DOMContentLoaded', function() {
+    setEffortMode('total');
+});
+
+/**
+ * Ticket #6: Setzt Stunden + Minuten aus Dezimalstunden
+ * Für das Bearbeiten einer bestehenden Aufgabe
+ */
+function setHoursAndMinutes(decimalHours) {
+    const hours = Math.floor(decimalHours);
+    const minutes = Math.round((decimalHours - hours) * 60);
+    // Auf 15-Minuten-Schritte runden
+    const roundedMinutes = Math.round(minutes / 15) * 15;
+    
+    const hoursInput = document.getElementById('taskHours');
+    const minutesSelect = document.getElementById('taskMinutes');
+    
+    if (hoursInput) hoursInput.value = hours;
+    if (minutesSelect) minutesSelect.value = roundedMinutes >= 60 ? 0 : roundedMinutes;
+    
+    updateWeeklyHours();
+}
+
+/**
+ * Ticket #6: Update für Edit-Formular (dynamisch generierte IDs)
+ */
+function updateEditWeeklyHours(taskId) {
+    const hours = parseInt(document.getElementById('editTaskHours_' + taskId)?.value) || 0;
+    const minutes = parseInt(document.getElementById('editTaskMinutes_' + taskId)?.value) || 0;
+    const decimalHours = hours + (minutes / 60);
+    const input = document.getElementById('editWeeklyHoursInput_' + taskId);
+    if (input) {
+        input.value = decimalHours.toFixed(2);
+    }
+}
 
 // Duration Mode Toggle
 function updateDurationMode() {
@@ -936,7 +1164,7 @@ function showTaskTooltip(event) {
             </div>
             <div>
                 <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Wochenstunden</div>
-                <div style="font-size: 14px; color: #111827; font-weight: 500;">${weeklyHours}h / Woche</div>
+                <div style="font-size: 14px; color: #111827; font-weight: 500;">${formatHours(weeklyHours, true)}</div>
             </div>
         </div>
         <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #6b7280; text-align: center;">
@@ -1157,8 +1385,8 @@ window.renderTasksList = function(tasks, projectId, employeeId) {
                         <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${duration} Tage</div>
                     </div>
                     <div>
-                        <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Wochenstunden</div>
-                        <div style="font-size: 14px; color: #111827; font-weight: 500;">${task.weekly_hours || 20}h / Woche</div>
+                        <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Zeit pro Woche</div>
+                        <div style="font-size: 14px; color: #111827; font-weight: 500;">${formatHours(task.weekly_hours || 20, true)}</div>
                     </div>
                     <div>
                         <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Reihenfolge</div>
@@ -1206,8 +1434,24 @@ window.editTask = function(taskId, projectId, employeeId) {
                         </div>
                     </div>
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight: 500;">Wochenstunden</label>
-                        <input type="number" name="weekly_hours" value="${task.weekly_hours || 20}" min="1" max="40" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                        <label style="display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight: 500;">Zeit pro Woche</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <div style="flex: 1;">
+                                <input type="number" id="editTaskHours_${taskId}" min="0" max="40" value="${Math.floor(task.weekly_hours || 20)}" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" onchange="updateEditWeeklyHours(${taskId})">
+                                <div style="font-size: 10px; color: #9ca3af; text-align: center;">Std</div>
+                            </div>
+                            <span style="color: #6b7280;">:</span>
+                            <div style="flex: 1;">
+                                <select id="editTaskMinutes_${taskId}" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" onchange="updateEditWeeklyHours(${taskId})">
+                                    <option value="0" ${Math.round(((task.weekly_hours || 20) % 1) * 60) < 8 ? 'selected' : ''}>00</option>
+                                    <option value="15" ${Math.round(((task.weekly_hours || 20) % 1) * 60) >= 8 && Math.round(((task.weekly_hours || 20) % 1) * 60) < 23 ? 'selected' : ''}>15</option>
+                                    <option value="30" ${Math.round(((task.weekly_hours || 20) % 1) * 60) >= 23 && Math.round(((task.weekly_hours || 20) % 1) * 60) < 38 ? 'selected' : ''}>30</option>
+                                    <option value="45" ${Math.round(((task.weekly_hours || 20) % 1) * 60) >= 38 ? 'selected' : ''}>45</option>
+                                </select>
+                                <div style="font-size: 10px; color: #9ca3af; text-align: center;">Min</div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="weekly_hours" id="editWeeklyHoursInput_${taskId}" value="${task.weekly_hours || 20}">
                     </div>
                     <div style="display: flex; gap: 8px; justify-content: flex-end;">
                         <button type="button" onclick="cancelTaskEdit(${taskId}, ${projectId}, ${employeeId})" style="padding: 8px 16px; background: #f3f4f6; border: none; border-radius: 6px; color: #374151; font-size: 13px; cursor: pointer; font-weight: 500;">
@@ -1309,6 +1553,12 @@ window.deleteTask = function(taskId, projectId, employeeId, taskName) {
                 taskElement.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     taskElement.remove();
+                    
+                    // Ticket #5: Wenn keine Aufgaben mehr, Hinweis anzeigen
+                    if (data.employee_has_no_tasks) {
+                        showNoTasksHint(projectId, employeeId);
+                    }
+                    
                     // Close modal and reload page to update gantt timeline
                     if (typeof window.closeManageTasksModal === 'function') {
                         window.closeManageTasksModal();
@@ -1324,6 +1574,32 @@ window.deleteTask = function(taskId, projectId, employeeId, taskName) {
         console.error('Error:', error);
         alert('Fehler beim Löschen der Aufgabe.');
     });
+}
+
+/**
+ * Ticket #5: Zeigt Hinweis-Balken wenn MA keine Aufgaben mehr hat
+ */
+function showNoTasksHint(projectId, employeeId) {
+    // Find the employee's timeline container
+    const taskBars = document.querySelectorAll(`.project-task-bar[data-project-id="${projectId}"][data-employee-id="${employeeId}"]`);
+    
+    if (taskBars.length === 0) {
+        // Find the parent timeline container for this employee
+        const employeeRow = document.querySelector(`.employee-name[data-employee-id="${employeeId}"]`)?.closest('[style*="grid-template-columns"]');
+        if (employeeRow) {
+            const timelineContainer = employeeRow.querySelector('[style*="position: relative"]');
+            if (timelineContainer) {
+                timelineContainer.innerHTML = `
+                    <div style="position: absolute; top: 2px; left: 5%; width: 90%; height: calc(100% - 4px); border-radius: 8px; background: #fef3c7; border: 2px dashed #f59e0b; display: flex; align-items: center; justify-content: center; gap: 8px; color: #92400e; font-size: 12px; font-weight: 500;">
+                        <span>⚠️ Keine Aufgaben zugewiesen</span>
+                        <button onclick="openAddTaskModal(${projectId}, ${employeeId}, ganttConfig.baseUrl)" style="padding: 4px 12px; background: #f59e0b; border: none; border-radius: 4px; color: white; font-size: 11px; cursor: pointer; font-weight: 600;">
+                            + Aufgabe
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
 }
 
 /**
@@ -1592,7 +1868,7 @@ window.renderUtilizationView = function(data, employeeName) {
                             <div style="font-size: 12px; color: #9ca3af;">${task.task_description || 'Keine Beschreibung'}</div>
                         </div>
                         <div style="background: #0ea5e9; color: white; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap;">
-                            ${task.weekly_hours}h/Woche
+                            ${formatHours(task.weekly_hours, true)}
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 8px;">

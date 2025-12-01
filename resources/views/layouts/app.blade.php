@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +10,88 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
+        /* ============================================
+           DAY2DAY DESIGN SYSTEM - CSS Variables
+           ============================================
+           
+           UI GUIDELINES (Konsistenz-Regeln):
+           
+           PAGE HEADER BUTTONS:
+           - Primary Action (Create):  .btn .btn-primary .btn-sm
+           - Secondary Actions:        .btn .btn-secondary .btn-sm
+           - Sync/Special Actions:     .btn .btn-info .btn-sm
+           - Delete Actions:           .btn .btn-danger .btn-sm
+           
+           TABLE ACTION BUTTONS:
+           - View:    .btn .btn-ghost .btn-sm
+           - Edit:    .btn .btn-ghost .btn-sm
+           - Delete:  .btn .btn-danger .btn-sm (oder .btn-ghost mit text-danger)
+           
+           FILTER ELEMENTS:
+           - Dropdowns: .form-select
+           - Inputs:    .form-input
+           - Reset:     .btn .btn-ghost .btn-sm
+           
+           BADGES/STATUS:
+           - Success: .badge .badge-success
+           - Warning: .badge .badge-warning
+           - Danger:  .badge .badge-danger
+           - Info:    .badge .badge-info
+           - Neutral: .badge .badge-neutral
+           
+           ============================================ */
+        :root {
+            /* Primary Colors */
+            --color-primary: #111827;           /* Schwarz - Primary Actions */
+            --color-primary-hover: #1f2937;
+            --color-secondary: #ffffff;         /* Weiß - Secondary Actions */
+            --color-secondary-hover: #f9fafb;
+            
+            /* Semantic Colors */
+            --color-success: #059669;           /* Grün - Erfolg/Aktiv */
+            --color-success-light: #d1fae5;
+            --color-warning: #f59e0b;           /* Orange - Warnung */
+            --color-warning-light: #fef3c7;
+            --color-danger: #dc2626;            /* Rot - Fehler/Löschen */
+            --color-danger-light: #fee2e2;
+            --color-info: #3b82f6;              /* Blau - Info */
+            --color-info-light: #dbeafe;
+            
+            /* Neutral Colors */
+            --color-text-primary: #111827;
+            --color-text-secondary: #6b7280;
+            --color-text-muted: #9ca3af;
+            --color-border: #e5e7eb;
+            --color-border-light: #f3f4f6;
+            --color-bg-page: #f8fafc;
+            --color-bg-card: #ffffff;
+            --color-bg-hover: #f9fafb;
+            
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+            --spacing-xl: 20px;
+            --spacing-2xl: 24px;
+            
+            /* Border Radius */
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 10px;
+            --radius-xl: 12px;
+            --radius-full: 9999px;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.15);
+            
+            /* Transitions */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.2s ease;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             margin: 0;
@@ -163,86 +245,242 @@
             width: 100%;
         }
         
-        /* Global Button Styles */
+        /* ============================================
+           GLOBAL BUTTON STYLES (using CSS Variables)
+           ============================================ */
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 12px;
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
             font-size: 14px;
             font-weight: 500;
             text-decoration: none;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            gap: 8px;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-md);
+            gap: var(--spacing-sm);
+            font-family: inherit;
         }
         
         .btn:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-lg);
         }
         
         .btn:active {
             transform: translateY(0);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow-sm);
         }
         
+        /* Primary Button - Schwarz für Hauptaktionen */
         .btn-primary {
-            background: #ffffff;
-            color: #374151;
+            background: var(--color-primary);
+            color: var(--color-secondary);
+            border-color: var(--color-primary);
         }
         
         .btn-primary:hover {
-            background: #f9fafb;
+            background: var(--color-primary-hover);
+            border-color: var(--color-primary-hover);
         }
         
+        /* Secondary Button - Weiß für sekundäre Aktionen */
         .btn-secondary {
-            background: #f3f4f6;
-            color: #374151;
+            background: var(--color-secondary);
+            color: var(--color-text-primary);
+            border-color: var(--color-border);
         }
         
         .btn-secondary:hover {
-            background: #e5e7eb;
+            background: var(--color-secondary-hover);
         }
         
+        /* Success Button */
         .btn-success {
-            background: #ffffff;
-            color: #059669;
+            background: var(--color-success);
+            color: var(--color-secondary);
+            border-color: var(--color-success);
         }
         
         .btn-success:hover {
-            background: #f0fdf4;
+            background: #047857;
+            border-color: #047857;
         }
         
+        /* Danger Button - Für Lösch-Aktionen */
         .btn-danger {
-            background: #ffffff;
-            color: #dc2626;
+            background: var(--color-secondary);
+            color: var(--color-danger);
+            border-color: var(--color-border);
         }
         
         .btn-danger:hover {
-            background: #fef2f2;
+            background: var(--color-danger-light);
+            border-color: var(--color-danger);
         }
         
+        /* Info Button - Blau für Sync/Info */
+        .btn-info {
+            background: var(--color-info);
+            color: var(--color-secondary);
+            border-color: var(--color-info);
+        }
+        
+        .btn-info:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+        
+        /* Ghost Button - Minimal */
+        .btn-ghost {
+            background: transparent;
+            color: var(--color-text-secondary);
+            border-color: transparent;
+            box-shadow: none;
+        }
+        
+        .btn-ghost:hover {
+            background: var(--color-border-light);
+            color: var(--color-text-primary);
+            box-shadow: none;
+        }
+        
+        /* Button Sizes */
         .btn-sm {
-            padding: 6px 12px;
+            padding: var(--spacing-sm) var(--spacing-md);
             font-size: 12px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
         }
         
         .btn-lg {
-            padding: 12px 24px;
+            padding: var(--spacing-md) var(--spacing-2xl);
             font-size: 16px;
-            border-radius: 16px;
+            border-radius: var(--radius-xl);
         }
+        
+        /* ============================================
+           CARD STYLES
+           ============================================ */
         .card {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: var(--color-bg-card);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            border: 1px solid var(--color-border);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .card-header {
+            background: var(--color-bg-card);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+        }
+        
+        /* ============================================
+           STATUS BADGES (Unified)
+           ============================================ */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-full);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-success {
+            background: var(--color-success-light);
+            color: var(--color-success);
+        }
+        
+        .badge-warning {
+            background: var(--color-warning-light);
+            color: #92400e;
+        }
+        
+        .badge-danger {
+            background: var(--color-danger-light);
+            color: var(--color-danger);
+        }
+        
+        .badge-info {
+            background: var(--color-info-light);
+            color: #1d4ed8;
+        }
+        
+        .badge-neutral {
+            background: var(--color-border-light);
+            color: var(--color-text-secondary);
+        }
+        
+        /* ============================================
+           STAT CARDS (for KPIs)
+           ============================================ */
+        .stat-card {
+            background: var(--color-bg-card);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+        }
+        
+        .stat-label {
+            color: var(--color-text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            color: var(--color-text-primary);
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: var(--spacing-xs);
+        }
+        
+        .stat-value.success { color: var(--color-success); }
+        .stat-value.warning { color: var(--color-warning); }
+        .stat-value.danger { color: var(--color-danger); }
+        .stat-value.info { color: var(--color-info); }
+        
+        /* ============================================
+           UTILITY CLASSES
+           ============================================ */
+        .text-success { color: var(--color-success) !important; }
+        .text-warning { color: var(--color-warning) !important; }
+        .text-danger { color: var(--color-danger) !important; }
+        .text-info { color: var(--color-info) !important; }
+        .text-muted { color: var(--color-text-muted) !important; }
+        
+        .bg-success-light { background: var(--color-success-light) !important; }
+        .bg-warning-light { background: var(--color-warning-light) !important; }
+        .bg-danger-light { background: var(--color-danger-light) !important; }
+        .bg-info-light { background: var(--color-info-light) !important; }
+        
+        /* ============================================
+           FORM ELEMENTS
+           ============================================ */
+        .form-select, .form-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            color: var(--color-text-primary);
+            background: var(--color-bg-card);
+            transition: all var(--transition-fast);
+        }
+        
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: var(--color-info);
+            box-shadow: 0 0 0 3px var(--color-info-light);
         }
         
         /* Responsive Design */
@@ -251,7 +489,6 @@
                 flex-direction: column;
                 margin-top: 70px; /* Weniger Abstand auf mobilen Geräten */
             }
-            
             .sidebar {
                 width: 100%;
                 height: auto;
@@ -331,8 +568,20 @@
 </head>
 <body>
 <div class="header">
-    <div class="header-content">
+    <div class="header-content" style="display: flex; align-items: center; gap: 24px;">
         <h1>Day2Day-Manager</h1>
+        
+        @auth
+        <!-- Globale Suche (direkt neben Logo) -->
+        <button onclick="openGlobalSearch()" 
+                style="display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; color: #9ca3af; font-size: 14px; transition: all 0.15s; min-width: 280px;"
+                onmouseover="this.style.borderColor='#d1d5db'; this.style.background='#ffffff'"
+                onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='#f3f4f6'">
+            <span style="font-size: 16px;">🔍</span>
+            <span style="flex: 1; text-align: left;">Suche...</span>
+            <kbd style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #6b7280;">Ctrl+K</kbd>
+        </button>
+        @endauth
     </div>
 
     @auth
@@ -653,6 +902,258 @@ document.addEventListener('DOMContentLoaded', () => {
 
 {{-- Loading Helper JavaScript --}}
 <script src="{{ url('js/loading.js') }}"></script>
+
+{{-- ========== GLOBAL SEARCH MODAL ========== --}}
+@auth
+<div id="globalSearchBackdrop" onclick="closeGlobalSearch()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 99998; backdrop-filter: blur(4px);"></div>
+
+<div id="globalSearchModal" style="display: none; position: fixed; top: 15%; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 25px 80px rgba(0,0,0,0.4); z-index: 99999; overflow: hidden;">
+    <!-- Search Input -->
+    <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 20px; color: #9ca3af;">🔍</span>
+            <input type="text" 
+                   id="globalSearchInput" 
+                   placeholder="Projekte, Mitarbeiter, Abwesenheiten suchen..." 
+                   autocomplete="off"
+                   style="flex: 1; border: none; outline: none; font-size: 16px; color: #111827; background: transparent;"
+                   oninput="performGlobalSearch(this.value)">
+            <kbd onclick="closeGlobalSearch()" style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: #6b7280; cursor: pointer;">ESC</kbd>
+        </div>
+    </div>
+    
+    <!-- Search Results -->
+    <div id="globalSearchResults" style="max-height: 400px; overflow-y: auto; padding: 8px 0;">
+        <!-- Hint when empty -->
+        <div id="searchHint" style="padding: 40px 20px; text-align: center; color: #9ca3af;">
+            <div style="font-size: 32px; margin-bottom: 12px;">🔍</div>
+            <div style="font-size: 14px;">Tippe um zu suchen...</div>
+            <div style="font-size: 12px; margin-top: 8px; color: #d1d5db;">Projekte, Mitarbeiter, Abwesenheiten</div>
+        </div>
+        
+        <!-- Loading -->
+        <div id="searchLoading" style="display: none; padding: 40px 20px; text-align: center; color: #9ca3af;">
+            <div style="font-size: 14px;">⏳ Suche läuft...</div>
+        </div>
+        
+        <!-- No Results -->
+        <div id="searchNoResults" style="display: none; padding: 40px 20px; text-align: center; color: #9ca3af;">
+            <div style="font-size: 32px; margin-bottom: 12px;">😕</div>
+            <div style="font-size: 14px;">Keine Ergebnisse gefunden</div>
+        </div>
+        
+        <!-- Results Container -->
+        <div id="searchResultsList"></div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="padding: 12px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 16px; font-size: 12px; color: #9ca3af;">
+            <span>↑↓ Navigation</span>
+            <span>↵ Öffnen</span>
+            <span>ESC Schließen</span>
+        </div>
+        <div style="font-size: 12px; color: #9ca3af;">
+            <span id="searchResultCount"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+// ==================== GLOBAL SEARCH ====================
+let searchTimeout = null;
+let currentResultIndex = -1;
+let searchResults = [];
+
+function openGlobalSearch() {
+    document.getElementById('globalSearchBackdrop').style.display = 'block';
+    document.getElementById('globalSearchModal').style.display = 'block';
+    document.getElementById('globalSearchInput').focus();
+    document.getElementById('globalSearchInput').value = '';
+    document.getElementById('searchHint').style.display = 'block';
+    document.getElementById('searchLoading').style.display = 'none';
+    document.getElementById('searchNoResults').style.display = 'none';
+    document.getElementById('searchResultsList').innerHTML = '';
+    document.getElementById('searchResultCount').textContent = '';
+    document.body.style.overflow = 'hidden';
+    currentResultIndex = -1;
+    searchResults = [];
+}
+
+function closeGlobalSearch() {
+    document.getElementById('globalSearchBackdrop').style.display = 'none';
+    document.getElementById('globalSearchModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function performGlobalSearch(query) {
+    // Clear previous timeout
+    if (searchTimeout) clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+        document.getElementById('searchHint').style.display = 'block';
+        document.getElementById('searchLoading').style.display = 'none';
+        document.getElementById('searchNoResults').style.display = 'none';
+        document.getElementById('searchResultsList').innerHTML = '';
+        document.getElementById('searchResultCount').textContent = '';
+        return;
+    }
+    
+    // Show loading
+    document.getElementById('searchHint').style.display = 'none';
+    document.getElementById('searchLoading').style.display = 'block';
+    document.getElementById('searchNoResults').style.display = 'none';
+    
+    // Debounce search
+    searchTimeout = setTimeout(() => {
+        fetch(`/search?q=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('searchLoading').style.display = 'none';
+                searchResults = data.results;
+                
+                if (data.results.length === 0) {
+                    document.getElementById('searchNoResults').style.display = 'block';
+                    document.getElementById('searchResultsList').innerHTML = '';
+                    document.getElementById('searchResultCount').textContent = '';
+                    return;
+                }
+                
+                document.getElementById('searchResultCount').textContent = `${data.total} Ergebnis${data.total !== 1 ? 'se' : ''}`;
+                renderSearchResults(data.results);
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                document.getElementById('searchLoading').style.display = 'none';
+                document.getElementById('searchNoResults').style.display = 'block';
+            });
+    }, 200);
+}
+
+function renderSearchResults(results) {
+    const container = document.getElementById('searchResultsList');
+    
+    // Group by type
+    const grouped = {
+        project: results.filter(r => r.type === 'project'),
+        employee: results.filter(r => r.type === 'employee'),
+        absence: results.filter(r => r.type === 'absence')
+    };
+    
+    const typeLabels = {
+        project: 'Projekte',
+        employee: 'Mitarbeiter',
+        absence: 'Abwesenheiten'
+    };
+    
+    let html = '';
+    let globalIndex = 0;
+    
+    for (const [type, items] of Object.entries(grouped)) {
+        if (items.length === 0) continue;
+        
+        html += `<div style="padding: 8px 20px; font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px;">${typeLabels[type]}</div>`;
+        
+        for (const item of items) {
+            html += `
+                <a href="${item.url}" 
+                   data-result-index="${globalIndex}"
+                   onclick="closeGlobalSearch()"
+                   style="display: flex; align-items: center; gap: 12px; padding: 10px 20px; text-decoration: none; color: inherit; transition: background 0.1s;"
+                   onmouseover="this.style.background='#f3f4f6'; highlightResult(${globalIndex})"
+                   onmouseout="this.style.background='transparent'">
+                    <span style="font-size: 20px;">${item.icon}</span>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 14px; font-weight: 500; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.title}</div>
+                        <div style="font-size: 12px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.subtitle}</div>
+                    </div>
+                    <span style="padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; background: ${item.badge.color}20; color: ${item.badge.color};">${item.badge.text}</span>
+                </a>
+            `;
+            globalIndex++;
+        }
+    }
+    
+    container.innerHTML = html;
+    currentResultIndex = -1;
+}
+
+function highlightResult(index) {
+    currentResultIndex = index;
+    document.querySelectorAll('[data-result-index]').forEach((el, i) => {
+        el.style.background = i === index ? '#f3f4f6' : 'transparent';
+    });
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    // Ctrl+K or Cmd+K to open search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        openGlobalSearch();
+        return;
+    }
+    
+    // Only handle if search modal is open
+    const modal = document.getElementById('globalSearchModal');
+    if (!modal || modal.style.display === 'none') return;
+    
+    // ESC to close
+    if (e.key === 'Escape') {
+        closeGlobalSearch();
+        return;
+    }
+    
+    // Arrow navigation
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (searchResults.length > 0) {
+            currentResultIndex = Math.min(currentResultIndex + 1, searchResults.length - 1);
+            highlightResult(currentResultIndex);
+            scrollToResult(currentResultIndex);
+        }
+    }
+    
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (searchResults.length > 0) {
+            currentResultIndex = Math.max(currentResultIndex - 1, 0);
+            highlightResult(currentResultIndex);
+            scrollToResult(currentResultIndex);
+        }
+    }
+    
+    // Enter to open
+    if (e.key === 'Enter' && currentResultIndex >= 0) {
+        e.preventDefault();
+        const element = document.querySelector(`[data-result-index="${currentResultIndex}"]`);
+        if (element) {
+            closeGlobalSearch();
+            window.location.href = element.href;
+        }
+    }
+});
+
+function scrollToResult(index) {
+    const element = document.querySelector(`[data-result-index="${index}"]`);
+    if (element) {
+        element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+}
+</script>
+@endauth
 
 </body>
 </html>
