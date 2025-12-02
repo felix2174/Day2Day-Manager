@@ -907,18 +907,18 @@ document.addEventListener('DOMContentLoaded', () => {
 @auth
 <div id="globalSearchBackdrop" onclick="closeGlobalSearch()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 99998; backdrop-filter: blur(4px);"></div>
 
-<div id="globalSearchModal" style="display: none; position: fixed; top: 15%; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: white; border-radius: 12px; box-shadow: 0 25px 80px rgba(0,0,0,0.4); z-index: 99999; overflow: hidden;">
+<div id="globalSearchModal" style="display: none; position: fixed; top: 15%; left: 50%; transform: translateX(-50%); width: 90%; max-width: 600px; background: white; border-radius: 16px; box-shadow: 0 25px 80px rgba(0,0,0,0.4); z-index: 99999; overflow: hidden;">
     <!-- Search Input -->
     <div style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 20px; color: #9ca3af;">🔍</span>
+        <div style="display: flex; align-items: center; gap: 12px; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; transition: border-color 0.2s;" onfocusin="this.style.borderColor='#3b82f6'" onfocusout="this.style.borderColor='#e5e7eb'">
+            <span style="font-size: 20px; color: #3b82f6;">🔍</span>
             <input type="text" 
                    id="globalSearchInput" 
                    placeholder="Projekte, Mitarbeiter, Abwesenheiten suchen..." 
                    autocomplete="off"
                    style="flex: 1; border: none; outline: none; font-size: 16px; color: #111827; background: transparent;"
                    oninput="performGlobalSearch(this.value)">
-            <kbd onclick="closeGlobalSearch()" style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: #6b7280; cursor: pointer;">ESC</kbd>
+            <kbd onclick="closeGlobalSearch()" style="background: #e5e7eb; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: #6b7280; cursor: pointer; font-weight: 500;">ESC</kbd>
         </div>
     </div>
     
